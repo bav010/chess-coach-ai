@@ -167,10 +167,14 @@ export default function App() {
   const engineLabel = engineState === 'ready' ? 'Stockfish готов'
     : engineState === 'loading' ? 'Stockfish загружается…' : 'Stockfish не загрузился'
 
+  const engineStatus = engineState === 'ready' ? 'Сервис онлайн'
+    : engineState === 'loading' ? 'Сервис загружается…' : 'Сервис не загрузился'
+  
   return <main className="app-shell">
     <header className="topbar">
       <div className="brand-mark">♞</div>
       <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">ТВОЙ ПЕРСОНАЛЬНЫЙ ШАХМАТНЫЙ ТРЕНЕР</div></div>
+      <div className="top-status"><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{"Сервис онлайн"}</div>
     </header>
 
     <section className="hero">
