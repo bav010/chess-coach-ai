@@ -79,7 +79,7 @@ export default function App() {
     return next.isCheckmate() ? 'Мат! Отличная работа.'
       : next.isDraw() ? 'Ничья.'
       : next.isCheck() ? 'Шах! Проверь безопасность короля.'
-      : 'Ход принят.'
+      : 'Ход принят. Жду следующий ход.'
   }
 
   function applyMove(from: Square, to: Square, promotion?: 'q' | 'r' | 'b' | 'n') {
@@ -174,13 +174,13 @@ export default function App() {
     </header>
 
     <section className="hero">
-      <div><div className="eyebrow">ТРЕНИРОВОЧНАЯ СТАНЦИЯ</div><h1>Играй. Думай.<br/><em>Становись сильнее.</em></h1>
+      <div><h1>Играй. Думай.<br/><em>Становись сильнее.</em></h1>
         <p>Каждый ход — возможность научиться чему-то новому.</p></div>
     </section>
 
     <div className="main-grid">
       <section className="panel board-panel">
-        <div className="panel-head"><div><div className="eyebrow">ПРАКТИКА</div><h2>Шахматная доска</h2></div><span className="pill">Локальная партия</span></div>
+        <div className="panel-head"><div><div className="eyebrow">АНАЛИЗ</div><h2>Шахматная доска</h2></div><span className="pill">Локальная партия</span></div>
         <div className="board" role="grid" aria-label="Шахматная доска">
           {board.flatMap((row) => row.map((sq) => {
             const piece = game.get(sq)
@@ -207,7 +207,6 @@ export default function App() {
           <button className="btn" onClick={undo} disabled={moves.length === 0}>↶ Отменить ход</button>
           <button className="btn" onClick={saveSession} disabled={moves.length === 0}>Сохранить сессию</button>
         </div>
-        <div className="hint"><b>Совет тренера</b><span>Перед ходом проверь шахи, взятия и угрозы — сначала свои, затем соперника.</span></div>
       </section>
 
       <aside className="right-column">
@@ -247,6 +246,6 @@ export default function App() {
         </section>
       </aside>
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.1</span><span>Сначала понимание. Потом рейтинг.</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.2</span></footer>
   </main>
 }
