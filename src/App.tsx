@@ -176,6 +176,7 @@ export default function App() {
     <section className="hero">
       <div><h1>Играй. Думай.<br/><em>Становись сильнее.</em></h1>
         <p>Каждый ход — возможность научиться чему-то новому.</p></div>
+        <div className="hero-badge"><span>♟</span><div><b>ТРЕНИРУЙ РАЗУМ</b><small>Превращай ошибки в мастерство.</small></div></div>
     </section>
 
     <div className="main-grid">
@@ -246,6 +247,6 @@ export default function App() {
         </section>
       </aside>
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.2</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.3</span></footer>
   </main>
 }
