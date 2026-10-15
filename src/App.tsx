@@ -175,7 +175,7 @@ export default function App() {
     </header>
 
     <section className="hero">
-      <div><div className="eyebrow">ТРЕНИРОВОЧНАЯ СТАНЦИЯ / 01</div><h1>Играй. Думай.<br/><em>Становись сильнее.</em></h1>
+      <div><div className="eyebrow">ТРЕНИРОВОЧНАЯ СТАНЦИЯ</div><h1>Играй. Думай.<br/><em>Становись сильнее.</em></h1>
         <p>Каждый ход — возможность научиться чему-то новому.</p></div>
       <div className="hero-badge"><span>♟</span><div><b>ТВОЙ ПРОГРЕСС</b><small>Хранится только в твоём браузере</small></div></div>
     </section>
