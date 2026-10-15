@@ -171,13 +171,11 @@ export default function App() {
     <header className="topbar">
       <div className="brand-mark">♞</div>
       <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">ТВОЙ ПЕРСОНАЛЬНЫЙ ШАХМАТНЫЙ ТРЕНЕР</div></div>
-      <div className="top-status"><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{engineLabel}</div>
     </header>
 
     <section className="hero">
       <div><div className="eyebrow">ТРЕНИРОВОЧНАЯ СТАНЦИЯ</div><h1>Играй. Думай.<br/><em>Становись сильнее.</em></h1>
         <p>Каждый ход — возможность научиться чему-то новому.</p></div>
-      <div className="hero-badge"><span>♟</span><div><b>ТВОЙ ПРОГРЕСС</b><small>Хранится только в твоём браузере</small></div></div>
     </section>
 
     <div className="main-grid">
