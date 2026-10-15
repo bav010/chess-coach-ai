@@ -79,7 +79,7 @@ export default function App() {
     return next.isCheckmate() ? 'Мат! Отличная работа.'
       : next.isDraw() ? 'Ничья.'
       : next.isCheck() ? 'Шах! Проверь безопасность короля.'
-      : 'Ход принят. Перед следующим ходом проверь угрозы соперника.'
+      : 'Ход принят.'
   }
 
   function applyMove(from: Square, to: Square, promotion?: 'q' | 'r' | 'b' | 'n') {
@@ -249,6 +249,6 @@ export default function App() {
         </section>
       </aside>
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1</span><span>Сначала понимание. Потом рейтинг.</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.1</span><span>Сначала понимание. Потом рейтинг.</span></footer>
   </main>
 }
