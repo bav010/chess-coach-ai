@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test": "vitest run"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
@@ -19,7 +20,8 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "~5.6.3",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vitest": "^3.2.7"
   },
   "description": "Шахматный тренер в браузере: доска, анализ Stockfish (WASM), прогресс в localStorage. Работает на GitHub Pages без сервера.",
   "license": "GPL-3.0-or-later",
