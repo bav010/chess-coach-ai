@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { calibrate, clampElo, pickBotMove, thinkTimeMs, ENGINE_MAX_ELO, ENGINE_MIN_ELO } from './bot'
+import {
+  calibrate, clampElo, humanDelayMs, lineGapCp, pickBotMove, slipForElo, thinkTimeMs,
+  ENGINE_MAX_ELO, ENGINE_MIN_ELO,
+} from './bot'
 
 describe('calibrate', () => {
   it('в диапазоне движка используется UCI_Elo напрямую', () => {
-    expect(calibrate(1800)).toMatchObject({ limitStrength: true, uciElo: 1800, slipChance: 0, multipv: 1, depth: null })
+    expect(calibrate(1800)).toMatchObject({ limitStrength: true, uciElo: 1800, slipChance: 0, multipv: 2, depth: null })
     expect(calibrate(ENGINE_MIN_ELO).uciElo).toBe(ENGINE_MIN_ELO)
   })
   it('максимум — без ограничения силы', () => {
@@ -55,5 +58,60 @@ describe('pickBotMove', () => {
   })
   it('одна линия — промахнуться не из чего', () => {
     expect(pickBotMove('a2a3', [{ uci: 'a2a3' }], 1, () => 0)).toBe('a2a3')
+  })
+})
+
+describe('промахи слабых уровней', () => {
+  it('вероятность промаха строго убывает с рейтингом и равна нулю у 1320', () => {
+    let prev = Infinity
+    for (let e = 400; e <= ENGINE_MIN_ELO; e += 20) {
+      const v = slipForElo(e)
+      expect(v).toBeLessThan(prev)
+      prev = v
+    }
+    expect(slipForElo(ENGINE_MIN_ELO)).toBe(0)
+  })
+  it('слабые уровни заметно сильнее прежних (600: не более четверти промахов, раньше — 80%)', () => {
+    expect(slipForElo(600)).toBeLessThanOrEqual(0.25)
+    expect(slipForElo(400)).toBeLessThan(0.5)
+  })
+})
+
+describe('humanDelayMs', () => {
+  const base = { legalMoves: 30, inCheck: false, gapCp: 60, ply: 30, remainingMs: null, incrementMs: 0, rnd: () => 0.5 }
+  it('сильный бот думает дольше слабого', () => {
+    expect(humanDelayMs({ ...base, elo: 2800 })).toBeGreaterThan(humanDelayMs({ ...base, elo: 600 }))
+  })
+  it('вынужденный ход — быстро, сложная позиция — дольше', () => {
+    const forced = humanDelayMs({ ...base, elo: 1500, legalMoves: 1 })
+    const tricky = humanDelayMs({ ...base, elo: 1500, gapCp: 10 })
+    const obvious = humanDelayMs({ ...base, elo: 1500, gapCp: 500 })
+    expect(forced).toBeLessThan(900)
+    expect(obvious).toBeLessThan(tricky)
+  })
+  it('начало партии быстрее середины', () => {
+    expect(humanDelayMs({ ...base, elo: 1500, ply: 4 })).toBeLessThan(humanDelayMs({ ...base, elo: 1500 }))
+  })
+  it('не съедает часы: при малом остатке времени пауза короткая', () => {
+    const t = humanDelayMs({ ...base, elo: 3000, remainingMs: 6000 })
+    expect(t).toBeLessThanOrEqual(600)
+    expect(t).toBeGreaterThanOrEqual(250)
+  })
+  it('всегда в разумных пределах', () => {
+    for (const rnd of [() => 0, () => 0.999]) {
+      const t = humanDelayMs({ ...base, elo: 3200, gapCp: 0, legalMoves: 45, rnd })
+      expect(t).toBeGreaterThanOrEqual(300)
+      expect(t).toBeLessThanOrEqual(12_000)
+    }
+  })
+})
+
+describe('lineGapCp', () => {
+  it('разрыв между первой и второй линиями', () => {
+    expect(lineGapCp([{ cp: 50, mate: null }, { cp: -20, mate: null }])).toBe(70)
+  })
+  it('мат — огромная оценка; одной линии мало', () => {
+    expect(lineGapCp([{ cp: null, mate: 2 }, { cp: 100, mate: null }])).toBeGreaterThan(5000)
+    expect(lineGapCp([{ cp: 10, mate: null }])).toBeNull()
   })
 })

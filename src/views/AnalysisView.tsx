@@ -40,6 +40,7 @@ type Props = {
   sessions: SavedSession[]
   onSaveSession: (s: Pick<SavedSession, 'result' | 'plies' | 'pgn'>) => void
   onDownload: (s: SavedSession) => void
+  onOpenSession: (s: SavedSession) => void
   onResetProgress: () => void
   engineState: 'loading' | 'ready' | 'error'
   engineLabel: string
@@ -53,7 +54,7 @@ type ReviewState = { evals: PositionEval[]; running: boolean; done: number; tota
 
 const NAMES: Record<Color, string> = { w: 'Белые', b: 'Чёрные' }
 
-export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onDownload, onResetProgress, engineState, engineLabel, active }: Props) {
+export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onDownload, onOpenSession, onResetProgress, engineState, engineLabel, active }: Props) {
   const [startFen, setStartFen] = useState(seed?.startFen ?? START_FEN)
   const [ucis, setUcis] = useState<string[]>(seed?.ucis ?? [])
   const [viewPly, setViewPly] = useState(seed?.ucis.length ?? 0)
@@ -292,10 +293,11 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   const viewMove: ReviewMove | null = report?.moves.find(m => m.ply === viewPly) ?? live
   const marks = useMemo(() => {
     const m = new Map<number, MoveClass>()
+    if (!prefs.showMarks) return m
     if (report) report.moves.forEach(x => m.set(x.ply, x.cls))
     else if (live) m.set(live.ply, live.cls)
     return m
-  }, [report, live])
+  }, [report, live, prefs.showMarks])
 
   const arrowStyle = { opacity: prefs.arrowOpacity, width: prefs.arrowWidth, numbering: prefs.numbering }
   const lastRec = viewPly > 0 ? records[viewPly - 1] : null
@@ -319,6 +321,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         <label className="toggle"><input type="checkbox" checked={prefs.showPanel} onChange={e => onPrefs({ showPanel: e.target.checked })} data-testid="toggle-panel" /> Показывать анализ</label>
         <label className="toggle"><input type="checkbox" checked={prefs.showBar} onChange={e => onPrefs({ showBar: e.target.checked })} data-testid="toggle-bar" /> Шкала оценки</label>
         <label className="toggle"><input type="checkbox" checked={prefs.showArrows} onChange={e => onPrefs({ showArrows: e.target.checked })} data-testid="toggle-arrows" /> Стрелки</label>
+        <label className="toggle"><input type="checkbox" checked={prefs.showMarks} onChange={e => onPrefs({ showMarks: e.target.checked })} data-testid="toggle-marks" /> Оценка ходов</label>
         <button className="link-btn" onClick={() => setShowSettings(s => !s)} data-testid="settings-btn">{showSettings ? 'Скрыть настройки' : 'Настройки'}</button>
       </div>
       {showSettings && <AnalysisSettings prefs={prefs} onChange={onPrefs} />}
@@ -329,7 +332,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
           <Board chess={chess} orientation={orientation} selected={selected} legal={legal}
             lastMove={lastRec ? { from: lastRec.from, to: lastRec.to } : null}
             arrows={arrows} arrowStyle={arrowStyle} onSquareClick={chooseSquare}
-            mark={viewMove && lastRec && hasIcon(viewMove.cls) ? { square: lastRec.to, cls: viewMove.cls } : null} />
+            mark={prefs.showMarks && viewMove && lastRec && hasIcon(viewMove.cls) ? { square: lastRec.to, cls: viewMove.cls } : null} />
         </div>
       </div>
 
@@ -360,7 +363,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       </div>
       {tab === 'analysis' && !prefs.showPanel && <section className="panel"><p className="muted">Панель анализа скрыта. Включите «Показывать анализ» над доской — позиция и результаты сохранены.</p></section>}
       {tab === 'analysis' && prefs.showPanel && <AnalysisPanel fen={fen} turn={chess.turn()} entry={entry} score={score} busy={an.busy} error={an.error}
-          engineState={engineState} engineLabel={engineLabel} status={status} live={viewMove} analysisOn={analysisOn} />}
+          engineState={engineState} engineLabel={engineLabel} status={status} live={prefs.showMarks ? viewMove : null} marksOn={prefs.showMarks} analysisOn={analysisOn} />}
       {tab === 'review' && <ReviewSection
         records={records.length} review={review} report={report} reviewComplete={reviewComplete} names={names} userColor={userColor}
         onStart={() => void startReview()} onCancel={cancelReview} onGoto={goto}
@@ -371,7 +374,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         <div className="panel-head"><div><div className="eyebrow">ХОД ПАРТИИ</div><h2>Нотация</h2></div><span className="move-count">{ucis.length} полуходов</span></div>
         <MoveList records={records} viewPly={viewPly} onSelect={goto} marks={marks} />
       </section>
-      <ProgressPanel sessions={sessions} onDownload={onDownload} onReset={onResetProgress} />
+      <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />
     </aside>
   </div>
 }

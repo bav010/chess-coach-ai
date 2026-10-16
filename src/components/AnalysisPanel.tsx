@@ -18,6 +18,8 @@ type Props = {
   engineLabel: string
   status: GameStatus
   live: ReviewMove | null
+  /** Оценка хода включена (переключатель над доской). */
+  marksOn: boolean
   analysisOn: boolean
 }
 
@@ -27,7 +29,7 @@ const END_TEXT: Record<string, string> = {
 }
 
 /** Панель анализа: оценка, лучшие линии, состояние расчёта и текстовый разбор последнего хода. */
-export default function AnalysisPanel({ fen, turn, entry, score, busy, error, engineState, engineLabel, status, live, analysisOn }: Props) {
+export default function AnalysisPanel({ fen, turn, entry, score, busy, error, engineState, engineLabel, status, live, marksOn, analysisOn }: Props) {
   const lines = entry?.lines ?? []
   const best = lines[0]
   return <section className="panel analysis-panel">
@@ -57,7 +59,9 @@ export default function AnalysisPanel({ fen, turn, entry, score, busy, error, en
     {error && <p className="tiny">{error}</p>}
     {engineState === 'error' && <p className="tiny">Не удалось загрузить движок. Обнови страницу; нужен современный браузер с поддержкой WebAssembly.</p>}
 
-    <div className="sub-head">Разбор хода</div>
-    <ExplainMove move={live} />
+    {marksOn && <>
+      <div className="sub-head">Оценка хода</div>
+      <ExplainMove move={live} />
+    </>}
   </section>
 }

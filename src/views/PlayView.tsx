@@ -8,7 +8,7 @@ import PlayerStrip from '../components/PlayerStrip'
 import PlaySetup, { type GameConfig } from '../components/PlaySetup'
 import PromoPicker from '../components/PromoPicker'
 import ProgressPanel from '../components/ProgressPanel'
-import { calibrate, pickBotMove, thinkTimeMs } from '../lib/bot'
+import { calibrate, humanDelayMs, lineGapCp, pickBotMove, thinkTimeMs } from '../lib/bot'
 import { ChessClock, type ClockSnapshot, type TimeControl } from '../lib/clock'
 import {
   START_FEN, captures, hasMatingMaterial, opposite, replay, splitUci, statusOf,
@@ -25,6 +25,7 @@ type Props = {
   sessions: SavedSession[]
   onSaveSession: (s: Pick<SavedSession, 'result' | 'plies' | 'pgn'>) => void
   onDownload: (s: SavedSession) => void
+  onOpenSession: (s: SavedSession) => void
   onResetProgress: () => void
   onReview: (seed: Omit<GameSeed, 'nonce'>) => void
   engineError: boolean
@@ -32,7 +33,6 @@ type Props = {
 
 type ManualEnd = { result: '1-0' | '0-1' | '1/2-1/2'; reason: EndReason }
 
-const MIN_BOT_DELAY = 350
 const nowMs = () => performance.now()
 
 const REASON_TEXT: Record<EndReason, string> = {
@@ -51,7 +51,7 @@ export function formatBalance(b: number): string {
   return b > 0 ? `+${b}` : b < 0 ? `−${-b}` : '0'
 }
 
-export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDownload, onResetProgress, onReview, engineError }: Props) {
+export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDownload, onOpenSession, onResetProgress, onReview, engineError }: Props) {
   const [cfg, setCfg] = useState<GameConfig | null>(null)
   const [gameId, setGameId] = useState(0)
   const [ucis, setUcisState] = useState<string[]>([])
@@ -190,7 +190,13 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       if (ac.signal.aborted || !alive) return
       const uci = pickBotMove(a.bestMoveUci, a.lines.map(l => ({ uci: l.pv[0] })), settings.slipChance)
       if (!uci) return
-      const wait = MIN_BOT_DELAY - (nowMs() - startedAt)
+      // «Человеческая» пауза: зависит от рейтинга, сложности позиции и часов; время поиска в неё входит
+      const pos = repRef.current.chess
+      const delay = humanDelayMs({
+        elo: cfg.elo, legalMoves: pos.moves().length, inCheck: pos.inCheck(), gapCp: lineGapCp(a.lines),
+        ply: history.length, remainingMs: clock ? clock.remaining(bot, nowMs()) : null, incrementMs: cfg.tc.incrementMs,
+      })
+      const wait = delay - (nowMs() - startedAt)
       if (wait > 0) await new Promise(r => setTimeout(r, wait))
       if (ac.signal.aborted || !alive) return
       if (ucisRef.current.length !== history.length) return
@@ -302,7 +308,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     return <div className="main-grid">
       <PlaySetup prefs={prefs} onPrefs={onPrefs} onStart={startGame} engineError={engineError} />
       <aside className="right-column">
-        <ProgressPanel sessions={sessions} onDownload={onDownload} onReset={onResetProgress} />
+        <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />
       </aside>
     </div>
   }
@@ -349,7 +355,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       </div>
       {reviewable && <div className="board-actions">
         <button className="btn primary" data-testid="review-btn"
-          onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}>Разобрать партию</button>
+          onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}>🔍 Разобрать партию</button>
       </div>}
     </section>
 
@@ -365,7 +371,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
         </div>
         <p className="tiny">Просмотр истории не мешает партии: часы и бот продолжают работать.</p>
       </section>
-      <ProgressPanel sessions={sessions} onDownload={onDownload} onReset={onResetProgress} />
+      <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />
     </aside>
   </div>
 }

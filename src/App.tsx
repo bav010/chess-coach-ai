@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { analysisEngine } from './engine'
 import { usePrefs } from './hooks/usePrefs'
 import { addSession, clearSessions, loadSessions, type SavedSession } from './storage'
+import { parsePgn } from './lib/pgn'
 import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView from './views/PlayView'
 
@@ -44,6 +45,19 @@ export default function App() {
     setMode('analysis')
   }
 
+  /** Сохранённая партия — в режим анализа одним кликом (с запуском разбора). */
+  function openSession(s: SavedSession) {
+    try {
+      const p = parsePgn(s.pgn)
+      // партии из режима «Игра с ботом» подписаны «Вы» — по этому восстанавливаем, за кого играл пользователь
+      const userColor = p.white === 'Вы' ? 'w' : p.black === 'Вы' ? 'b' : null
+      setSeed({ startFen: p.startFen, ucis: p.ucis, userColor, autoReview: true, nonce: Date.now() })
+      setMode('analysis')
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Не удалось открыть партию')
+    }
+  }
+
   const engineLabel = engineState === 'ready' ? 'Stockfish готов'
     : engineState === 'loading' ? 'Stockfish загружается…' : 'Stockfish не загрузился'
 
@@ -71,13 +85,13 @@ export default function App() {
     {/* Оба режима остаются смонтированными: партия с ботом и её часы не теряются при переключении вкладок */}
     <div hidden={mode !== 'analysis'}>
       <AnalysisView key={seed?.nonce ?? 0} seed={seed} prefs={prefs} onPrefs={updatePrefs} sessions={sessions}
-        onSaveSession={saveSession} onDownload={downloadPgn} onResetProgress={resetProgress}
+        onSaveSession={saveSession} onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress}
         engineState={engineState} engineLabel={engineLabel} active={mode === 'analysis'} />
     </div>
     <div hidden={mode !== 'play'}>
       <PlayView prefs={prefs} onPrefs={updatePrefs} sessions={sessions} onSaveSession={saveSession}
-        onDownload={downloadPgn} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} />
+        onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.2.1</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> MVP 0.2.2</span></footer>
   </main>
 }

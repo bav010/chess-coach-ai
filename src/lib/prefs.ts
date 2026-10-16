@@ -6,6 +6,8 @@ export type Prefs = {
   showPanel: boolean
   showBar: boolean
   showArrows: boolean
+  /** Значки и разбор оценки хода (блестящий, ошибка, зевок…). */
+  showMarks: boolean
   arrowOpacity: number
   arrowWidth: number
   arrowCount: number
@@ -21,6 +23,7 @@ export const DEFAULT_PREFS: Prefs = {
   showPanel: true,
   showBar: true,
   showArrows: true,
+  showMarks: true,
   arrowOpacity: 0.85,
   arrowWidth: 0.16,
   arrowCount: 3,
@@ -46,6 +49,7 @@ export function loadPrefs(): Prefs {
       showPanel: d.showPanel ?? DEFAULT_PREFS.showPanel,
       showBar: d.showBar ?? DEFAULT_PREFS.showBar,
       showArrows: d.showArrows ?? DEFAULT_PREFS.showArrows,
+      showMarks: d.showMarks ?? DEFAULT_PREFS.showMarks,
       arrowOpacity: clamp(d.arrowOpacity, 0.2, 1, DEFAULT_PREFS.arrowOpacity),
       arrowWidth: clamp(d.arrowWidth, 0.06, 0.3, DEFAULT_PREFS.arrowWidth),
       arrowCount: Math.round(clamp(d.arrowCount, 0, 5, DEFAULT_PREFS.arrowCount)),
