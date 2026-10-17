@@ -7,6 +7,7 @@ import Board, { type ArrowSpec } from '../components/Board'
 import EvalBar from '../components/EvalBar'
 import MoveList from '../components/MoveList'
 import PgnImport from '../components/PgnImport'
+import PositionEditor from '../components/PositionEditor'
 import PromoPicker from '../components/PromoPicker'
 import ProgressPanel from '../components/ProgressPanel'
 import ReviewSection from '../components/ReviewSection'
@@ -66,6 +67,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   const [message, setMessage] = useState(seed ? 'Партия загружена. Листайте ходы или запустите разбор.' : 'Выбери белую фигуру, затем клетку для хода.')
   const [showSettings, setShowSettings] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [showEditor, setShowEditor] = useState(false)
   const [tab, setTab] = useState<Tab>('analysis')
   const [trainerOn, setTrainerOn] = useState(false)
   const [trainerSide, setTrainerSide] = useState<Color | 'both'>('both')
@@ -265,6 +267,13 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
     setMessage(`Партия загружена${p.white || p.black ? `: ${p.white ?? '?'} — ${p.black ?? '?'}` : ''}. Листайте ходы или запустите разбор.`)
   }
 
+  function loadPosition(fen: string) {
+    setStartFen(fen); setUcis([]); setViewPly(0); setUserColor(null)
+    setOrientation(new Chess(fen).turn())
+    clearSelection(); setShowEditor(false); setTab('analysis')
+    setMessage('Позиция расставлена. Анализ запущен: можно играть ходы за обе стороны.')
+  }
+
   function saveSession() {
     const full = chessAtPly(startFen, ucis, ucis.length)
     const st = statusOf(full)
@@ -352,8 +361,10 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         <button className="btn" onClick={undo} disabled={ucis.length === 0}>↶ Отменить ход</button>
         <button className="btn" onClick={saveSession} disabled={ucis.length === 0}>Сохранить сессию</button>
         <button className="btn" onClick={() => setShowImport(s => !s)} data-testid="import-btn">Загрузить PGN</button>
+        <button className={`btn ${showEditor ? 'active' : ''}`} onClick={() => setShowEditor(s => !s)} data-testid="editor-btn">Расставить позицию</button>
       </div>
       {showImport && <PgnImport onLoad={loadPgn} />}
+      {showEditor && <PositionEditor initialFen={chess.fen()} onApply={loadPosition} onCancel={() => setShowEditor(false)} />}
     </section>
 
     <aside className="right-column">

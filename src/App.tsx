@@ -5,9 +5,10 @@ import { addSession, clearSessions, loadSessions, type SavedSession } from './st
 import { parsePgn } from './lib/pgn'
 import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView from './views/PlayView'
+import PuzzleView from './views/PuzzleView'
 
 type EngineState = 'loading' | 'ready' | 'error'
-type Mode = 'analysis' | 'play'
+type Mode = 'analysis' | 'play' | 'tactics'
 
 function downloadPgn(s: SavedSession) {
   const blob = new Blob([s.pgn], { type: 'application/x-chess-pgn' })
@@ -80,6 +81,7 @@ export default function App() {
     <nav className="mode-tabs" role="tablist" aria-label="Режим">
       <button role="tab" aria-selected={mode === 'analysis'} className={`mode-tab ${mode === 'analysis' ? 'active' : ''}`} onClick={() => setMode('analysis')} data-testid="mode-analysis">Анализ</button>
       <button role="tab" aria-selected={mode === 'play'} className={`mode-tab ${mode === 'play' ? 'active' : ''}`} onClick={() => setMode('play')} data-testid="mode-play">Игра с ботом</button>
+      <button role="tab" aria-selected={mode === 'tactics'} className={`mode-tab ${mode === 'tactics' ? 'active' : ''}`} onClick={() => setMode('tactics')} data-testid="mode-tactics">Задачи</button>
     </nav>
 
     {/* Оба режима остаются смонтированными: партия с ботом и её часы не теряются при переключении вкладок */}
@@ -92,6 +94,9 @@ export default function App() {
       <PlayView prefs={prefs} onPrefs={updatePrefs} sessions={sessions} onSaveSession={saveSession}
         onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.2.2</span></footer>
+    <div hidden={mode !== 'tactics'}>
+      <PuzzleView active={mode === 'tactics'} />
+    </div>
+    <footer><span>CHESS COACH AI <i>•</i> MVP 0.3.1</span></footer>
   </main>
 }

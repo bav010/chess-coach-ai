@@ -116,29 +116,56 @@ export type DelayInput = {
   ply: number
   remainingMs: number | null
   incrementMs: number
+  /** Начальное время бота на партию (null — без часов). Задаёт «темп» партии. */
+  baseMs?: number | null
   rnd?: () => number
 }
 
+/** Время «на ход» при данном контроле: партия ≈ 40 ходов; без часов — спокойный темп 5 с. */
+export function paceMs(baseMs: number | null | undefined, incrementMs: number): number {
+  if (baseMs == null) return 5000
+  return Math.max(400, (baseMs + 40 * incrementMs) / 40)
+}
+
 /**
- * «Человеческая» пауза перед ходом бота, мс. Растёт с рейтингом (сильный бот «думает» дольше) и со
- * сложностью позиции (много ходов, близкие по силе варианты), сокращается для вынужденных ходов,
- * очевидных ответов и начала партии, и никогда не съедает больше доли оставшегося времени.
+ * «Человеческая» пауза перед ходом бота, мс. Складывается из темпа партии (минутная партия — доли
+ * секунды на ход, пятиминутная — несколько секунд), рейтинга (сильный игрок быстрее видит нужный ход,
+ * слабый сомневается дольше), сложности позиции (дебют и очевидные ходы — почти мгновенно, вынужденный
+ * ответ — сразу, острый момент — долго) и случайного разброса с редкими долгими раздумьями и быстрыми
+ * ходами. Никогда не превышает долю остатка времени и 2,5 темпа партии.
  */
 export function humanDelayMs(i: DelayInput): number {
   const rnd = i.rnd ?? Math.random
-  const cap = i.remainingMs === null ? Infinity : Math.min(i.remainingMs / 12 + i.incrementMs * 0.6, i.remainingMs * 0.4)
-  if (i.legalMoves <= 1) return Math.max(250, Math.min(cap, Math.round(400 + rnd() * 300)))
-  const base = 1200 + (clampElo(i.elo) / ELO_MAX) * 3300
-  let c = Math.max(0.6, Math.min(1.5, i.legalMoves / 30))
-  if (i.inCheck) c *= 0.6
+  const pace = paceMs(i.baseMs, i.incrementMs)
+  const remaining = i.remainingMs
+  const cap = Math.min(
+    pace * 2.5,
+    remaining === null ? Infinity : Math.min(remaining / 12 + i.incrementMs * 0.5, remaining * 0.3),
+  )
+  const floor = Math.min(250, cap)
+  if (i.legalMoves <= 1) return Math.round(Math.max(floor, Math.min(cap, pace * (0.06 + rnd() * 0.08))))
+
+  // рейтинг: 400 → ×1.25, 3200 → ×0.55
+  const eloF = 1.25 - 0.7 * (clampElo(i.elo) - ELO_MIN) / (ELO_MAX - ELO_MIN)
+  // сложность
+  let c = Math.max(0.5, Math.min(1.4, i.legalMoves / 32))
+  if (i.inCheck) c *= 0.55
   if (i.gapCp !== null) {
-    if (i.gapCp >= 300) c *= 0.45
-    else if (i.gapCp >= 120) c *= 0.7
-    else if (i.gapCp <= 25) c *= 1.45
+    if (i.gapCp >= 400) c *= 0.3
+    else if (i.gapCp >= 150) c *= 0.55
+    else if (i.gapCp >= 60) c *= 0.9
+    else if (i.gapCp <= 25) c *= 1.7
+    else c *= 1.2
   }
-  if (i.ply < 12) c *= 0.55
-  c *= 0.75 + rnd() * 0.5
-  return Math.round(Math.max(300, Math.min(base * c, 12_000, cap)))
+  // дебют: ходы «из головы»; чем выше рейтинг, тем лучше теория
+  if (i.ply < 16) c *= i.ply < 6 ? 0.12 : 0.12 + (i.ply - 6) * 0.07
+  // разброс: примерно логнормальный (сумма трёх равномерных) + редкие долгие и быстрые ходы
+  const z = (rnd() + rnd() + rnd() - 1.5) * 2
+  let v = Math.exp(0.6 * z)
+  const r = rnd()
+  if (r > 0.92) v *= 1.8
+  else if (r < 0.15) v *= 0.4
+  return Math.round(Math.max(floor, Math.min(pace * eloF * c * v, cap)))
 }
 
 /** Разрыв (сантипешки) между первой и второй линиями; мат считается очень большой оценкой. */

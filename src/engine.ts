@@ -221,3 +221,5 @@ export class Engine {
 export const analysisEngine = new Engine()
 /** Отдельный движок для ходов бота. */
 export const botEngine = new Engine()
+/** Движок проверки ходов в режиме «Задачи». */
+export const puzzleEngine = new Engine()

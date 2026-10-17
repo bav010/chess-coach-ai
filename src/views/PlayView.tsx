@@ -8,7 +8,7 @@ import PlayerStrip from '../components/PlayerStrip'
 import PlaySetup, { type GameConfig } from '../components/PlaySetup'
 import PromoPicker from '../components/PromoPicker'
 import ProgressPanel from '../components/ProgressPanel'
-import { calibrate, humanDelayMs, lineGapCp, pickBotMove, thinkTimeMs } from '../lib/bot'
+import { calibrate, humanDelayMs, lineGapCp, paceMs, pickBotMove, thinkTimeMs } from '../lib/bot'
 import { ChessClock, type ClockSnapshot, type TimeControl } from '../lib/clock'
 import {
   START_FEN, captures, hasMatingMaterial, opposite, replay, splitUci, statusOf,
@@ -179,7 +179,13 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       const settings = calibrate(cfg.elo)
       const clock = clockRef.current
       const remaining = clock ? clock.remaining(bot, nowMs()) : null
-      const movetime = thinkTimeMs(cfg.elo, remaining, cfg.tc.incrementMs)
+      const baseMs = bot === 'w' ? cfg.tc.whiteMs : cfg.tc.blackMs
+      // поиск не должен быть дольше темпа партии; в дебюте — короткий
+      const movetime = Math.max(250, Math.min(
+        thinkTimeMs(cfg.elo, remaining, cfg.tc.incrementMs),
+        paceMs(baseMs, cfg.tc.incrementMs) * 1.2,
+        history.length < 12 ? 500 : Infinity,
+      ))
       const a = await botEngine.search(START_FEN, history, {
         depth: settings.depth ?? 40,
         movetime,
@@ -195,6 +201,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       const delay = humanDelayMs({
         elo: cfg.elo, legalMoves: pos.moves().length, inCheck: pos.inCheck(), gapCp: lineGapCp(a.lines),
         ply: history.length, remainingMs: clock ? clock.remaining(bot, nowMs()) : null, incrementMs: cfg.tc.incrementMs,
+        baseMs,
       })
       const wait = delay - (nowMs() - startedAt)
       if (wait > 0) await new Promise(r => setTimeout(r, wait))

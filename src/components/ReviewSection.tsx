@@ -49,6 +49,6 @@ export default function ReviewSection(p: Props) {
         {(Object.keys(QUALITY) as ReviewQuality[]).map(q => <option key={q} value={q}>{QUALITY[q].label} — глубина {QUALITY[q].depth}, до {QUALITY[q].movetime} мс на позицию</option>)}
       </select>
     </label>
-    <button className="btn primary full" onClick={p.onStart} disabled={p.engineError} data-testid="start-review">{partial ? 'Продолжить разбор' : 'Разобрать партию'}</button>
+    <button className="btn primary full" onClick={p.onStart} disabled={p.engineError} data-testid="start-review">{partial ? 'Продолжить разбор' : '🔍 Разобрать партию'}</button>
   </section>
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  calibrate, clampElo, humanDelayMs, lineGapCp, pickBotMove, slipForElo, thinkTimeMs,
+  calibrate, clampElo, humanDelayMs, lineGapCp, paceMs, pickBotMove, slipForElo, thinkTimeMs,
   ENGINE_MAX_ELO, ENGINE_MIN_ELO,
 } from './bot'
 
@@ -78,30 +78,50 @@ describe('промахи слабых уровней', () => {
 })
 
 describe('humanDelayMs', () => {
-  const base = { legalMoves: 30, inCheck: false, gapCp: 60, ply: 30, remainingMs: null, incrementMs: 0, rnd: () => 0.5 }
-  it('сильный бот думает дольше слабого', () => {
-    expect(humanDelayMs({ ...base, elo: 2800 })).toBeGreaterThan(humanDelayMs({ ...base, elo: 600 }))
+  const base = { legalMoves: 30, inCheck: false, gapCp: 60, ply: 30, remainingMs: null, incrementMs: 0, baseMs: null, rnd: () => 0.5 }
+  it('чем выше рейтинг, тем короче пауза', () => {
+    expect(humanDelayMs({ ...base, elo: 2800 })).toBeLessThan(humanDelayMs({ ...base, elo: 600 }))
   })
-  it('вынужденный ход — быстро, сложная позиция — дольше', () => {
+  it('вынужденный ход и очевидный ответ — быстро, сложная позиция — дольше', () => {
     const forced = humanDelayMs({ ...base, elo: 1500, legalMoves: 1 })
     const tricky = humanDelayMs({ ...base, elo: 1500, gapCp: 10 })
     const obvious = humanDelayMs({ ...base, elo: 1500, gapCp: 500 })
-    expect(forced).toBeLessThan(900)
+    expect(forced).toBeLessThan(obvious)
     expect(obvious).toBeLessThan(tricky)
   })
-  it('начало партии быстрее середины', () => {
-    expect(humanDelayMs({ ...base, elo: 1500, ply: 4 })).toBeLessThan(humanDelayMs({ ...base, elo: 1500 }))
+  it('в дебюте почти не думает', () => {
+    const opening = humanDelayMs({ ...base, elo: 1500, ply: 2 })
+    expect(opening).toBeLessThan(humanDelayMs({ ...base, elo: 1500 }) / 4)
+    expect(opening).toBeLessThan(1000)
+  })
+  it('зависит от длины партии: минутная партия — доли секунды, пятиминутная — секунды', () => {
+    const bullet = humanDelayMs({ ...base, elo: 1500, gapCp: 10, baseMs: 60_000, remainingMs: 60_000 })
+    const blitz = humanDelayMs({ ...base, elo: 1500, gapCp: 10, baseMs: 300_000, remainingMs: 300_000 })
+    expect(bullet).toBeLessThanOrEqual(3750)
+    expect(blitz).toBeGreaterThan(bullet * 2)
+    expect(blitz).toBeGreaterThan(3000)
   })
   it('не съедает часы: при малом остатке времени пауза короткая', () => {
-    const t = humanDelayMs({ ...base, elo: 3000, remainingMs: 6000 })
-    expect(t).toBeLessThanOrEqual(600)
+    const t = humanDelayMs({ ...base, elo: 600, remainingMs: 6000, baseMs: 60_000, rnd: () => 0.999 })
+    expect(t).toBeLessThanOrEqual(1800)
     expect(t).toBeGreaterThanOrEqual(250)
+  })
+  it('паузы разнообразны: при одной и той же позиции разброс значительный', () => {
+    let seed = 7
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
+    const xs = Array.from({ length: 200 }, () => humanDelayMs({ ...base, elo: 1500, baseMs: 300_000, remainingMs: 250_000, rnd }))
+    const mean = xs.reduce((a, b) => a + b, 0) / xs.length
+    const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length)
+    expect(sd / mean).toBeGreaterThan(0.4)
+    expect(Math.max(...xs)).toBeGreaterThan(Math.min(...xs) * 4)
   })
   it('всегда в разумных пределах', () => {
     for (const rnd of [() => 0, () => 0.999]) {
-      const t = humanDelayMs({ ...base, elo: 3200, gapCp: 0, legalMoves: 45, rnd })
-      expect(t).toBeGreaterThanOrEqual(300)
-      expect(t).toBeLessThanOrEqual(12_000)
+      for (const baseMs of [null, 60_000, 600_000]) {
+        const t = humanDelayMs({ ...base, elo: 400, gapCp: 0, legalMoves: 45, baseMs, rnd })
+        expect(t).toBeGreaterThanOrEqual(250)
+        expect(t).toBeLessThanOrEqual(paceMs(baseMs, 0) * 2.5)
+      }
     }
   })
 })
