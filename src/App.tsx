@@ -6,9 +6,10 @@ import { parsePgn } from './lib/pgn'
 import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView from './views/PlayView'
 import PuzzleView from './views/PuzzleView'
+import OpeningsView from './views/OpeningsView'
 
 type EngineState = 'loading' | 'ready' | 'error'
-type Mode = 'analysis' | 'play' | 'tactics'
+type Mode = 'analysis' | 'play' | 'tactics' | 'openings'
 
 function downloadPgn(s: SavedSession) {
   const blob = new Blob([s.pgn], { type: 'application/x-chess-pgn' })
@@ -82,6 +83,7 @@ export default function App() {
       <button role="tab" aria-selected={mode === 'analysis'} className={`mode-tab ${mode === 'analysis' ? 'active' : ''}`} onClick={() => setMode('analysis')} data-testid="mode-analysis">Анализ</button>
       <button role="tab" aria-selected={mode === 'play'} className={`mode-tab ${mode === 'play' ? 'active' : ''}`} onClick={() => setMode('play')} data-testid="mode-play">Игра с ботом</button>
       <button role="tab" aria-selected={mode === 'tactics'} className={`mode-tab ${mode === 'tactics' ? 'active' : ''}`} onClick={() => setMode('tactics')} data-testid="mode-tactics">Задачи</button>
+      <button role="tab" aria-selected={mode === 'openings'} className={`mode-tab ${mode === 'openings' ? 'active' : ''}`} onClick={() => setMode('openings')} data-testid="mode-openings">Дебюты</button>
     </nav>
 
     {/* Оба режима остаются смонтированными: партия с ботом и её часы не теряются при переключении вкладок */}
@@ -97,6 +99,9 @@ export default function App() {
     <div hidden={mode !== 'tactics'}>
       <PuzzleView active={mode === 'tactics'} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.3.1</span></footer>
+    <div hidden={mode !== 'openings'}>
+      <OpeningsView active={mode === 'openings'} />
+    </div>
+    <footer><span>CHESS COACH AI <i>•</i> v0.3.2-alpha</span></footer>
   </main>
 }

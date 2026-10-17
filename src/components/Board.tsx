@@ -4,7 +4,13 @@ import { glyph } from '../lib/glyphs'
 import type { MoveClass } from '../lib/classify'
 import MoveMark from './MoveMark'
 
-export type ArrowSpec = { from: Square; to: Square; /** 0 — главный вариант */ rank: number }
+export type ArrowSpec = {
+  from: Square; to: Square; /** 0 — главный вариант */ rank: number
+  /** Подпись-номер у острия (всегда показывается, независимо от настройки нумерации). */
+  label?: string
+  /** Свой цвет стрелки. */
+  color?: string
+}
 export type ArrowStyle = { opacity: number; width: number; numbering: boolean }
 
 type Props = {
@@ -25,6 +31,7 @@ type Props = {
 }
 
 const FILES = 'abcdefgh'
+const DEFAULT_ARROW_STYLE: ArrowStyle = { opacity: 0.85, width: 0.16, numbering: false }
 
 function squaresFor(orientation: Color): Square[][] {
   const ranks = orientation === 'w' ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8]
@@ -42,7 +49,7 @@ function center(sq: Square, orientation: Color): [number, number] {
 function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientation: Color; style: ArrowStyle }) {
   const head = style.width * 2.4
   return <svg className="board-arrows" viewBox="0 0 8 8" aria-hidden="true">
-    {arrows.map(a => {
+    {arrows.map((a, idx) => {
       const [x1, y1] = center(a.from, orientation)
       const [x2, y2] = center(a.to, orientation)
       const dx = x2 - x1, dy = y2 - y1
@@ -51,16 +58,16 @@ function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientati
       const bx = x2 - ux * head, by = y2 - uy * head
       const px = -uy * head * 0.6, py = ux * head * 0.6
       const main = a.rank === 0
-      const color = main ? '#f5a524' : '#3d9bff'
+      const color = a.color ?? (main ? '#f5a524' : '#3d9bff')
       const opacity = main ? style.opacity : style.opacity * 0.6
       const w = main ? style.width : style.width * 0.8
-      return <g key={`${a.from}${a.to}${a.rank}`} opacity={opacity} data-arrow={a.rank}>
+      return <g key={`${idx}${a.from}${a.to}${a.rank}`} opacity={a.label ? 0.9 : opacity} data-arrow={a.rank}>
         <line x1={x1} y1={y1} x2={bx} y2={by} stroke={color} strokeWidth={w} strokeLinecap="round" />
         <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill={color} />
-        {style.numbering && <g>
+        {(style.numbering || a.label) && <g>
           <circle cx={x2 + 0.3} cy={y2 - 0.3} r={0.19} fill="#111318" stroke={color} strokeWidth={0.04} />
           <text x={x2 + 0.3} y={y2 - 0.3} fontSize={0.24} fill="#fff" textAnchor="middle" dominantBaseline="central"
-            fontFamily="DM Mono, monospace" fontWeight={700}>{a.rank + 1}</text>
+            fontFamily="DM Mono, monospace" fontWeight={700}>{a.label ?? a.rank + 1}</text>
         </g>}
       </g>
     })}
@@ -100,6 +107,6 @@ export default function Board({ chess, orientation, selected, legal, lastMove, h
         {sq[1] === bottomRank && <small className="file-label">{sq[0]}</small>}
       </button>
     }))}
-    {arrows && arrows.length > 0 && arrowStyle && <Arrows arrows={arrows} orientation={orientation} style={arrowStyle} />}
+    {arrows && arrows.length > 0 && <Arrows arrows={arrows} orientation={orientation} style={arrowStyle ?? DEFAULT_ARROW_STYLE} />}
   </div>
 }
