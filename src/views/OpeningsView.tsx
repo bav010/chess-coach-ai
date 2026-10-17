@@ -3,6 +3,7 @@ import OpeningsLessons from '../components/OpeningsLessons'
 import OpeningsStudy from '../components/OpeningsStudy'
 import OpeningsTrainer from '../components/OpeningsTrainer'
 import { buildCatalog, type Catalog } from '../lib/openings'
+import { syncLessons } from '../lib/lessonSync'
 import { exportOpenings, importOpenings, loadOpenings, saveOpenings, type OpeningsData } from '../lib/openingsStore'
 
 type Sub = 'lessons' | 'study' | 'train'
@@ -22,6 +23,8 @@ export default function OpeningsView({ active }: { active: boolean }) {
   }, [active, catalog])
 
   useEffect(() => { saveOpenings(data) }, [data])
+  // пройденные уроки автоматически попадают в репертуар и считаются выученными
+  useEffect(() => { const s = syncLessons(data); if (s !== data) setData(s) }, [data])
 
   const update = useCallback((fn: (d: OpeningsData) => OpeningsData) => setData(d => fn(d)), [])
 

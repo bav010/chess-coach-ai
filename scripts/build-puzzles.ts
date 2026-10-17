@@ -43,7 +43,7 @@ for (const r of raws) {
 }
 
 // ограничение размера: не больше N на главную тему, чтобы база была сбалансирована
-const CAP = 70
+const CAP = 130
 const per: Record<string, number> = {}
 const final = out.filter(p => {
   const k = p.mate === 1 ? 'm1' : p.themes.find(t => userThemes.includes(t)) ?? 'x'

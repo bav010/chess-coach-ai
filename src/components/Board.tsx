@@ -46,12 +46,30 @@ function center(sq: Square, orientation: Color): [number, number] {
   return orientation === 'w' ? [f + 0.5, 7 - r + 0.5] : [7 - f + 0.5, r + 0.5]
 }
 
+/** Позиции кружков с номерами: у острия стрелки, а при наложении на чужой кружок — в других углах клетки или вдоль древка. */
+export function badgePositions(pts: { x1: number; y1: number; x2: number; y2: number }[], minDist = 0.46): [number, number][] {
+  const placed: [number, number][] = []
+  return pts.map(({ x1, y1, x2, y2 }) => {
+    const candidates: [number, number][] = [[x2 + 0.3, y2 - 0.3], [x2 - 0.3, y2 - 0.3], [x2 + 0.3, y2 + 0.3], [x2 - 0.3, y2 + 0.3]]
+    for (const t of [0.75, 0.55, 0.35, 0.2]) candidates.push([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t])
+    const ok = (c: [number, number]) => placed.every(q => Math.hypot(q[0] - c[0], q[1] - c[1]) >= minDist)
+    const pos = candidates.find(ok) ?? candidates[0]
+    placed.push(pos)
+    return pos
+  })
+}
+
 function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientation: Color; style: ArrowStyle }) {
   const head = style.width * 2.4
+  const geo = arrows.map(a => {
+    const [x1, y1] = center(a.from, orientation)
+    const [x2, y2] = center(a.to, orientation)
+    return { x1, y1, x2, y2 }
+  })
+  const badges = badgePositions(geo)
   return <svg className="board-arrows" viewBox="0 0 8 8" aria-hidden="true">
     {arrows.map((a, idx) => {
-      const [x1, y1] = center(a.from, orientation)
-      const [x2, y2] = center(a.to, orientation)
+      const { x1, y1, x2, y2 } = geo[idx]
       const dx = x2 - x1, dy = y2 - y1
       const len = Math.hypot(dx, dy) || 1
       const ux = dx / len, uy = dy / len
@@ -61,12 +79,13 @@ function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientati
       const color = a.color ?? (main ? '#f5a524' : '#3d9bff')
       const opacity = main ? style.opacity : style.opacity * 0.6
       const w = main ? style.width : style.width * 0.8
+      const [cx, cy] = badges[idx]
       return <g key={`${idx}${a.from}${a.to}${a.rank}`} opacity={a.label ? 0.9 : opacity} data-arrow={a.rank}>
         <line x1={x1} y1={y1} x2={bx} y2={by} stroke={color} strokeWidth={w} strokeLinecap="round" />
         <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill={color} />
-        {(style.numbering || a.label) && <g>
-          <circle cx={x2 + 0.3} cy={y2 - 0.3} r={0.19} fill="#111318" stroke={color} strokeWidth={0.04} />
-          <text x={x2 + 0.3} y={y2 - 0.3} fontSize={0.24} fill="#fff" textAnchor="middle" dominantBaseline="central"
+        {(style.numbering || a.label) && <g data-badge={a.label ?? a.rank + 1}>
+          <circle cx={cx} cy={cy} r={0.19} fill="#111318" stroke={color} strokeWidth={0.04} />
+          <text x={cx} y={cy} fontSize={0.24} fill="#fff" textAnchor="middle" dominantBaseline="central"
             fontFamily="DM Mono, monospace" fontWeight={700}>{a.label ?? a.rank + 1}</text>
         </g>}
       </g>

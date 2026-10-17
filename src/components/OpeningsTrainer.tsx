@@ -43,8 +43,9 @@ export default function OpeningsTrainer({ data, update, active }: Props) {
 
   const now = Date.now()
   const specs = useMemo(() => (rep ? new Map(cardSpecs(rep).map(s => [s.key, s])) : new Map<string, CardSpec>()), [rep])
-  const counts = rep ? countCards(rep, data.cards, now) : null
-  const plan = rep ? planDrill(rep, data.cards, now, mode) : null
+  const doneLessons = useMemo(() => new Set(Object.entries(data.lessons).filter(([, v]) => v.done).map(([k]) => k)), [data.lessons])
+  const counts = rep ? countCards(rep, data.cards, now, doneLessons) : null
+  const plan = rep ? planDrill(rep, data.cards, now, mode, 12, doneLessons) : null
 
   const chess = useMemo(() => {
     const c = new Chess()
@@ -187,14 +188,21 @@ export default function OpeningsTrainer({ data, update, active }: Props) {
       </>}
       {rep && !drill && !summary && <div className="trainer-start" data-testid="trainer-start">
         <p className="muted">Вы видите позицию и вспоминаете свой следующий ход. Ответы соперника — те, что заданы в репертуаре. Ошибочные позиции возвращаются чаще, хорошо выученные — реже.</p>
+        {data.repertoires.length > 1 && <label className="rep-select" style={{ display: 'block', margin: '10px 0' }}>
+          <span className="tiny">Репертуар для тренировки: </span>
+          <select value={rep.id} onChange={e => update(d => ({ ...d, activeId: e.target.value }))} data-testid="trainer-rep-select">
+            {data.repertoires.map(r => <option key={r.id} value={r.id}>{r.name} · {r.side === 'w' ? 'белые' : 'чёрные'} · линий: {r.lines.length}</option>)}
+          </select>
+        </label>}
         <div className="chips">
           <button className={`chip ${mode === 'due' ? 'active' : ''}`} onClick={() => setMode('due')} data-testid="mode-due">К повторению{counts ? ` (${counts.due + counts.new})` : ''}</button>
+          <button className={`chip ${mode === 'learned' ? 'active' : ''}`} onClick={() => setMode('learned')} data-testid="mode-learned">Повторить выученное{counts ? ` (${counts.learnedLines})` : ''}</button>
           <button className={`chip ${mode === 'all' ? 'active' : ''}`} onClick={() => setMode('all')} data-testid="mode-all">Все линии</button>
         </div>
         <div className="board-actions" style={{ marginTop: 14 }}>
           <button className="btn primary" onClick={begin} disabled={!plan || plan.lines.length === 0} data-testid="trainer-begin">▶ Начать тренировку{plan ? ` (${plan.lines.length} лин.)` : ''}</button>
         </div>
-        {plan && plan.lines.length === 0 && <p className="tiny" data-testid="trainer-empty">{rep.lines.length === 0 ? 'В репертуаре нет линий — добавьте их на вкладке «Изучение».' : `На сегодня всё повторено.${Number.isFinite(nextDueMs) ? ` Следующее повторение ${fmtDue(nextDueMs - now)}.` : ''} Можно выбрать «Все линии».`}</p>}
+        {plan && plan.lines.length === 0 && <p className="tiny" data-testid="trainer-empty">{rep.lines.length === 0 ? 'В репертуаре нет линий — добавьте их на вкладке «Каталог и репертуар» или пройдите урок.' : mode === 'learned' ? 'Выученных линий пока нет. Линия считается выученной, когда вы прошли по ней урок или верно отвечаете на все её позиции с интервалом 7+ дней.' : `На сегодня всё повторено.${Number.isFinite(nextDueMs) ? ` Следующее повторение ${fmtDue(nextDueMs - now)}.` : ''} Можно выбрать «Все линии».`}</p>}
       </div>}
       {summary && !drill && <div className="trainer-summary" data-testid="trainer-summary">
         <b>Тренировка завершена</b>

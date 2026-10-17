@@ -102,6 +102,6 @@ export default function App() {
     <div hidden={mode !== 'openings'}>
       <OpeningsView active={mode === 'openings'} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.3.2-alpha</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i>v0.3.3-alpha</span></footer>
   </main>
 }

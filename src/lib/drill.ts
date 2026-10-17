@@ -2,7 +2,7 @@
 import { isDue, urgency, type CardState } from './srs'
 import { lineCardIds, type Repertoire, type RepLine } from './repertoire'
 
-export type DrillMode = 'due' | 'all'
+export type DrillMode = 'due' | 'all' | 'learned'
 
 export type DrillPlan = { lines: RepLine[]; dueCards: number; newCards: number }
 
@@ -11,7 +11,14 @@ export type DrillPlan = { lines: RepLine[]; dueCards: number; newCards: number }
  * карточек, которым пора (новые + просроченные), самые «трудные» первыми. Режим «все»: все линии, сначала
  * те, где больше трудных карточек.
  */
-export function planDrill(rep: Repertoire, cards: Readonly<Record<string, CardState>>, now: number, mode: DrillMode, limit = 12): DrillPlan {
+/** Линия «выучена»: пройден урок по ней или все её позиции повторены с интервалом от 7 дней. */
+export function isLearnedLine(rep: Repertoire, line: RepLine, cards: Readonly<Record<string, CardState>>, doneLessons: ReadonlySet<string>): boolean {
+  if (line.lessons?.some(id => doneLessons.has(id))) return true
+  const ids = lineCardIds(rep, line)
+  return ids.length > 0 && ids.every(id => (cards[id]?.ivl ?? 0) >= 7)
+}
+
+export function planDrill(rep: Repertoire, cards: Readonly<Record<string, CardState>>, now: number, mode: DrillMode, limit = 12, doneLessons: ReadonlySet<string> = new Set()): DrillPlan {
   const lineIds = rep.lines.map(l => ({ line: l, ids: lineCardIds(rep, l) }))
   const allIds = new Set(lineIds.flatMap(x => x.ids))
   const need = new Set<string>()
@@ -22,6 +29,12 @@ export function planDrill(rep: Repertoire, cards: Readonly<Record<string, CardSt
     else if (isDue(c, now)) { need.add(id); dueCards++ }
   }
   const weight = (ids: string[]) => ids.reduce((s, id) => s + (cards[id] ? urgency(cards[id], now) : 0.5), 0)
+  if (mode === 'learned') {
+    // повторение выученного: все карточки линии уже с интервалом ≥ 7 дней; давно не повторявшиеся — первыми
+    const learned = lineIds.filter(x => isLearnedLine(rep, x.line, cards, doneLessons))
+    const oldest = (ids: string[]) => Math.min(...ids.map(id => cards[id]?.last ?? 0))
+    return { lines: learned.sort((a, b) => oldest(a.ids) - oldest(b.ids)).map(x => x.line).slice(0, limit), dueCards, newCards }
+  }
   if (mode === 'all') {
     const lines = [...lineIds].sort((a, b) => weight(b.ids) - weight(a.ids)).map(x => x.line)
     return { lines: lines.slice(0, limit), dueCards, newCards }
@@ -44,11 +57,12 @@ export function planDrill(rep: Repertoire, cards: Readonly<Record<string, CardSt
   return { lines: chosen, dueCards, newCards }
 }
 
-export type Counts = { total: number; new: number; due: number; learning: number; learned: number }
+export type Counts = { total: number; new: number; due: number; learning: number; learned: number; learnedLines: number }
 
-export function countCards(rep: Repertoire, cards: Readonly<Record<string, CardState>>, now: number): Counts {
+export function countCards(rep: Repertoire, cards: Readonly<Record<string, CardState>>, now: number, doneLessons: ReadonlySet<string> = new Set()): Counts {
   const ids = new Set(rep.lines.flatMap(l => lineCardIds(rep, l)))
-  const out: Counts = { total: ids.size, new: 0, due: 0, learning: 0, learned: 0 }
+  const out: Counts = { total: ids.size, new: 0, due: 0, learning: 0, learned: 0, learnedLines: 0 }
+  out.learnedLines = rep.lines.filter(l => isLearnedLine(rep, l, cards, doneLessons)).length
   for (const id of ids) {
     const c = cards[id]
     if (!c) { out.new++; continue }

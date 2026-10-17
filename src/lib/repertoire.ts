@@ -2,7 +2,11 @@
 import { Chess, type Color } from 'chess.js'
 import { splitUci } from './game'
 
-export type RepLine = { id: string; name: string; moves: string[]; note: string }
+export type RepLine = {
+  id: string; name: string; moves: string[]; note: string
+  /** Уроки, пройденные по этой линии: пройденный урок считается выученным дебютом. */
+  lessons?: string[]
+}
 
 export type Repertoire = {
   id: string
