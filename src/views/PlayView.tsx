@@ -249,6 +249,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       const pgn = toPgn(START_FEN, ucisRef.current, {
         Event: 'Chess Coach AI', White: cfg.userColor === 'w' ? 'Вы' : `Бот (~${cfg.elo})`,
         Black: cfg.userColor === 'b' ? 'Вы' : `Бот (~${cfg.elo})`, Result: end.result,
+        TimeControl: cfg.tc.whiteMs === null ? '-' : `${Math.round(cfg.tc.whiteMs / 1000)}+${Math.round(cfg.tc.incrementMs / 1000)}`,
       })
       onSaveSession({ result: end.result, plies: ucisRef.current.length, pgn })
     }

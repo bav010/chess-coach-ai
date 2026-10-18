@@ -23,6 +23,7 @@ import {
   assessMove, buildReport, positionScore, runReview,
   type PositionEval, type ReviewMove,
 } from '../lib/review'
+import { summarizeReview, type GameReview } from '../lib/gameStats'
 import { gameKey, loadReview, saveReview, type SavedSession, type TrainerEntry } from '../storage'
 
 export type GameSeed = {
@@ -40,6 +41,8 @@ type Props = {
   onPrefs: (patch: Partial<Prefs>) => void
   sessions: SavedSession[]
   onSaveSession: (s: Pick<SavedSession, 'result' | 'plies' | 'pgn'>) => void
+  /** Разбор партии завершён — итог попадает в личную статистику. */
+  onReviewDone?: (key: string, review: GameReview) => void
   onDownload: (s: SavedSession) => void
   onOpenSession: (s: SavedSession) => void
   onResetProgress: () => void
@@ -55,7 +58,7 @@ type ReviewState = { evals: PositionEval[]; running: boolean; done: number; tota
 
 const NAMES: Record<Color, string> = { w: 'Белые', b: 'Чёрные' }
 
-export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onDownload, onOpenSession, onResetProgress, engineState, engineLabel, active }: Props) {
+export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onReviewDone, onDownload, onOpenSession, onResetProgress, engineState, engineLabel, active }: Props) {
   const [startFen, setStartFen] = useState(seed?.startFen ?? START_FEN)
   const [ucis, setUcis] = useState<string[]>(seed?.ucis ?? [])
   const [viewPly, setViewPly] = useState(seed?.ucis.length ?? 0)
@@ -155,6 +158,8 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
           key: gKey, created_at: new Date().toISOString(), startFen, ucis, userColor, evals,
           trainer: loadReview(gKey)?.trainer ?? {},
         })
+        const sum = summarizeReview(startFen, ucis, evals, userColor)
+        if (sum) onReviewDone?.(gKey, sum)
       }
     } catch (e) {
       if (!ac.signal.aborted) {
@@ -162,7 +167,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         setMessage(e instanceof Error ? e.message : 'Ошибка разбора партии')
       }
     }
-  }, [review, fens, startFen, records, prefs.reviewQuality, gKey, ucis, userColor])
+  }, [review, fens, startFen, records, prefs.reviewQuality, gKey, ucis, userColor, onReviewDone])
 
   function cancelReview() {
     reviewAbort.current?.abort()

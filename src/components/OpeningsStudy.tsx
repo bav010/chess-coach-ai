@@ -48,6 +48,8 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
   const input = useBoardInput(chess, chess.turn(), play)
 
   function play(uci: string) {
+    // ход совпал со следующим ходом загруженной линии — идём по ней дальше, стрелки и название линии сохраняются
+    if (cursor < path.length && path[cursor] === uci) { setCursor(cursor + 1); setEngine(null); setInfo(''); return }
     const next = [...shown, uci]
     setPath(next); setCursor(next.length); setEngine(null); setInfo(''); setTitle('')
   }
@@ -71,8 +73,21 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
       out.push({ from: from as Square, to: to as Square, rank: i, label: String(i + 1), color: c.turn() === 'w' ? '#d3ff72' : '#ffb066' })
       try { c.move(splitUci(u)) } catch { break }
     }
+    if (out.length > 0) return out
+    // линия закончилась или это свой ход: подсказка — продолжения из каталога (самое разработанное — №1)
+    const seen = new Set<string>()
+    for (const m of repMoves) {
+      const { from, to } = splitUci(m)
+      seen.add(m); out.push({ from: from as Square, to: to as Square, rank: out.length, label: '★', color: '#ff7ad9' })
+    }
+    for (const cn of conts.slice(0, 4)) {
+      if (seen.has(cn.uci)) continue
+      const { from, to } = splitUci(cn.uci)
+      out.push({ from: from as Square, to: to as Square, rank: out.length, label: String(out.length + 1 - repMoves.length), color: '#6cb8ff' })
+    }
     return out
-  }, [fen, path, cursor, showAhead])
+  }, [fen, path, cursor, showAhead, conts, repMoves])
+  const lineAhead = cursor < path.length
   const last = shown.length ? splitUci(shown[shown.length - 1]) : null
 
   async function askEngine() {
@@ -128,7 +143,10 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
         <Board chess={chess} orientation={orientation} selected={input.selected} legal={input.legal} lastMove={last ? { from: last.from as Square, to: last.to as Square } : null}
           arrows={aheadArrows} onSquareClick={input.onSquare} />
       </div>
-      {aheadArrows.length > 0 && <p className="tiny" data-testid="arrow-legend">Стрелки с номерами — следующие ходы линии по порядку: <b style={{ color: '#d3ff72' }}>светлые — белые</b>, <b style={{ color: '#ffb066' }}>оранжевые — чёрные</b>. Нажимайте ▶, чтобы идти по ходам.</p>}
+      {aheadArrows.length > 0 && lineAhead && <p className="tiny" data-testid="arrow-legend">Стрелки с номерами — следующие ходы линии по порядку: <b style={{ color: '#d3ff72' }}>светлые — белые</b>, <b style={{ color: '#ffb066' }}>оранжевые — чёрные</b>. Ходите по стрелке или нажимайте ▶.</p>}
+      {aheadArrows.length > 0 && !lineAhead && <p className="tiny" data-testid="hint-legend">Подсказка — возможные ходы из каталога: <b style={{ color: '#6cb8ff' }}>синие стрелки</b> (№1 — самый разработанный){repMoves.length > 0 && <>, <b style={{ color: '#ff7ad9' }}>★ — ход из вашего репертуара</b></>}.</p>}
+      {showAhead && aheadArrows.length === 0 && !lineAhead && shown.length > 0 && <p className="tiny" data-testid="hint-none">Линия закончилась, и дальше в каталоге ходов нет. Можно играть своим ходом или спросить движок (кнопка справа).</p>}
+      {!showAhead && <p className="tiny">Подсказки скрыты. Нажмите «💡 Подсказка», чтобы показать стрелки.</p>}
       {input.promo && <PromoPicker color={chess.turn()} onPick={input.pickPromo} onCancel={input.cancelPromo} />}
 
       <div className="line-moves" data-testid="line-moves">
@@ -146,7 +164,7 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
         <button className="btn" onClick={() => goto(cursor + 1)} disabled={cursor >= path.length} aria-label="Вперёд" data-testid="study-next">▶</button>
         <button className="btn" onClick={() => goto(path.length)} disabled={cursor >= path.length} aria-label="В конец">⏭</button>
         <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="study-flip">⇅ Перевернуть</button>
-        <label className="chip"><input type="checkbox" checked={showAhead} onChange={e => setShowAhead(e.target.checked)} data-testid="ahead-toggle" /> Стрелки ходов</label>
+        <button className={`btn ${showAhead ? 'primary' : ''}`} onClick={() => setShowAhead(v => !v)} aria-pressed={showAhead} data-testid="ahead-toggle" title="Показать или скрыть стрелки-подсказки">💡 Подсказка{showAhead ? ': вкл' : ''}</button>
         <button className="btn" onClick={() => load([])} disabled={path.length === 0} data-testid="study-reset">Сбросить</button>
       </div>
       <div className="chip-group" style={{ marginTop: 10 }}><small>СМОТРЮ ЗА</small>

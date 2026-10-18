@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { analysisEngine } from './engine'
 import { usePrefs } from './hooks/usePrefs'
 import { addSession, clearSessions, loadSessions, type SavedSession } from './storage'
@@ -7,9 +7,11 @@ import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView from './views/PlayView'
 import PuzzleView from './views/PuzzleView'
 import OpeningsView from './views/OpeningsView'
+import StatsView from './views/StatsView'
+import { attachReview, backfillReviews, deriveGame, loadGames, saveGames, syncFromSessions, upsertGame, type GameReview, type GameStat } from './lib/gameStats'
 
 type EngineState = 'loading' | 'ready' | 'error'
-type Mode = 'analysis' | 'play' | 'tactics' | 'openings'
+type Mode = 'analysis' | 'play' | 'tactics' | 'openings' | 'stats'
 
 function downloadPgn(s: SavedSession) {
   const blob = new Blob([s.pgn], { type: 'application/x-chess-pgn' })
@@ -27,6 +29,15 @@ export default function App() {
   const [engineState, setEngineState] = useState<EngineState>('loading')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadSessions())
   const [prefs, updatePrefs] = usePrefs()
+  // Личная статистика: одна запись на партию; при запуске подтягиваем уже сохранённые сессии и разборы (без дублей)
+  const [games, setGames] = useState<GameStat[]>(() => {
+    const g = backfillReviews(syncFromSessions(loadGames(), loadSessions()))
+    saveGames(g)
+    return g
+  })
+  function changeGames(fn: (g: GameStat[]) => GameStat[]) {
+    setGames(cur => { const next = fn(cur); if (next !== cur) saveGames(next); return next })
+  }
 
   // Движок грузится заранее, пока пользователь осматривается (≈2 МБ).
   useEffect(() => {
@@ -34,8 +45,13 @@ export default function App() {
   }, [])
 
   function saveSession(s: Pick<SavedSession, 'result' | 'plies' | 'pgn'>) {
-    setSessions(addSession(s))
+    const list = addSession(s)
+    setSessions(list)
+    const g = deriveGame(list[0])
+    if (g) changeGames(cur => upsertGame(cur, g))
   }
+
+  const reviewDone = useCallback((key: string, review: GameReview) => changeGames(cur => attachReview(cur, key, review)), [])
 
   function resetProgress() {
     if (window.confirm('Удалить все сохранённые сессии в этом браузере?')) setSessions(clearSessions())
@@ -84,12 +100,13 @@ export default function App() {
       <button role="tab" aria-selected={mode === 'play'} className={`mode-tab ${mode === 'play' ? 'active' : ''}`} onClick={() => setMode('play')} data-testid="mode-play">Игра с ботом</button>
       <button role="tab" aria-selected={mode === 'tactics'} className={`mode-tab ${mode === 'tactics' ? 'active' : ''}`} onClick={() => setMode('tactics')} data-testid="mode-tactics">Задачи</button>
       <button role="tab" aria-selected={mode === 'openings'} className={`mode-tab ${mode === 'openings' ? 'active' : ''}`} onClick={() => setMode('openings')} data-testid="mode-openings">Дебюты</button>
+      <button role="tab" aria-selected={mode === 'stats'} className={`mode-tab ${mode === 'stats' ? 'active' : ''}`} onClick={() => setMode('stats')} data-testid="mode-stats">Статистика</button>
     </nav>
 
     {/* Оба режима остаются смонтированными: партия с ботом и её часы не теряются при переключении вкладок */}
     <div hidden={mode !== 'analysis'}>
       <AnalysisView key={seed?.nonce ?? 0} seed={seed} prefs={prefs} onPrefs={updatePrefs} sessions={sessions}
-        onSaveSession={saveSession} onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress}
+        onSaveSession={saveSession} onReviewDone={reviewDone} onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress}
         engineState={engineState} engineLabel={engineLabel} active={mode === 'analysis'} />
     </div>
     <div hidden={mode !== 'play'}>
@@ -102,6 +119,9 @@ export default function App() {
     <div hidden={mode !== 'openings'}>
       <OpeningsView active={mode === 'openings'} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i>v0.3.3-alpha</span></footer>
+    <div hidden={mode !== 'stats'}>
+      <StatsView active={mode === 'stats'} games={games} onGo={setMode} onResetGames={() => { saveGames([]); setGames([]) }} />
+    </div>
+    <footer><span>CHESS COACH AI <i>•</i> v0.3.4-alpha</span></footer>
   </main>
 }

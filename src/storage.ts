@@ -39,6 +39,16 @@ export function addSession(s: Pick<SavedSession, 'result' | 'plies' | 'pgn'>): S
   return list
 }
 
+/** Объединяет сессии из резервной копии с имеющимися (без дублей по PGN), новые сверху. */
+export function mergeSessions(extra: readonly SavedSession[]): SavedSession[] {
+  const cur = loadSessions()
+  const seen = new Set(cur.map(s => s.pgn))
+  const add = extra.filter(s => typeof s?.pgn === 'string' && typeof s?.plies === 'number' && typeof s?.id === 'number' && !seen.has(s.pgn))
+  const list = [...cur, ...add].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, MAX_SESSIONS)
+  persist(list)
+  return list
+}
+
 export function clearSessions(): SavedSession[] {
   persist([])
   return []
