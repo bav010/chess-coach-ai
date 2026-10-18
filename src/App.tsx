@@ -97,7 +97,7 @@ export default function App() {
     <header className="topbar">
       <div className="brand-mark">♞</div>
       <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">ТВОЙ ПЕРСОНАЛЬНЫЙ ШАХМАТНЫЙ ТРЕНЕР</div></div>
-      <div className="top-status" title={engineStatus}><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{"Сервис онлайн"}</div>
+      <div className="top-status" title={engineStatus}><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{""}</div>
       <button className={`avatar-btn ${mode === 'account' ? 'active' : ''} ${cloud.status === 'in' ? 'cloud-on' : ''}`} onClick={() => (mode === 'account' ? setMode(lastMode) : setMode('account'))}
         aria-label={`Аккаунт: ${me.name}`} title="Аккаунт, статистика и настройки" data-testid="account-btn">
         <Avatar profile={me} size={34} /><span className="avatar-name">{me.name}</span>

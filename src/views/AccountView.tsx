@@ -98,7 +98,7 @@ export default function AccountView({ active, games, profiles, cloud, onProfiles
         <div className="panel-head"><div><div className="eyebrow">НА ЭТОМ УСТРОЙСТВЕ</div><h2>Аккаунты</h2></div></div>
         <p className="tiny">У каждого аккаунта своя статистика, партии, задачи, дебюты и настройки. Локальные аккаунты без пароля — это разделение данных на устройстве. Чтобы войти с другого устройства, привяжите аккаунт к почте на вкладке «Вход и облако».</p>
         <ul className="acc-list">{profiles.list.map(p => <li key={p.id} className={p.id === profiles.current ? 'current' : ''} data-testid={`acc-item-${p.id}`}>
-          <Avatar profile={p} size={32} /><span>{p.name}{p.cloud && <em> · {p.cloud.email}</em>}{p.id === profiles.current && <em> · текущий</em>}</span>
+          <span>{p.name}{p.cloud && <em> · {p.cloud.email}</em>}{p.id === profiles.current && <em> · текущий</em>}</span>
           {p.id !== profiles.current && <button className="btn" onClick={() => switchProfile(p.id)} data-testid={`acc-switch-${p.id}`}>Войти</button>}
           {p.id !== 'default' && <button className="btn" onClick={() => remove(p.id)} data-testid={`acc-delete-${p.id}`}>Удалить</button>}
         </li>)}</ul>
