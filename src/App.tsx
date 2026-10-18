@@ -10,6 +10,8 @@ import OpeningsView from './views/OpeningsView'
 import AccountView from './views/AccountView'
 import Avatar from './components/Avatar'
 import { loadProfiles, type ProfileStore } from './lib/profile'
+import { useCloud } from './hooks/useCloud'
+import { markGamesReset } from './lib/sync'
 import { attachReview, backfillReviews, deriveGame, loadGames, saveGames, syncFromSessions, upsertGame, type GameReview, type GameStat } from './lib/gameStats'
 
 type EngineState = 'loading' | 'ready' | 'error'
@@ -41,6 +43,9 @@ export default function App() {
     saveGames(g)
     return g
   })
+  const cloud = useCloud(games)
+  // привязка профиля к облачному аккаунту меняет список профилей — обновляем шапку и страницу аккаунта
+  useEffect(() => { setProfiles(loadProfiles()) }, [cloud.status, cloud.user?.id])
   function changeGames(fn: (g: GameStat[]) => GameStat[]) {
     setGames(cur => { const next = fn(cur); if (next !== cur) saveGames(next); return next })
   }
@@ -85,14 +90,15 @@ export default function App() {
   const engineLabel = engineState === 'ready' ? 'Stockfish готов'
     : engineState === 'loading' ? 'Stockfish загружается…' : 'Stockfish не загрузился'
 
-    const engineStatus = engineState === 'ready' ? 'Сервис онлайн'
+  const engineStatus = engineState === 'ready' ? 'Сервис онлайн'
     : engineState === 'loading' ? 'Сервис загружается…' : 'Сервис не загрузился'
+
   return <main className="app-shell">
     <header className="topbar">
       <div className="brand-mark">♞</div>
       <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">ТВОЙ ПЕРСОНАЛЬНЫЙ ШАХМАТНЫЙ ТРЕНЕР</div></div>
-      <div className="top-status" title={engineStatus}><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{""}</div>
-      <button className={`avatar-btn ${mode === 'account' ? 'active' : ''}`} onClick={() => (mode === 'account' ? setMode(lastMode) : setMode('account'))}
+      <div className="top-status" title={engineStatus}><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{"Сервис онлайн"}</div>
+      <button className={`avatar-btn ${mode === 'account' ? 'active' : ''} ${cloud.status === 'in' ? 'cloud-on' : ''}`} onClick={() => (mode === 'account' ? setMode(lastMode) : setMode('account'))}
         aria-label={`Аккаунт: ${me.name}`} title="Аккаунт, статистика и настройки" data-testid="account-btn">
         <Avatar profile={me} size={34} /><span className="avatar-name">{me.name}</span>
       </button>
@@ -128,9 +134,9 @@ export default function App() {
       <OpeningsView active={mode === 'openings'} />
     </div>
     <div hidden={mode !== 'account'}>
-      <AccountView active={mode === 'account'} games={games} profiles={profiles} onProfiles={setProfiles}
-        onGo={m => go(m)} onBack={() => setMode(lastMode)} onResetGames={() => { saveGames([]); setGames([]) }} />
+      <AccountView active={mode === 'account'} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
+        onGo={m => go(m)} onBack={() => setMode(lastMode)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.4.0-beta</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.3</span></footer>
   </main>
 }

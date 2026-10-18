@@ -50,6 +50,13 @@ export function mergeSessions(extra: readonly SavedSession[]): SavedSession[] {
   return list
 }
 
+/** Полная замена списка сессий (используется синхронизацией после слияния). */
+export function replaceSessions(list: readonly SavedSession[]): SavedSession[] {
+  const l = list.slice(0, MAX_SESSIONS) as SavedSession[]
+  persist(l)
+  return l
+}
+
 export function clearSessions(): SavedSession[] {
   persist([])
   return []

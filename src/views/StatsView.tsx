@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LineChart, StackedBars, WdlBar } from '../components/Charts'
 import type { GameStat } from '../lib/gameStats'
+import { loadPuzzleStats } from '../lib/puzzleStats'
+import LearningStats from '../components/LearningStats'
 import { loadOpenings } from '../lib/openingsStore'
-import { countCards } from '../lib/drill'
-import { LESSONS } from '../lib/lessons'
-import { loadPuzzleStats, successPercent, formatDuration } from '../lib/puzzleStats'
-import { THEME_LABEL, THEME_ORDER } from '../lib/puzzleThemes'
 import { DEFAULT_FILTERS, MIN_REVIEWED, applyFilters, movingAverage, ratingSeries, recommend, summarize, type Filters } from '../lib/statsCalc'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
@@ -35,16 +33,6 @@ export default function StatsView({ active, games, onGo }: Props) {
   const accSeries = reviewedGames.map(g => ({ y: g.review!.acc ?? 0, label: `${fmtDate(g.at)}${g.opp ? `, бот ${g.opp}` : ''}` })).filter(p => p.y > 0)
   const ma = movingAverage(accSeries.map(p => p.y))
 
-  const learned = useMemo(() => {
-    const done = new Set(Object.entries(openings.lessons).filter(([, v]) => v.done).map(([k]) => k))
-    let learnedCards = 0, totalCards = 0, learnedLines = 0, lines = 0
-    for (const r of openings.repertoires) {
-      const c = countCards(r, openings.cards, Date.now(), done)
-      learnedCards += c.learned; totalCards += c.total; learnedLines += c.learnedLines; lines += r.lines.length
-    }
-    return { lessons: done.size, learnedCards, totalCards, learnedLines, lines }
-  }, [openings])
-
   const none = games.length === 0
   return <div className="st-page" data-testid="stats-view">
     <section className="panel">
@@ -60,7 +48,7 @@ export default function StatsView({ active, games, onGo }: Props) {
           <option value="all">Все</option><option value="bot">Игра с ботом</option><option value="botClock">Бот, с часами</option><option value="botNoClock">Бот, без часов</option><option value="analysis">Анализ</option></select></label>
         <button className="btn" onClick={() => setF(DEFAULT_FILTERS)} data-testid="f-reset">Сбросить фильтры</button>
       </div>
-      {none && <div className="empty-state"><span>♟</span><p>Здесь появится ваша статистика</p><small>Сыграйте партию с ботом — она сохранится автоматически, а разбор партии добавит точность и ошибки.</small></div>}
+      {none && <div className="empty-state"><span>♟</span><p>Партий пока нет</p><small>Сыграйте партию с ботом — она сохранится автоматически, а разбор партии добавит точность и ошибки. Задачи и дебюты — ниже.</small></div>}
       {!none && filtered.length === 0 && <p className="tiny" data-testid="stats-nomatch">По выбранным фильтрам партий нет.</p>}
     </section>
 
@@ -105,24 +93,13 @@ export default function StatsView({ active, games, onGo }: Props) {
             <WdlBar {...sum.endgame.wdl} />
             <p className="tiny">Точность в эндшпиле: {pct(sum.endgame.acc)}.{sum.endgame.strong.n > 0 && ` Из ${sum.endgame.strong.n} партий, где вы входили в эндшпиль с преимуществом (65%+), выиграно ${sum.endgame.strong.won}.`}</p></>}
         </section>
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">ТАКТИКА</div><h2>Результаты задач</h2></div></div>
-          {puzzles.attempted === 0 ? <p className="tiny">Задачи ещё не решались.</p> : <>
-            <p className="st-big" data-testid="puzzle-percent">{successPercent(puzzles)}% <small>решено {puzzles.solved} из {puzzles.attempted}, без ошибок с первой попытки: {puzzles.clean}</small></p>
-            <ul className="st-bars">{THEME_ORDER.filter(t => puzzles.byTheme[t]?.tried).map(t => { const s = puzzles.byTheme[t]!; const p = Math.round((s.solved / s.tried) * 100); return <li key={t}><span>{THEME_LABEL[t]}</span><div><i style={{ width: `${p}%` }} /></div><b>{p}% · {s.tried}</b></li> })}</ul>
-            <p className="tiny">Время в задачах: {formatDuration(puzzles.timeMs)}. История задач не хранит даты, поэтому фильтры периода и цвета к ним не применяются.</p></>}
-        </section>
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">ДЕБЮТЫ</div><h2>Прогресс изучения дебютов</h2></div></div>
-          <div className="stats">
-            <div><strong data-testid="op-lessons">{learned.lessons}/{LESSONS.length}</strong><small>уроков пройдено</small></div>
-            <div><strong>{learned.learnedLines}/{learned.lines}</strong><small>линий выучено</small></div>
-            <div><strong>{learned.learnedCards}/{learned.totalCards}</strong><small>позиций выучено</small></div>
-            <div><strong>{openings.stats.answered ? Math.round((openings.stats.correct / openings.stats.answered) * 100) : 0}%</strong><small>верных ответов ({openings.stats.answered})</small></div>
-          </div>
-          <p className="tiny">Без привязки к датам, поэтому фильтры к дебютам не применяются.</p>
-        </section>
       </div>
 
-      <section className="panel" data-testid="recs">
+    </>}
+
+    <LearningStats puzzles={puzzles} openings={openings} onGo={onGo} />
+
+    <section className="panel" data-testid="recs">
         <div className="panel-head"><div><div className="eyebrow">ПЕРСОНАЛЬНО</div><h2>Рекомендации</h2></div></div>
         {rec.needMore > 0 && <p className="st-info" data-testid="recs-more">Пока мало данных для выводов по партиям: разобрано {rec.reviewed} из минимум {MIN_REVIEWED}. Разберите ещё {rec.needMore} {rec.needMore === 1 ? 'партию' : 'партии'} (включите «Авторазбор» в настройках или нажмите «Разбор партии»). Выводы строятся только по партиям с разбором и учитывают фильтры выше.</p>}
         {rec.recs.length === 0 && rec.needMore === 0 && <p className="st-info" data-testid="recs-none">По {rec.reviewed} разобранным партиям устойчивых проблем не найдено — так держать. Рекомендации появляются, когда одна и та же проблема повторяется в нескольких партиях.</p>}
@@ -132,7 +109,6 @@ export default function StatsView({ active, games, onGo }: Props) {
           <button className="btn" onClick={() => onGo(r.action.go)}>{r.action.label} →</button>
         </article>)}</div>
       </section>
-    </>}
 
   </div>
 }

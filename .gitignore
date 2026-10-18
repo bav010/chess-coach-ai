@@ -4,5 +4,7 @@ dist/
 .vite/
 .env
 .env.*
+!.env.example
 .DS_Store
 Thumbs.db
+dist-cloud/

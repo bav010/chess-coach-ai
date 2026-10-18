@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import Avatar from '../components/Avatar'
 import BackupPanel from '../components/BackupPanel'
+import CloudPanel from '../components/CloudPanel'
+import type { CloudApi } from '../hooks/useCloud'
 import StatsView from './StatsView'
 import type { GameStat } from '../lib/gameStats'
 import {
@@ -9,11 +11,12 @@ import {
 } from '../lib/profile'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
-type Tab = 'stats' | 'profile' | 'data'
+type Tab = 'stats' | 'profile' | 'cloud' | 'data'
 type Props = {
   active: boolean
   games: GameStat[]
   profiles: ProfileStore
+  cloud: CloudApi
   onProfiles: (s: ProfileStore) => void
   onGo: (m: Go) => void
   onBack: () => void
@@ -21,7 +24,7 @@ type Props = {
 }
 
 /** Страница аккаунта: статистика, настройки профиля (имя, аватарка), данные и список аккаунтов на устройстве. */
-export default function AccountView({ active, games, profiles, onProfiles, onGo, onBack, onResetGames }: Props) {
+export default function AccountView({ active, games, profiles, cloud, onProfiles, onGo, onBack, onResetGames }: Props) {
   const [tab, setTab] = useState<Tab>('stats')
   const me = profiles.list.find(p => p.id === profiles.current) ?? profiles.list[0]
   const [name, setName] = useState(me.name)
@@ -55,10 +58,10 @@ export default function AccountView({ active, games, profiles, onProfiles, onGo,
     <section className="panel acc-head">
       <button className="btn" onClick={onBack} data-testid="account-back">← Назад</button>
       <Avatar profile={me} size={64} />
-      <div className="acc-who"><b data-testid="account-name">{me.name}</b><small>Локальный аккаунт · данные хранятся в этом браузере</small></div>
+      <div className="acc-who"><b data-testid="account-name">{me.name}</b><small data-testid="account-kind">{me.cloud && cloud.status === 'in' ? `Облачный аккаунт · ${me.cloud.email}` : me.cloud ? `Привязан к ${me.cloud.email} · сейчас без входа` : 'Локальный аккаунт · данные хранятся в этом браузере'}</small></div>
     </section>
     <nav className="tabs acc-tabs" role="tablist" aria-label="Аккаунт">
-      {([['stats', 'Статистика'], ['profile', 'Профиль и аватар'], ['data', 'Данные и аккаунты']] as [Tab, string][]).map(([k, l]) =>
+      {([['stats', 'Статистика'], ['profile', 'Профиль и аватар'], ['cloud', 'Вход и облако'], ['data', 'Данные и аккаунты']] as [Tab, string][]).map(([k, l]) =>
         <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} data-testid={`acc-tab-${k}`}>{l}</button>)}
     </nav>
 
@@ -87,13 +90,15 @@ export default function AccountView({ active, games, profiles, onProfiles, onGo,
       </div>
     </section>}
 
+    {tab === 'cloud' && <CloudPanel cloud={cloud} />}
+
     {tab === 'data' && <>
       <BackupPanel hasGames={games.length > 0} onResetGames={onResetGames} />
       <section className="panel" data-testid="acc-list">
         <div className="panel-head"><div><div className="eyebrow">НА ЭТОМ УСТРОЙСТВЕ</div><h2>Аккаунты</h2></div></div>
-        <p className="tiny">У каждого аккаунта своя статистика, партии, задачи, дебюты и настройки. Это локальное разделение данных: пароля нет, поэтому не храните здесь ничего секретного. Для входа с других устройств есть резервная копия.</p>
+        <p className="tiny">У каждого аккаунта своя статистика, партии, задачи, дебюты и настройки. Локальные аккаунты без пароля — это разделение данных на устройстве. Чтобы войти с другого устройства, привяжите аккаунт к почте на вкладке «Вход и облако».</p>
         <ul className="acc-list">{profiles.list.map(p => <li key={p.id} className={p.id === profiles.current ? 'current' : ''} data-testid={`acc-item-${p.id}`}>
-          <span>{p.name}{p.id === profiles.current && <em> · текущий</em>}</span>
+          <Avatar profile={p} size={32} /><span>{p.name}{p.cloud && <em> · {p.cloud.email}</em>}{p.id === profiles.current && <em> · текущий</em>}</span>
           {p.id !== profiles.current && <button className="btn" onClick={() => switchProfile(p.id)} data-testid={`acc-switch-${p.id}`}>Войти</button>}
           {p.id !== 'default' && <button className="btn" onClick={() => remove(p.id)} data-testid={`acc-delete-${p.id}`}>Удалить</button>}
         </li>)}</ul>

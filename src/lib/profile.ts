@@ -3,7 +3,9 @@
 // лежат под прежними ключами localStorage, поэтому ничего из сохранённого ранее не теряется.
 
 export type Avatar = { emoji: string; color: string; image?: string }
-export type Profile = { id: string; name: string; avatar: Avatar; created: string }
+/** Привязка локального профиля к облачному аккаунту (вход по почте и паролю). */
+export type CloudLink = { userId: string; email: string }
+export type Profile = { id: string; name: string; avatar: Avatar; created: string; cloud?: CloudLink }
 export type ProfileStore = { v: 1; current: string; list: Profile[] }
 
 export const DEFAULT_ID = 'default'
@@ -58,6 +60,19 @@ export function createProfile(name: string, avatar: Avatar): ProfileStore {
 export function updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'avatar'>>): ProfileStore {
   const s = read()
   s.list = s.list.map(p => (p.id === id ? { ...p, ...(patch.name !== undefined ? { name: cleanName(patch.name) || p.name } : {}), ...(patch.avatar ? { avatar: patch.avatar } : {}) } : p))
+  write(s)
+  return s
+}
+
+/** Привязывает профиль к облачному аккаунту (или отвязывает при null). */
+export function bindProfile(id: string, cloud: CloudLink | null): ProfileStore {
+  const s = read()
+  s.list = s.list.map(p => {
+    if (p.id !== id) return p
+    const { cloud: _old, ...rest } = p
+    void _old
+    return cloud ? { ...rest, cloud } : rest
+  })
   write(s)
   return s
 }

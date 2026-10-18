@@ -81,3 +81,15 @@ Tactics puzzles (Lichess open database, CC0), opening trainer with spaced repeti
 **GNU GPL v3 or later** — see [LICENSE](LICENSE). The repository bundles the Stockfish engine (GPLv3), so the whole project is distributed under the same terms.
 
 Credits: [Stockfish](https://github.com/official-stockfish/Stockfish) (GPLv3), [Stockfish.js](https://github.com/nmrugg/stockfish.js) by Nathan Rugg / Chess.com (GPLv3), [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause), [React](https://react.dev/) and [Vite](https://vite.dev/) (MIT).
+
+## Cloud accounts (email and password sign-in)
+
+By default accounts are local (no password, data stays in the browser). To enable **real email/password sign-in and sync between devices**, connect a free [Supabase](https://supabase.com) project. The site stays static on GitHub Pages: Supabase stores passwords (the app never sees them) and each user's data is protected by row-level security.
+
+1. Create a Supabase project, open the **SQL Editor**, paste `docs/supabase.sql` and **Run** it (creates the `user_data` table, "each user sees only their own row" policies and the delete-account function).
+2. **Authentication → Sign In / Providers → Email** (called "Providers" in older dashboards): open the Email provider and make sure it is enabled. The **Confirm email** switch is in the same panel: when on, a link is mailed after sign-up and sign-in works only after confirming; when off, users can sign in immediately. Dashboard labels may change over time.
+3. **Authentication → URL Configuration**: set *Site URL* to your site (e.g. `https://YOUR-LOGIN.github.io/chess-coach-ai/`) and add it to *Redirect URLs* (needed for confirmation and password-reset emails).
+4. **Project settings → API**: copy the *Project URL* and the *anon public* key. These are public values. **Never put the `service_role` key in the app.**
+5. Locally, create `.env.local` from `.env.example`. On GitHub Pages add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under *Settings → Secrets and variables → Actions → Variables* (the `pages.yml` workflow passes them to the build) and redeploy.
+
+The account page then offers sign-in, sign-up, password reset, password change, manual sync and account deletion. On first sign-in this device's data is merged with the cloud data without loss; later changes are pushed automatically. Merging only adds data (games, opening cards, finished lessons, solved puzzles); resetting game statistics syncs, deleting repertoires on another device does not yet. Without Supabase the cloud tab explains how to connect it and local accounts work as before.
