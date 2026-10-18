@@ -1,4 +1,5 @@
 // Хранение репертуаров и прогресса повторений в localStorage (статический сайт, без сервера).
+import { pk } from './profile'
 import type { Repertoire } from './repertoire'
 import type { CardState } from './srs'
 
@@ -16,11 +17,11 @@ export type OpeningsData = {
 
 export const EMPTY_OPENINGS: OpeningsData = { v: 1, lessons: {}, repertoires: [], cards: {}, activeId: null, stats: { answered: 0, correct: 0, timeMs: 0, sessions: 0 } }
 
-const KEY = 'chess-coach-ai:openings:v1'
+const BASE = 'chess-coach-ai:openings:v1'
 
 export function loadOpenings(): OpeningsData {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(pk(BASE))
     if (!raw) return EMPTY_OPENINGS
     const d = JSON.parse(raw) as Partial<OpeningsData>
     if (d.v !== 1 || !Array.isArray(d.repertoires)) return EMPTY_OPENINGS
@@ -35,7 +36,7 @@ export function loadOpenings(): OpeningsData {
 }
 
 export function saveOpenings(d: OpeningsData) {
-  try { localStorage.setItem(KEY, JSON.stringify(d)) } catch { /* хранилище недоступно — данные только на время сессии */ }
+  try { localStorage.setItem(pk(BASE), JSON.stringify(d)) } catch { /* хранилище недоступно — данные только на время сессии */ }
 }
 
 export function exportOpenings(d: OpeningsData): string { return JSON.stringify(d, null, 1) }

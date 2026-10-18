@@ -7,11 +7,13 @@ import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView from './views/PlayView'
 import PuzzleView from './views/PuzzleView'
 import OpeningsView from './views/OpeningsView'
-import StatsView from './views/StatsView'
+import AccountView from './views/AccountView'
+import Avatar from './components/Avatar'
+import { loadProfiles, type ProfileStore } from './lib/profile'
 import { attachReview, backfillReviews, deriveGame, loadGames, saveGames, syncFromSessions, upsertGame, type GameReview, type GameStat } from './lib/gameStats'
 
 type EngineState = 'loading' | 'ready' | 'error'
-type Mode = 'analysis' | 'play' | 'tactics' | 'openings' | 'stats'
+type Mode = 'analysis' | 'play' | 'tactics' | 'openings' | 'account'
 
 function downloadPgn(s: SavedSession) {
   const blob = new Blob([s.pgn], { type: 'application/x-chess-pgn' })
@@ -25,6 +27,10 @@ function downloadPgn(s: SavedSession) {
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('analysis')
+  const [lastMode, setLastMode] = useState<Exclude<Mode, 'account'>>('analysis')
+  const [profiles, setProfiles] = useState<ProfileStore>(() => loadProfiles())
+  const me = profiles.list.find(p => p.id === profiles.current) ?? profiles.list[0]
+  function go(m: Mode) { if (m !== 'account') setLastMode(m); setMode(m) }
   const [seed, setSeed] = useState<GameSeed | null>(null)
   const [engineState, setEngineState] = useState<EngineState>('loading')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadSessions())
@@ -79,14 +85,17 @@ export default function App() {
   const engineLabel = engineState === 'ready' ? 'Stockfish готов'
     : engineState === 'loading' ? 'Stockfish загружается…' : 'Stockfish не загрузился'
 
-  const engineStatus = engineState === 'ready' ? 'Сервис онлайн'
+    const engineStatus = engineState === 'ready' ? 'Сервис онлайн'
     : engineState === 'loading' ? 'Сервис загружается…' : 'Сервис не загрузился'
-
   return <main className="app-shell">
     <header className="topbar">
       <div className="brand-mark">♞</div>
       <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">ТВОЙ ПЕРСОНАЛЬНЫЙ ШАХМАТНЫЙ ТРЕНЕР</div></div>
-      <div className="top-status" title={engineStatus}><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{"Сервис онлайн"}</div>
+      <div className="top-status" title={engineStatus}><i className={engineState === 'ready' ? 'dot online' : 'dot'} />{""}</div>
+      <button className={`avatar-btn ${mode === 'account' ? 'active' : ''}`} onClick={() => (mode === 'account' ? setMode(lastMode) : setMode('account'))}
+        aria-label={`Аккаунт: ${me.name}`} title="Аккаунт, статистика и настройки" data-testid="account-btn">
+        <Avatar profile={me} size={34} /><span className="avatar-name">{me.name}</span>
+      </button>
     </header>
 
     <section className="hero">
@@ -96,11 +105,10 @@ export default function App() {
     </section>
 
     <nav className="mode-tabs" role="tablist" aria-label="Режим">
-      <button role="tab" aria-selected={mode === 'analysis'} className={`mode-tab ${mode === 'analysis' ? 'active' : ''}`} onClick={() => setMode('analysis')} data-testid="mode-analysis">Анализ</button>
-      <button role="tab" aria-selected={mode === 'play'} className={`mode-tab ${mode === 'play' ? 'active' : ''}`} onClick={() => setMode('play')} data-testid="mode-play">Игра с ботом</button>
-      <button role="tab" aria-selected={mode === 'tactics'} className={`mode-tab ${mode === 'tactics' ? 'active' : ''}`} onClick={() => setMode('tactics')} data-testid="mode-tactics">Задачи</button>
-      <button role="tab" aria-selected={mode === 'openings'} className={`mode-tab ${mode === 'openings' ? 'active' : ''}`} onClick={() => setMode('openings')} data-testid="mode-openings">Дебюты</button>
-      <button role="tab" aria-selected={mode === 'stats'} className={`mode-tab ${mode === 'stats' ? 'active' : ''}`} onClick={() => setMode('stats')} data-testid="mode-stats">Статистика</button>
+      <button role="tab" aria-selected={mode === 'analysis'} className={`mode-tab ${mode === 'analysis' ? 'active' : ''}`} onClick={() => go('analysis')} data-testid="mode-analysis">Анализ</button>
+      <button role="tab" aria-selected={mode === 'play'} className={`mode-tab ${mode === 'play' ? 'active' : ''}`} onClick={() => go('play')} data-testid="mode-play">Игра с ботом</button>
+      <button role="tab" aria-selected={mode === 'tactics'} className={`mode-tab ${mode === 'tactics' ? 'active' : ''}`} onClick={() => go('tactics')} data-testid="mode-tactics">Задачи</button>
+      <button role="tab" aria-selected={mode === 'openings'} className={`mode-tab ${mode === 'openings' ? 'active' : ''}`} onClick={() => go('openings')} data-testid="mode-openings">Дебюты</button>
     </nav>
 
     {/* Оба режима остаются смонтированными: партия с ботом и её часы не теряются при переключении вкладок */}
@@ -119,9 +127,10 @@ export default function App() {
     <div hidden={mode !== 'openings'}>
       <OpeningsView active={mode === 'openings'} />
     </div>
-    <div hidden={mode !== 'stats'}>
-      <StatsView active={mode === 'stats'} games={games} onGo={setMode} onResetGames={() => { saveGames([]); setGames([]) }} />
+    <div hidden={mode !== 'account'}>
+      <AccountView active={mode === 'account'} games={games} profiles={profiles} onProfiles={setProfiles}
+        onGo={m => go(m)} onBack={() => setMode(lastMode)} onResetGames={() => { saveGames([]); setGames([]) }} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.3.4-alpha</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.4.0-beta</span></footer>
   </main>
 }

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { LineChart, StackedBars, WdlBar } from '../components/Charts'
-import { applyBackup, makeBackup, parseBackup } from '../lib/backup'
 import type { GameStat } from '../lib/gameStats'
 import { loadOpenings } from '../lib/openingsStore'
 import { countCards } from '../lib/drill'
@@ -10,17 +9,15 @@ import { THEME_LABEL, THEME_ORDER } from '../lib/puzzleThemes'
 import { DEFAULT_FILTERS, MIN_REVIEWED, applyFilters, movingAverage, ratingSeries, recommend, summarize, type Filters } from '../lib/statsCalc'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
-type Props = { active: boolean; games: GameStat[]; onGo: (m: Go) => void; onResetGames: () => void }
+type Props = { active: boolean; games: GameStat[]; onGo: (m: Go) => void }
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
 
 /** Личная панель прогресса: партии, внутренний рейтинг, точность, ошибки, задачи, дебюты, эндшпили, рекомендации, резервная копия. */
-export default function StatsView({ active, games, onGo, onResetGames }: Props) {
+export default function StatsView({ active, games, onGo }: Props) {
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS)
-  const [msg, setMsg] = useState('')
   const [tick, setTick] = useState(0)
-  const fileRef = useRef<HTMLInputElement>(null)
   // задачи и дебюты живут в своих хранилищах — перечитываем при открытии вкладки
   const puzzles = useMemo(() => loadPuzzleStats(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
   const openings = useMemo(() => loadOpenings(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -48,31 +45,10 @@ export default function StatsView({ active, games, onGo, onResetGames }: Props) 
     return { lessons: done.size, learnedCards, totalCards, learnedLines, lines }
   }, [openings])
 
-  function download() {
-    const blob = new Blob([JSON.stringify(makeBackup(), null, 1)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `chess-coach-ai-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click()
-    URL.revokeObjectURL(url)
-    setMsg('Резервная копия скачана.')
-  }
-
-  async function restore(file: File | undefined) {
-    if (!file) return
-    try {
-      const b = parseBackup(await file.text())
-      const withTrainers = window.confirm('Восстановить также прогресс задач и дебютов из файла?\n\nОК — заменить текущий прогресс задач и дебютов данными из файла.\nОтмена — только добавить партии и сессии (без дублей).')
-      const r = applyBackup(b, withTrainers)
-      setMsg(`Готово: партий в статистике — ${r.games}. Страница перезагрузится…`)
-      window.setTimeout(() => window.location.reload(), 700)
-    } catch (e) { setMsg(e instanceof Error ? e.message : 'Не удалось восстановить копию.') }
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
   const none = games.length === 0
   return <div className="st-page" data-testid="stats-view">
     <section className="panel">
-      <div className="panel-head"><div><div className="eyebrow">ТВОЙ ПРОГРЕСС</div><h2>Статистика и развитие</h2></div><span className="pill">данные хранятся только в этом браузере</span></div>
+      <div className="panel-head"><div><div className="eyebrow">ТВОЙ ПРОГРЕСС</div><h2>Статистика и развитие</h2></div></div>
       <div className="st-filters" data-testid="stats-filters">
         <label>Период<select value={f.period} onChange={e => set('period', e.target.value as Filters['period'])} data-testid="f-period">
           <option value="all">Всё время</option><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option><option value="365">Год</option></select></label>
@@ -158,16 +134,5 @@ export default function StatsView({ active, games, onGo, onResetGames }: Props) 
       </section>
     </>}
 
-    <section className="panel">
-      <div className="panel-head"><div><div className="eyebrow">ДАННЫЕ</div><h2>Резервная копия</h2></div></div>
-      <p className="tiny">Партии, статистика, задачи и дебюты хранятся локально в браузере. Скачайте копию, чтобы перенести данные на другое устройство или не потерять их при очистке браузера. Синхронизации между устройствами нет.</p>
-      <div className="board-actions" style={{ marginTop: 10 }}>
-        <button className="btn primary" onClick={download} data-testid="backup-download">⬇ Скачать резервную копию</button>
-        <button className="btn" onClick={() => fileRef.current?.click()} data-testid="backup-restore">⬆ Восстановить из файла</button>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden data-testid="backup-file" onChange={e => void restore(e.target.files?.[0])} />
-        {!none && <button className="btn" onClick={() => { if (window.confirm('Удалить статистику партий в этом браузере? Задачи, дебюты и сохранённые сессии останутся.')) onResetGames() }} data-testid="stats-reset">Сбросить статистику партий</button>}
-      </div>
-      {msg && <p className="tiny" role="status" data-testid="backup-msg">{msg}</p>}
-    </section>
   </div>
 }

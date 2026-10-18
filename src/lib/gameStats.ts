@@ -1,6 +1,7 @@
 // Личная статистика партий. Одна запись на партию (ключ — стартовая позиция + ходы), поэтому повторное
 // сохранение той же партии (из игры, из анализа, из резервной копии) её не дублирует.
 // Хранится в localStorage отдельно от списка сессий (там лимит 200 и лежит весь PGN) — записи компактные и без лимита.
+import { pk } from './profile'
 import type { Color } from 'chess.js'
 import { gameKey, loadReview, type SavedSession, type SessionResult } from '../storage'
 import { parsePgn } from './pgn'
@@ -177,11 +178,11 @@ export function attachReview(list: readonly GameStat[], key: string, review: Gam
 }
 
 // ---------- хранение ----------
-const KEY = 'chess-coach-ai:games:v1'
+const BASE = 'chess-coach-ai:games:v1'
 
 export function loadGames(): GameStat[] {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(pk(BASE))
     const d: unknown = raw ? JSON.parse(raw) : null
     const arr = d && typeof d === 'object' && Array.isArray((d as { games?: unknown }).games) ? (d as { games: unknown[] }).games : []
     return arr.filter((g): g is GameStat => !!g && typeof (g as GameStat).key === 'string' && typeof (g as GameStat).at === 'string' && typeof (g as GameStat).plies === 'number')
@@ -189,7 +190,7 @@ export function loadGames(): GameStat[] {
 }
 
 export function saveGames(games: readonly GameStat[]) {
-  try { localStorage.setItem(KEY, JSON.stringify({ v: 1, games })) } catch { /* хранилище недоступно — статистика только на время сессии */ }
+  try { localStorage.setItem(pk(BASE), JSON.stringify({ v: 1, games })) } catch { /* хранилище недоступно — статистика только на время сессии */ }
 }
 
 export function mergeGames(a: readonly GameStat[], b: readonly GameStat[]): GameStat[] {

@@ -1,5 +1,6 @@
 // Хранилище прогресса в localStorage браузера: данные остаются на устройстве пользователя,
 // сервер не нужен — поэтому сайт целиком работает на GitHub Pages.
+import { pk } from './lib/profile'
 
 export type SessionResult = 'in_progress' | '1-0' | '0-1' | '1/2-1/2'
 
@@ -11,12 +12,12 @@ export type SavedSession = {
   pgn: string
 }
 
-const KEY = 'chess-coach-ai:sessions:v1'
+const BASE = 'chess-coach-ai:sessions:v1'
 const MAX_SESSIONS = 200
 
 export function loadSessions(): SavedSession[] {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(pk(BASE))
     if (!raw) return []
     const data: unknown = JSON.parse(raw)
     if (!Array.isArray(data)) return []
@@ -28,7 +29,7 @@ export function loadSessions(): SavedSession[] {
 }
 
 function persist(list: SavedSession[]) {
-  try { localStorage.setItem(KEY, JSON.stringify(list)) } catch { /* приватный режим или переполнение */ }
+  try { localStorage.setItem(pk(BASE), JSON.stringify(list)) } catch { /* приватный режим или переполнение */ }
 }
 
 /** Добавляет сессию (новые — в начале списка) и возвращает обновлённый список. */
@@ -83,7 +84,7 @@ export type StoredReview = {
   trainer: Record<string, TrainerEntry>
 }
 
-const REVIEWS_KEY = 'chess-coach-ai:reviews:v1'
+const REVIEWS_BASE = 'chess-coach-ai:reviews:v1'
 const MAX_REVIEWS = 8
 
 /** Устойчивый короткий ключ партии (стартовая позиция + ходы). */
@@ -96,7 +97,7 @@ export function gameKey(startFen: string, ucis: readonly string[]): string {
 
 function readReviews(): StoredReview[] {
   try {
-    const raw = localStorage.getItem(REVIEWS_KEY)
+    const raw = localStorage.getItem(pk(REVIEWS_BASE))
     const data: unknown = raw ? JSON.parse(raw) : []
     return Array.isArray(data) ? data.filter((r): r is StoredReview => typeof r?.key === 'string' && Array.isArray(r?.evals)) : []
   } catch {
@@ -110,5 +111,5 @@ export function loadReview(key: string): StoredReview | null {
 
 export function saveReview(review: StoredReview) {
   const list = [review, ...readReviews().filter(r => r.key !== review.key)].slice(0, MAX_REVIEWS)
-  try { localStorage.setItem(REVIEWS_KEY, JSON.stringify(list)) } catch { /* переполнение — не критично */ }
+  try { localStorage.setItem(pk(REVIEWS_BASE), JSON.stringify(list)) } catch { /* переполнение — не критично */ }
 }

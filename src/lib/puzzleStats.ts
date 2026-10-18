@@ -1,4 +1,5 @@
 // Статистика решения задач. Хранится в localStorage (статический сайт, без сервера).
+import { pk } from './profile'
 import { THEME_ORDER, type ThemeId } from './puzzleThemes'
 
 export type ThemeStat = { tried: number; solved: number; firstTry: number; timeMs: number }
@@ -81,11 +82,11 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(m / 60)} ч ${m % 60} мин`
 }
 
-const KEY = 'chess-coach-ai:puzzles:v1'
+const BASE = 'chess-coach-ai:puzzles:v1'
 
 export function loadPuzzleStats(): PuzzleStats {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(pk(BASE))
     if (!raw) return EMPTY_STATS
     const d = JSON.parse(raw) as Partial<PuzzleStats>
     if (d.v !== 1 || typeof d.attempted !== 'number') return EMPTY_STATS
@@ -99,10 +100,10 @@ export function loadPuzzleStats(): PuzzleStats {
 }
 
 export function savePuzzleStats(s: PuzzleStats) {
-  try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* хранилище недоступно — статистика только на время сессии */ }
+  try { localStorage.setItem(pk(BASE), JSON.stringify(s)) } catch { /* хранилище недоступно — статистика только на время сессии */ }
 }
 
 export function resetPuzzleStats(): PuzzleStats {
-  try { localStorage.removeItem(KEY) } catch { /* ничего */ }
+  try { localStorage.removeItem(pk(BASE)) } catch { /* ничего */ }
   return EMPTY_STATS
 }

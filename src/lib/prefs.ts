@@ -1,3 +1,4 @@
+import { pk } from './profile'
 import { DEFAULT_THRESHOLDS, type Thresholds } from './classify'
 
 export type ReviewQuality = 'fast' | 'normal' | 'deep'
@@ -34,14 +35,14 @@ export const DEFAULT_PREFS: Prefs = {
   thresholds: DEFAULT_THRESHOLDS,
 }
 
-const KEY = 'chess-coach-ai:prefs:v1'
+const BASE = 'chess-coach-ai:prefs:v1'
 
 const clamp = (v: unknown, min: number, max: number, fallback: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback
 
 export function loadPrefs(): Prefs {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(pk(BASE))
     if (!raw) return DEFAULT_PREFS
     const d = JSON.parse(raw) as Partial<Prefs>
     const t = (d.thresholds ?? {}) as Partial<Thresholds>
@@ -70,5 +71,5 @@ export function loadPrefs(): Prefs {
 }
 
 export function savePrefs(p: Prefs) {
-  try { localStorage.setItem(KEY, JSON.stringify(p)) } catch { /* приватный режим */ }
+  try { localStorage.setItem(pk(BASE), JSON.stringify(p)) } catch { /* приватный режим */ }
 }
