@@ -137,6 +137,6 @@ export default function App() {
       <AccountView active={mode === 'account'} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
         onGo={m => go(m)} onBack={() => setMode(lastMode)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.3</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.4.1-beta</span></footer>
   </main>
 }
