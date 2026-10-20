@@ -5,13 +5,26 @@ import { getCached, putCache } from '../lib/analysisCache'
 import { winLoss, type Thresholds } from '../lib/classify'
 import { formatScore, forColor } from '../lib/eval'
 import { splitUci } from '../lib/game'
-import { PIECE_NAME, colorGen } from '../lib/glyphs'
+import { colorGen } from '../lib/glyphs'
 import { criticalMoves, positionScore, type ReviewReport } from '../lib/review'
 import { explainMove } from '../lib/explain'
 import type { TrainerEntry } from '../storage'
 import type { ArrowStyle } from './Board'
 import Board from './Board'
 import PromoPicker from './PromoPicker'
+import { t as tg, useI18n, type Key, type Params } from '../i18n'
+
+/** Сообщение хранится как ключ + параметры и переводится при показе — смена языка обновляет его на месте. */
+type Msg = { k: Key; p?: Params } | null
+/** colorKey ('w'/'b') и pieceKey (тип фигуры) превращаются в слова на текущем языке в момент показа. */
+function resolveParams(p?: Params): Params | undefined {
+  if (!p) return p
+  const { colorKey, pieceKey, ...rest } = p
+  const out: Params = { ...rest }
+  if (colorKey !== undefined) out.color = colorGen(colorKey as Color)
+  if (pieceKey !== undefined) out.piece = tg(`analysis.piece.${pieceKey}` as Key)
+  return out
+}
 
 type Props = {
   report: ReviewReport
@@ -33,6 +46,7 @@ const EMPTY: TrainerEntry = { attempts: 0, solved: false, firstTry: false, hints
  * все ходы здесь — пробы, а проверяет их Stockfish (или сохранённая оценка лучшего хода).
  */
 export default function Trainer({ report, userColor, thresholds, progress, initialSide, arrowStyle, onProgress, onExit }: Props) {
+  const { t } = useI18n()
   const [side, setSide] = useState<Color | 'both'>(initialSide)
   const list = useMemo(() => criticalMoves(report, side), [report, side])
   const [idx, setIdx] = useState(0)
@@ -45,7 +59,8 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
   const [selected, setSelected] = useState<Square | null>(null)
   const [legal, setLegal] = useState<Square[]>([])
   const [promo, setPromo] = useState<{ from: Square; to: Square } | null>(null)
-  const [message, setMessage] = useState('')
+  const [msg, setMessage] = useState<Msg>(null)
+  const message = msg ? t(msg.k, resolveParams(msg.p)) : ''
   const [hintLevel, setHintLevel] = useState(0)
   const progressRef = useRef(progress)
   progressRef.current = progress
@@ -57,7 +72,7 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
     setPhase(progressRef.current[key]?.solved || progressRef.current[key]?.revealed ? 'solved' : 'try')
     setShownFen(item?.record.fenBefore ?? '')
     setSelected(null); setLegal([]); setPromo(null); setHintLevel(0)
-    setMessage(item ? `Найдите лучший ход за ${colorGen(item.record.color)}. В партии здесь был сыгран ${item.record.san}.` : '')
+    setMessage(item ? { k: 'analysis.trainer.find', p: { colorKey: item.record.color, san: item.record.san } } : null)
     return () => abortRef.current?.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, side])
@@ -69,11 +84,11 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
 
   if (!item) {
     return <section className="panel trainer-panel" data-testid="trainer">
-      <div className="panel-head"><div><div className="eyebrow">ТРЕНАЖЁР</div><h2>Работа над ошибками</h2></div></div>
-      <p className="muted">Для выбранной стороны ошибок не найдено.</p>
+      <div className="panel-head"><div><div className="eyebrow">{t('analysis.trainer.eyebrow')}</div><h2>{t('analysis.trainer.title')}</h2></div></div>
+      <p className="muted">{t('analysis.trainer.none')}</p>
       <div className="board-actions">
-        {userColor && side !== 'both' && <button className="btn" onClick={() => setSide('both')}>Показать ошибки обеих сторон</button>}
-        <button className="btn primary" onClick={onExit}>Вернуться к партии</button>
+        {userColor && side !== 'both' && <button className="btn" onClick={() => setSide('both')}>{t('analysis.trainer.showBoth')}</button>}
+        <button className="btn primary" onClick={onExit}>{t('analysis.trainer.backToGame')}</button>
       </div>
     </section>
   }
@@ -107,16 +122,16 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
     if (uci === item!.bestUci) {
       update({ attempts, solved: true, firstTry: entry.solved ? entry.firstTry : firstTry })
       setPhase('solved'); setShownFen(item!.record.fenBefore)
-      setMessage(firstTry ? 'Верно! Это лучший ход — с первой попытки.' : 'Верно! Это лучший ход.')
+      setMessage({ k: firstTry ? 'analysis.trainer.correctFirst' : 'analysis.trainer.correct' })
       return
     }
     if (uci === item!.record.uci) {
       update({ attempts })
       setPhase('wrong')
-      setMessage(`Это тот же ход, что был сыгран в партии (${item!.record.san}). Попробуйте другой.`)
+      setMessage({ k: 'analysis.trainer.same', p: { san: item!.record.san } })
       return
     }
-    setPhase('checking'); setMessage('Проверяю ход движком…')
+    setPhase('checking'); setMessage({ k: 'analysis.trainer.checking' })
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
@@ -133,23 +148,23 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
           ev = a.lines.length ? { depth: a.depth, lines: a.lines } : null
         } catch {
           if (ac.signal.aborted) return
-          setPhase('try'); setMessage('Движок недоступен — не удалось проверить ход.')
+          setPhase('try'); setMessage({ k: 'analysis.trainer.noEngine' })
           return
         }
       }
     }
     const score = positionScore(afterFen, ev)
-    if (!score) { setPhase('try'); setMessage('Не удалось оценить ход.'); return }
+    if (!score) { setPhase('try'); setMessage({ k: 'analysis.trainer.cantEval' }); return }
     const loss = winLoss(item!.before, score, mover)
     const san = board.history()[0]
     if (loss < thresholds.inaccuracy) {
       update({ attempts, solved: true, firstTry: entry.solved ? entry.firstTry : firstTry })
       setPhase('solved'); setShownFen(item!.record.fenBefore)
-      setMessage(`Хороший ход: ${san} почти не хуже лучшего (потеря ${loss.toFixed(1)} п. п.). Лучший по движку — ${item!.bestSan ?? '—'}.`)
+      setMessage({ k: 'analysis.trainer.goodMove', p: { san, loss: loss.toFixed(1), best: item!.bestSan ?? '—' } })
     } else {
       update({ attempts })
       setPhase('wrong')
-      setMessage(`Не лучший ход: ${san} — оценка для ${colorGen(mover)} ${formatScore(forColor(score, mover))}, потеря около ${loss.toFixed(0)} п. п. Попробуйте ещё раз или возьмите подсказку.`)
+      setMessage({ k: 'analysis.trainer.notBest', p: { san, colorKey: mover, score: formatScore(forColor(score, mover)), loss: loss.toFixed(0) } })
     }
   }
 
@@ -172,7 +187,7 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
 
   function retry() {
     setPhase('try'); setShownFen(item!.record.fenBefore); setSelected(null); setLegal([])
-    setMessage(`Найдите лучший ход за ${colorGen(mover)}.`)
+    setMessage({ k: 'analysis.trainer.findShort', p: { colorKey: mover } })
   }
 
   function hint() {
@@ -180,25 +195,25 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
     setHintLevel(level)
     update({ hints: entry.hints + 1 })
     if (phase === 'wrong') retry()
-    if (level === 1) setMessage('Подсказка: ходить нужно подсвеченной фигурой.')
+    if (level === 1) setMessage({ k: 'analysis.trainer.hint1' })
     else if (bestFrom) {
       const piece = new Chess(item!.record.fenBefore).get(bestFrom.from)
-      setMessage(`Подсказка: ходит ${piece ? PIECE_NAME[piece.type] : 'фигура'} с ${bestFrom.from}.`)
+      setMessage({ k: 'analysis.trainer.hint2', p: { pieceKey: piece ? piece.type : 'generic', sq: bestFrom.from } })
     }
   }
 
   function reveal() {
     update({ revealed: true })
     setPhase('revealed'); setShownFen(item!.record.fenBefore); setSelected(null); setLegal([]); setPromo(null)
-    setMessage(`Лучший ход: ${item!.bestSan ?? '—'}.`)
+    setMessage({ k: 'analysis.trainer.revealed', p: { san: item!.bestSan ?? '—' } })
   }
 
   const go = (d: number) => setIdx(i => Math.max(0, Math.min(list.length - 1, i + d)))
   const i = Math.min(idx, list.length - 1)
 
   return <section className="panel trainer-panel" data-testid="trainer">
-    <div className="panel-head"><div><div className="eyebrow">ТРЕНАЖЁР</div><h2>Работа над ошибками</h2></div>
-      <span className="pill">{i + 1} из {list.length}</span></div>
+    <div className="panel-head"><div><div className="eyebrow">{t('analysis.trainer.eyebrow')}</div><h2>{t('analysis.trainer.title')}</h2></div>
+      <span className="pill">{t('analysis.trainer.of', { i: i + 1, n: list.length })}</span></div>
     <div className="trainer-grid">
       <div>
         <div className="board-wrap">
@@ -210,30 +225,30 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
       <div className="trainer-side">
         <div className={`board-message trainer-message ${phase}`} data-testid="trainer-message" data-phase={phase}><span className="pulse" /> {message}</div>
         <div className="board-actions">
-          {phase === 'wrong' && <button className="btn primary" onClick={retry}>Повторить</button>}
-          {!revealedNow && <button className="btn" onClick={hint} disabled={hintLevel >= 2 || phase === 'checking'}>Подсказка</button>}
-          {!revealedNow && <button className="btn" onClick={reveal} disabled={phase === 'checking'}>Показать лучший ход</button>}
-          {revealedNow && <button className="btn" onClick={() => { setPhase('try'); setShownFen(item.record.fenBefore); setHintLevel(0); setMessage(`Найдите лучший ход за ${colorGen(mover)}.`) }}>Решить ещё раз</button>}
+          {phase === 'wrong' && <button className="btn primary" onClick={retry}>{t('analysis.trainer.retry')}</button>}
+          {!revealedNow && <button className="btn" onClick={hint} disabled={hintLevel >= 2 || phase === 'checking'}>{t('analysis.trainer.hint')}</button>}
+          {!revealedNow && <button className="btn" onClick={reveal} disabled={phase === 'checking'}>{t('analysis.trainer.reveal')}</button>}
+          {revealedNow && <button className="btn" onClick={() => { setPhase('try'); setShownFen(item.record.fenBefore); setHintLevel(0); setMessage({ k: 'analysis.trainer.findShort', p: { colorKey: mover } }) }}>{t('analysis.trainer.again')}</button>}
         </div>
         {revealedNow && <div className="explain-box" data-testid="trainer-solution">
-          <p><b>Лучший ход: {item.bestSan ?? '—'}</b>{item.pvSan.length > 1 ? ` · вариант: ${item.pvSan.join(' ')}` : ''}</p>
+          <p><b>{t('analysis.trainer.solution', { san: item.bestSan ?? '—' })}</b>{item.pvSan.length > 1 ? t('analysis.trainer.line', { pv: item.pvSan.join(' ') }) : ''}</p>
           <ul>{explainMove(item).map((l, k) => <li key={k}>{l}</li>)}</ul>
         </div>}
         <div className="board-actions">
-          <button className="btn" onClick={() => go(-1)} disabled={i === 0}>← Предыдущая</button>
-          <button className="btn primary" onClick={() => go(1)} disabled={i >= list.length - 1}>Следующая →</button>
+          <button className="btn" onClick={() => go(-1)} disabled={i === 0}>{t('analysis.trainer.prev')}</button>
+          <button className="btn primary" onClick={() => go(1)} disabled={i >= list.length - 1}>{t('analysis.trainer.next')}</button>
         </div>
         <div className="trainer-stats" data-testid="trainer-stats">
-          <div><strong>{stats.solved}/{list.length}</strong><small>решено</small></div>
-          <div><strong>{stats.first}</strong><small>с первой попытки</small></div>
-          <div><strong>{stats.hints}</strong><small>подсказок</small></div>
-          <div><strong>{stats.repeat.length}</strong><small>повторить</small></div>
+          <div><strong>{stats.solved}/{list.length}</strong><small>{t('analysis.trainer.solved')}</small></div>
+          <div><strong>{stats.first}</strong><small>{t('analysis.trainer.first')}</small></div>
+          <div><strong>{stats.hints}</strong><small>{t('analysis.trainer.hints')}</small></div>
+          <div><strong>{stats.repeat.length}</strong><small>{t('analysis.trainer.repeat')}</small></div>
         </div>
         {userColor && <div className="board-actions">
-          <button className={`btn ${side === userColor ? 'active' : ''}`} onClick={() => { setSide(userColor); setIdx(0) }}>Мои ошибки</button>
-          <button className={`btn ${side === 'both' ? 'active' : ''}`} onClick={() => { setSide('both'); setIdx(0) }}>Все ошибки</button>
+          <button className={`btn ${side === userColor ? 'active' : ''}`} onClick={() => { setSide(userColor); setIdx(0) }}>{t('analysis.report.myMistakes')}</button>
+          <button className={`btn ${side === 'both' ? 'active' : ''}`} onClick={() => { setSide('both'); setIdx(0) }}>{t('analysis.report.allMistakes')}</button>
         </div>}
-        <button className="btn full" onClick={onExit}>↩ Вернуться к исходной партии</button>
+        <button className="btn full" onClick={onExit}>{t('analysis.trainer.back')}</button>
       </div>
     </div>
   </section>

@@ -1,5 +1,6 @@
 // Небольшие SVG-графики без сторонних библиотек.
 import { useState } from 'react'
+import { useI18n } from '../i18n'
 
 export type Pt = { y: number; label: string }
 export type Series = { name: string; color: string; pts: Pt[]; dashed?: boolean }
@@ -14,9 +15,10 @@ function nice(min: number, max: number): [number, number] {
 
 /** Линейный график: по оси X — номер партии (по порядку), по Y — значение. */
 export function LineChart({ series, yMin, yMax, unit = '', label }: { series: Series[]; yMin?: number; yMax?: number; unit?: string; label: string }) {
+  const { t } = useI18n()
   const [hover, setHover] = useState<{ s: number; i: number } | null>(null)
   const all = series.flatMap(s => s.pts.map(p => p.y))
-  if (all.length === 0) return <div className="st-empty">Пока нет данных для графика.</div>
+  if (all.length === 0) return <div className="st-empty">{t('stats.chart.noData')}</div>
   const [lo, hi] = nice(yMin ?? Math.min(...all), yMax ?? Math.max(...all))
   const lo2 = yMin ?? lo, hi2 = yMax ?? hi
   const n = Math.max(...series.map(s => s.pts.length))
@@ -28,8 +30,8 @@ export function LineChart({ series, yMin, yMax, unit = '', label }: { series: Se
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} onMouseLeave={() => setHover(null)}>
       {ticks.map((t, k) => <g key={k}><line x1={PL} x2={W - PR} y1={y(t)} y2={y(t)} stroke="#2d3038" strokeWidth="1" />
         <text x={PL - 6} y={y(t) + 3} textAnchor="end" fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">{Math.round(t)}</text></g>)}
-      <text x={PL} y={H - 6} fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">партия 1</text>
-      <text x={W - PR} y={H - 6} textAnchor="end" fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">партия {n}</text>
+      <text x={PL} y={H - 6} fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">{t('stats.chart.game1')}</text>
+      <text x={W - PR} y={H - 6} textAnchor="end" fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">{t('stats.chart.gameN', { n })}</text>
       {series.map((s, si) => <g key={s.name}>
         <polyline fill="none" stroke={s.color} strokeWidth={s.dashed ? 1.6 : 2.2} strokeDasharray={s.dashed ? '5 4' : undefined} strokeLinejoin="round" points={s.pts.map((p, i) => `${x(i)},${y(p.y)}`).join(' ')} />
         {!s.dashed && s.pts.map((p, i) => <g key={i}>
@@ -47,7 +49,8 @@ export type Stack = { label: string; parts: { v: number; color: string; name: st
 
 /** Столбики с накоплением: по одному на партию. */
 export function StackedBars({ bars, label }: { bars: Stack[]; label: string }) {
-  if (bars.length === 0) return <div className="st-empty">Пока нет данных для графика.</div>
+  const { t } = useI18n()
+  if (bars.length === 0) return <div className="st-empty">{t('stats.chart.noData')}</div>
   const max = Math.max(1, ...bars.map(b => b.parts.reduce((s, p) => s + p.v, 0)))
   const bw = Math.min(24, (W - PL - PR) / bars.length - 2)
   const x = (i: number) => PL + (i + 0.5) * ((W - PL - PR) / bars.length)
@@ -59,8 +62,8 @@ export function StackedBars({ bars, label }: { bars: Stack[]; label: string }) {
       {bars.map((b, i) => { let acc = 0; return <g key={i}>
         {b.parts.map(p => { const y0 = y(acc), y1 = y(acc + p.v); acc += p.v; return p.v > 0 ? <rect key={p.name} x={x(i) - bw / 2} y={y1} width={bw} height={y0 - y1} fill={p.color}><title>{`${b.label}: ${p.name} — ${p.v}`}</title></rect> : null })}
       </g> })}
-      <text x={PL} y={H - 6} fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">партия 1</text>
-      <text x={W - PR} y={H - 6} textAnchor="end" fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">партия {bars.length}</text>
+      <text x={PL} y={H - 6} fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">{t('stats.chart.game1')}</text>
+      <text x={W - PR} y={H - 6} textAnchor="end" fontSize="9" fill="#8f949e" fontFamily="DM Mono,monospace">{t('stats.chart.gameN', { n: bars.length })}</text>
     </svg>
     <div className="st-legend">{names.map(([n, c]) => <span key={n}><i style={{ background: c }} />{n}</span>)}</div>
   </div>
@@ -68,14 +71,15 @@ export function StackedBars({ bars, label }: { bars: Stack[]; label: string }) {
 
 /** Полоса результатов: победы / ничьи / поражения. */
 export function WdlBar({ w, d, l }: { w: number; d: number; l: number }) {
+  const { t } = useI18n()
   const n = w + d + l
-  if (n === 0) return <div className="st-empty">Нет завершённых партий.</div>
+  if (n === 0) return <div className="st-empty">{t('stats.wdl.noGames')}</div>
   return <div>
-    <div className="st-wdl" role="img" aria-label={`Победы ${w}, ничьи ${d}, поражения ${l}`}>
-      <span style={{ width: `${(w / n) * 100}%`, background: '#d3ff72' }} title={`Победы: ${w}`} />
-      <span style={{ width: `${(d / n) * 100}%`, background: '#8f949e' }} title={`Ничьи: ${d}`} />
-      <span style={{ width: `${(l / n) * 100}%`, background: '#ff7a7a' }} title={`Поражения: ${l}`} />
+    <div className="st-wdl" role="img" aria-label={t('stats.wdl.aria', { w, d, l })}>
+      <span style={{ width: `${(w / n) * 100}%`, background: '#d3ff72' }} title={`${t('stats.wdl.wins')}: ${w}`} />
+      <span style={{ width: `${(d / n) * 100}%`, background: '#8f949e' }} title={`${t('stats.wdl.draws')}: ${d}`} />
+      <span style={{ width: `${(l / n) * 100}%`, background: '#ff7a7a' }} title={`${t('stats.wdl.losses')}: ${l}`} />
     </div>
-    <div className="st-legend"><span><i style={{ background: '#d3ff72' }} />Победы {w}</span><span><i style={{ background: '#8f949e' }} />Ничьи {d}</span><span><i style={{ background: '#ff7a7a' }} />Поражения {l}</span></div>
+    <div className="st-legend"><span><i style={{ background: '#d3ff72' }} />{t('stats.wdl.wins')} {w}</span><span><i style={{ background: '#8f949e' }} />{t('stats.wdl.draws')} {d}</span><span><i style={{ background: '#ff7a7a' }} />{t('stats.wdl.losses')} {l}</span></div>
   </div>
 }

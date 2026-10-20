@@ -5,7 +5,8 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 import {
   applySnapshot, collectSnapshot, isSnapshot, loadMeta, mergeSnapshots, saveMeta, snapshotHash, type Snapshot,
 } from './sync'
-import { bindProfile, createProfile, loadProfiles, switchProfile, type Avatar } from './profile'
+import { bindProfile, createProfile, guestProfileId, loadProfiles, switchProfile, type Avatar } from './profile'
+import { LocalizedError, msgText, type Msg } from '../i18n/errors'
 
 const URL_ = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ?? ''
 const KEY_ = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ?? ''
@@ -17,32 +18,34 @@ const toUser = (u: User | null | undefined): CloudUser | null => (u ? { id: u.id
 
 let clientPromise: Promise<SupabaseClient> | null = null
 export function getClient(): Promise<SupabaseClient> {
-  if (!cloudConfigured) return Promise.reject(new Error('Облако не настроено.'))
+  if (!cloudConfigured) return Promise.reject(new LocalizedError('app.cloud.err.notConfigured'))
   clientPromise ??= import('@supabase/supabase-js').then(m => m.createClient(URL_, KEY_, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   }))
   return clientPromise
 }
 
-/** Понятные русские тексты для частых ошибок авторизации. */
-export function authErrorText(e: unknown): string {
+/** Сообщение об ошибке авторизации: ключ перевода + параметры (переводится при показе). */
+export function authError(e: unknown): Msg {
+  if (e instanceof LocalizedError) return { key: e.key, params: e.params }
   const raw = e instanceof Error ? e.message : String(e ?? '')
-  if (/^[А-Яа-я]/.test(raw)) return raw // наши собственные тексты (проверка формы)
   const m = raw.toLowerCase()
-  if (m.includes('invalid login')) return 'Неверная почта или пароль.'
-  if (m.includes('already registered') || m.includes('already been registered')) return 'Эта почта уже зарегистрирована — войдите.'
-  if (m.includes('not confirmed')) return 'Почта не подтверждена: откройте письмо со ссылкой и войдите снова.'
-  if (m.includes('password should be') || m.includes('weak')) return `Пароль слишком простой: минимум ${MIN_PASSWORD} символов.`
-  if (m.includes('rate limit') || m.includes('too many') || m.includes('for security purposes')) return 'Слишком много попыток. Подождите минуту и повторите.'
-  if (m.includes('valid email') || m.includes('invalid email')) return 'Проверьте адрес почты.'
-  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed')) return 'Нет связи с сервером. Проверьте интернет.'
-  if (m.includes('same password') || m.includes('different from the old')) return 'Новый пароль должен отличаться от старого.'
-  return e instanceof Error && e.message ? `Ошибка: ${e.message}` : 'Что-то пошло не так. Повторите попытку.'
+  if (m.includes('invalid login')) return { key: 'app.cloud.err.invalid' }
+  if (m.includes('already registered') || m.includes('already been registered')) return { key: 'app.cloud.err.exists' }
+  if (m.includes('not confirmed')) return { key: 'app.cloud.err.notConfirmed' }
+  if (m.includes('password should be') || m.includes('weak')) return { key: 'app.cloud.err.weak', params: { n: MIN_PASSWORD } }
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('for security purposes')) return { key: 'app.cloud.err.rate' }
+  if (m.includes('valid email') || m.includes('invalid email')) return { key: 'app.cloud.err.email' }
+  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed')) return { key: 'app.cloud.err.network' }
+  if (m.includes('same password') || m.includes('different from the old')) return { key: 'app.cloud.err.samePass' }
+  return raw ? { key: 'app.cloud.err.other', params: { msg: raw } } : { key: 'app.cloud.err.unknown' }
 }
+export const authErrorText = (e: unknown): string => msgText(authError(e))
 
-export function validateCredentials(email: string, password: string): string | null {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Проверьте адрес почты.'
-  if (password.length < MIN_PASSWORD) return `Пароль — минимум ${MIN_PASSWORD} символов.`
+/** Проверка формы входа: возвращает ошибку с ключом перевода или null. */
+export function validateCredentials(email: string, password: string): LocalizedError | null {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return new LocalizedError('app.cloud.err.email')
+  if (password.length < MIN_PASSWORD) return new LocalizedError('app.cloud.err.passMin', { n: MIN_PASSWORD })
   return null
 }
 
@@ -66,7 +69,7 @@ export async function signIn(email: string, password: string): Promise<CloudUser
   const { data, error } = await c.auth.signInWithPassword({ email: email.trim(), password })
   if (error) throw error
   const u = toUser(data.user)
-  if (!u) throw new Error('Не удалось войти.')
+  if (!u) throw new LocalizedError('app.cloud.err.signinFail')
   return u
 }
 
@@ -119,7 +122,7 @@ export function attachProfile(user: CloudUser): boolean {
   const cur = st.list.find(p => p.id === st.current)
   if (cur && !cur.cloud) { bindProfile(cur.id, { userId: user.id, email: user.email }); return false }
   const avatar: Avatar = { emoji: '♞', color: '#6cb8ff' }
-  const s = createProfile(user.email.split('@')[0] || 'Игрок', avatar)
+  const s = createProfile(user.email.split('@')[0] || 'Player', avatar)
   const created = s.list[s.list.length - 1]
   bindProfile(created.id, { userId: user.id, email: user.email })
   switchProfile(created.id)
@@ -171,4 +174,27 @@ export async function pushIfChanged(user: CloudUser): Promise<boolean> {
   const at = Date.now()
   saveMeta({ pushedHash: h, lastPushAt: at, lastSyncAt: at })
   return true
+}
+
+/** Есть ли в облаке то, чего нет на этом устройстве (изменения с другого устройства). Локальные данные не трогает. */
+export async function remoteHasNews(user: CloudUser): Promise<boolean> {
+  const c = await getClient()
+  const { snap: remote } = await fetchRemote(c, user.id)
+  if (!remote) return false
+  const local = collectSnapshot()
+  return snapshotHash(mergeSnapshots(local, remote, false)) !== snapshotHash(local)
+}
+
+/** После выхода показываем «гостевой» профиль (данные аккаунта на устройстве скрываются). Страница перезагружается. */
+export function leaveToGuest() { switchProfile(guestProfileId()) }
+
+/** Отвечает ли облачный сервер (Supabase). Любой HTTP-ответ без ошибки сервера считается «онлайн»; сеть/таймаут/5xx — «недоступен». */
+export async function checkServer(timeoutMs = 6000): Promise<boolean> {
+  if (!cloudConfigured) return true
+  const ctl = new AbortController()
+  const timer = window.setTimeout(() => ctl.abort(), timeoutMs)
+  try {
+    const r = await fetch(`${URL_}/auth/v1/health`, { headers: { apikey: KEY_ }, signal: ctl.signal, cache: 'no-store' })
+    return r.status < 500
+  } catch { return false } finally { clearTimeout(timer) }
 }

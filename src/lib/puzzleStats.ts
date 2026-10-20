@@ -1,5 +1,6 @@
 // Статистика решения задач. Хранится в localStorage (статический сайт, без сервера).
 import { pk } from './profile'
+import { t } from '../i18n'
 import { THEME_ORDER, type ThemeId } from './puzzleThemes'
 
 export type ThemeStat = { tried: number; solved: number; firstTry: number; timeMs: number }
@@ -76,10 +77,10 @@ export function weakThemes(s: PuzzleStats, minTried = 2): WeakTheme[] {
 
 export function formatDuration(ms: number): string {
   const sec = Math.round(ms / 1000)
-  if (sec < 60) return `${sec} с`
+  if (sec < 60) return t('puzzles.dur.s', { s: sec })
   const m = Math.floor(sec / 60)
-  if (m < 60) return `${m} мин ${sec % 60} с`
-  return `${Math.floor(m / 60)} ч ${m % 60} мин`
+  if (m < 60) return t('puzzles.dur.ms', { m, s: sec % 60 })
+  return t('puzzles.dur.hm', { h: Math.floor(m / 60), m: m % 60 })
 }
 
 const BASE = 'chess-coach-ai:puzzles:v1'

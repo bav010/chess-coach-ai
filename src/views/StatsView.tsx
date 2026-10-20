@@ -1,3 +1,4 @@
+import { fmtDate as fmtD, useI18n } from '../i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { LineChart, StackedBars, WdlBar } from '../components/Charts'
 import type { GameStat } from '../lib/gameStats'
@@ -9,11 +10,12 @@ import { DEFAULT_FILTERS, MIN_REVIEWED, applyFilters, movingAverage, ratingSerie
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
 type Props = { active: boolean; games: GameStat[]; onGo: (m: Go) => void }
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+const fmtDate = (iso: string) => fmtD(Date.parse(iso), { day: '2-digit', month: '2-digit' })
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
 
 /** Личная панель прогресса: партии, внутренний рейтинг, точность, ошибки, задачи, дебюты, эндшпили, рекомендации, резервная копия. */
 export default function StatsView({ active, games, onGo }: Props) {
+  const { t, tn, lang } = useI18n()
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS)
   const [tick, setTick] = useState(0)
   // задачи и дебюты живут в своих хранилищах — перечитываем при открытии вкладки
@@ -27,71 +29,71 @@ export default function StatsView({ active, games, onGo }: Props) {
   const rating = useMemo(() => ratingSeries(games), [games])
   const shownRating = useMemo(() => { const keys = new Set(filtered.map(g => g.key)); return rating.filter(r => keys.has(r.key)) }, [rating, filtered])
   const reviewedGames = filtered.filter(g => g.review)
-  const rec = useMemo(() => recommend(filtered, puzzles), [filtered, puzzles])
+  const rec = useMemo(() => recommend(filtered, puzzles), [filtered, puzzles, lang])
   const cur = rating.length ? Math.round(rating[rating.length - 1].rating) : null
 
-  const accSeries = reviewedGames.map(g => ({ y: g.review!.acc ?? 0, label: `${fmtDate(g.at)}${g.opp ? `, бот ${g.opp}` : ''}` })).filter(p => p.y > 0)
+  const accSeries = reviewedGames.map(g => ({ y: g.review!.acc ?? 0, label: `${fmtDate(g.at)}${g.opp ? `, ${t('stats.chart.vsBot', { opp: g.opp })}` : ''}` })).filter(p => p.y > 0)
   const ma = movingAverage(accSeries.map(p => p.y))
 
   const none = games.length === 0
   return <div className="st-page" data-testid="stats-view">
     <section className="panel">
-      <div className="panel-head"><div><div className="eyebrow">ТВОЙ ПРОГРЕСС</div><h2>Статистика и развитие</h2></div></div>
+      <div className="panel-head"><div><div className="eyebrow">{t('stats.eyebrow.progress')}</div><h2>{t('stats.title')}</h2></div></div>
       <div className="st-filters" data-testid="stats-filters">
-        <label>Период<select value={f.period} onChange={e => set('period', e.target.value as Filters['period'])} data-testid="f-period">
-          <option value="all">Всё время</option><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option><option value="365">Год</option></select></label>
-        <label>Цвет<select value={f.color} onChange={e => set('color', e.target.value as Filters['color'])} data-testid="f-color">
-          <option value="all">Любой</option><option value="w">Белые</option><option value="b">Чёрные</option></select></label>
-        <label>Результат<select value={f.result} onChange={e => set('result', e.target.value as Filters['result'])} data-testid="f-result">
-          <option value="all">Любой</option><option value="win">Победа</option><option value="draw">Ничья</option><option value="loss">Поражение</option></select></label>
-        <label>Режим<select value={f.mode} onChange={e => set('mode', e.target.value as Filters['mode'])} data-testid="f-mode">
-          <option value="all">Все</option><option value="bot">Игра с ботом</option><option value="botClock">Бот, с часами</option><option value="botNoClock">Бот, без часов</option><option value="analysis">Анализ</option></select></label>
-        <button className="btn" onClick={() => setF(DEFAULT_FILTERS)} data-testid="f-reset">Сбросить фильтры</button>
+        <label>{t('stats.filters.period')}<select value={f.period} onChange={e => set('period', e.target.value as Filters['period'])} data-testid="f-period">
+          {(['all', '7', '30', '90', '365'] as const).map(v => <option key={v} value={v}>{t(`stats.filters.period.${v}`)}</option>)}</select></label>
+        <label>{t('stats.filters.color')}<select value={f.color} onChange={e => set('color', e.target.value as Filters['color'])} data-testid="f-color">
+          <option value="all">{t('stats.filters.any')}</option><option value="w">{t('stats.filters.white')}</option><option value="b">{t('stats.filters.black')}</option></select></label>
+        <label>{t('stats.filters.result')}<select value={f.result} onChange={e => set('result', e.target.value as Filters['result'])} data-testid="f-result">
+          <option value="all">{t('stats.filters.any')}</option><option value="win">{t('stats.filters.win')}</option><option value="draw">{t('stats.filters.draw')}</option><option value="loss">{t('stats.filters.loss')}</option></select></label>
+        <label>{t('stats.filters.mode')}<select value={f.mode} onChange={e => set('mode', e.target.value as Filters['mode'])} data-testid="f-mode">
+          {(['all', 'bot', 'botClock', 'botNoClock', 'analysis'] as const).map(v => <option key={v} value={v}>{t(`stats.filters.mode.${v}`)}</option>)}</select></label>
+        <button className="btn" onClick={() => setF(DEFAULT_FILTERS)} data-testid="f-reset">{t('stats.filters.reset')}</button>
       </div>
-      {none && <div className="empty-state"><span>♟</span><p>Партий пока нет</p><small>Сыграйте партию с ботом — она сохранится автоматически, а разбор партии добавит точность и ошибки. Задачи и дебюты — ниже.</small></div>}
-      {!none && filtered.length === 0 && <p className="tiny" data-testid="stats-nomatch">По выбранным фильтрам партий нет.</p>}
+      {none && <div className="empty-state"><span>♟</span><p>{t('stats.empty.title')}</p><small>{t('stats.empty.text')}</small></div>}
+      {!none && filtered.length === 0 && <p className="tiny" data-testid="stats-nomatch">{t('stats.nomatch')}</p>}
     </section>
 
     {!none && <>
       <section className="st-kpis" data-testid="stats-kpis">
-        <div className="st-kpi"><small>Партий</small><strong data-testid="kpi-games">{sum.total}</strong><em>завершено {sum.finished}</em></div>
-        <div className="st-kpi"><small>Победы / ничьи / поражения</small><strong data-testid="kpi-wdl">{sum.wdl.w} / {sum.wdl.d} / {sum.wdl.l}</strong><em>очков {pct(sum.scorePct)}</em></div>
-        <div className="st-kpi" title="Внутренний рейтинг приложения: считается по формуле Эло против силы бота. Это не рейтинг FIDE и не рейтинг Chess.com."><small>Рейтинг приложения</small><strong data-testid="kpi-rating">{cur ?? '—'}</strong><em>{rating.length ? `за ${rating.length} парт. с ботом` : 'нужны партии с ботом'}</em></div>
-        <div className="st-kpi" title="Средняя по партиям точность ходов (по потере шансов на победу). Это не вероятность победы."><small>Точность</small><strong data-testid="kpi-acc">{pct(sum.acc)}</strong><em>{sum.reviewed ? `по ${sum.reviewed} разобранным` : 'разберите партию'}</em></div>
-        <div className="st-kpi"><small>Ошибок на 100 ходов</small><strong data-testid="kpi-err">{sum.per100 ? sum.per100.all : '—'}</strong><em>{sum.per100 ? `зевков ${sum.per100.blunder}` : 'нужен разбор'}</em></div>
+        <div className="st-kpi"><small>{t('stats.kpi.games')}</small><strong data-testid="kpi-games">{sum.total}</strong><em>{t('stats.kpi.finished', { n: sum.finished })}</em></div>
+        <div className="st-kpi"><small>{t('stats.kpi.wdl')}</small><strong data-testid="kpi-wdl">{sum.wdl.w} / {sum.wdl.d} / {sum.wdl.l}</strong><em>{t('stats.kpi.score', { pct: pct(sum.scorePct) })}</em></div>
+        <div className="st-kpi" title={t('stats.kpi.ratingTip')}><small>{t('stats.kpi.rating')}</small><strong data-testid="kpi-rating">{cur ?? '—'}</strong><em>{rating.length ? t('stats.kpi.ratingOver', { n: rating.length }) : t('stats.kpi.ratingNeed')}</em></div>
+        <div className="st-kpi" title={t('stats.kpi.accTip')}><small>{t('stats.kpi.acc')}</small><strong data-testid="kpi-acc">{pct(sum.acc)}</strong><em>{sum.reviewed ? t('stats.kpi.accFrom', { n: sum.reviewed }) : t('stats.kpi.accNeed')}</em></div>
+        <div className="st-kpi"><small>{t('stats.kpi.err')}</small><strong data-testid="kpi-err">{sum.per100 ? sum.per100.all : '—'}</strong><em>{sum.per100 ? t('stats.kpi.errBlunders', { n: sum.per100.blunder }) : t('stats.kpi.errNeed')}</em></div>
       </section>
-      <p className="tiny st-note">«Рейтинг приложения» — внутренняя оценка по результатам партий с ботом (формула Эло, старт 1000, сила бота — номинальная). Это не официальный рейтинг FIDE и не рейтинг Chess.com. «Точность» показывает, насколько ходы близки к лучшим по оценке движка, и не является вероятностью победы.</p>
+      <p className="tiny st-note">{t('stats.note')}</p>
 
       <div className="st-grid">
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">ДИНАМИКА</div><h2>Рейтинг приложения</h2></div></div>
-          <LineChart label="Динамика рейтинга приложения" series={[{ name: 'Рейтинг', color: '#d3ff72', pts: shownRating.map(r => ({ y: r.rating, label: `${fmtDate(r.at)}, бот ${r.opp}, ${r.delta >= 0 ? '+' : ''}${r.delta.toFixed(1)}` })) }]} />
+        <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.rating.eyebrow')}</div><h2>{t('stats.rating.title')}</h2></div></div>
+          <LineChart label={t('stats.rating.chart')} series={[{ name: t('stats.rating.series'), color: '#d3ff72', pts: shownRating.map(r => ({ y: r.rating, label: `${fmtDate(r.at)}, ${t('stats.chart.vsBot', { opp: r.opp })}, ${r.delta >= 0 ? '+' : ''}${r.delta.toFixed(1)}` })) }]} />
         </section>
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">КАЧЕСТВО ИГРЫ</div><h2>Точность партий</h2></div></div>
-          <LineChart label="Точность партий" unit="%" yMin={0} yMax={100} series={[{ name: 'Партия', color: '#6cb8ff', pts: accSeries }, { name: 'Среднее за 5', color: '#d3ff72', dashed: true, pts: ma.map(y => ({ y, label: '' })) }]} />
-          <p className="tiny">Только разобранные партии: {sum.reviewed} из {sum.decided || sum.total}.</p>
+        <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.acc.eyebrow')}</div><h2>{t('stats.acc.title')}</h2></div></div>
+          <LineChart label={t('stats.acc.title')} unit="%" yMin={0} yMax={100} series={[{ name: t('stats.acc.series'), color: '#6cb8ff', pts: accSeries }, { name: t('stats.acc.avg'), color: '#d3ff72', dashed: true, pts: ma.map(y => ({ y, label: '' })) }]} />
+          <p className="tiny">{t('stats.acc.only', { n: sum.reviewed, total: sum.decided || sum.total })}</p>
         </section>
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">РЕЗУЛЬТАТЫ</div><h2>Победы, ничьи, поражения</h2></div></div>
+        <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.wdl.eyebrow')}</div><h2>{t('stats.wdl.title')}</h2></div></div>
           <WdlBar {...sum.wdl} />
-          {f.mode === 'analysis' && <p className="tiny">В партиях анализа результат не относится к вам.</p>}
+          {f.mode === 'analysis' && <p className="tiny">{t('stats.wdl.analysisNote')}</p>}
         </section>
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">ОШИБКИ</div><h2>Количество и частота</h2></div></div>
-          <StackedBars label="Ошибки по партиям" bars={reviewedGames.map(g => ({ label: `${fmtDate(g.at)}`, parts: [
-            { name: 'Неточности', color: '#e0a44f', v: g.review!.counts.inaccuracy ?? 0 }, { name: 'Ошибки', color: '#ff9a52', v: (g.review!.counts.mistake ?? 0) + (g.review!.counts.miss ?? 0) }, { name: 'Зевки', color: '#ff5c5c', v: g.review!.counts.blunder ?? 0 }] }))} />
-          {sum.per100 && <p className="tiny" data-testid="err-text">На 100 ходов: неточностей {sum.per100.inaccuracy}, ошибок {sum.per100.mistake}, упущенных шансов {sum.per100.miss}, зевков {sum.per100.blunder}. Всего за разобранные партии: {sum.errors.inaccuracy + sum.errors.mistake + sum.errors.miss + sum.errors.blunder}.</p>}
+        <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.errors.eyebrow')}</div><h2>{t('stats.errors.title')}</h2></div></div>
+          <StackedBars label={t('stats.errors.chart')} bars={reviewedGames.map(g => ({ label: `${fmtDate(g.at)}`, parts: [
+            { name: t('stats.errors.inaccuracies'), color: '#e0a44f', v: g.review!.counts.inaccuracy ?? 0 }, { name: t('stats.errors.mistakes'), color: '#ff9a52', v: (g.review!.counts.mistake ?? 0) + (g.review!.counts.miss ?? 0) }, { name: t('stats.errors.blunders'), color: '#ff5c5c', v: g.review!.counts.blunder ?? 0 }] }))} />
+          {sum.per100 && <p className="tiny" data-testid="err-text">{t('stats.errors.per100', { inaccuracy: sum.per100.inaccuracy, mistake: sum.per100.mistake, miss: sum.per100.miss, blunder: sum.per100.blunder, total: sum.errors.inaccuracy + sum.errors.mistake + sum.errors.miss + sum.errors.blunder })}</p>}
         </section>
       </div>
 
       <div className="st-grid">
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">СТАДИИ ПАРТИИ</div><h2>Дебют · миттельшпиль · эндшпиль</h2></div></div>
-          <table className="st-table"><thead><tr><th>Стадия</th><th>Ходов</th><th>Точность</th><th>Грубых ошибок</th></tr></thead><tbody>
-            {(['opening', 'middlegame', 'endgame'] as const).map(p => <tr key={p}><td>{p === 'opening' ? 'Дебют' : p === 'middlegame' ? 'Миттельшпиль' : 'Эндшпиль'}</td><td>{sum.phases[p].n}</td><td>{pct(sum.phases[p].acc)}</td><td>{sum.phases[p].bad}</td></tr>)}
+        <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.phases.eyebrow')}</div><h2>{t('stats.phases.title')}</h2></div></div>
+          <table className="st-table"><thead><tr><th>{t('stats.phases.phase')}</th><th>{t('stats.phases.moves')}</th><th>{t('stats.phases.acc')}</th><th>{t('stats.phases.bad')}</th></tr></thead><tbody>
+            {(['opening', 'middlegame', 'endgame'] as const).map(p => <tr key={p}><td>{t(`stats.phase.${p}`)}</td><td>{sum.phases[p].n}</td><td>{pct(sum.phases[p].acc)}</td><td>{sum.phases[p].bad}</td></tr>)}
           </tbody></table>
         </section>
-        <section className="panel"><div className="panel-head"><div><div className="eyebrow">ЭНДШПИЛИ</div><h2>Успешность в эндшпилях</h2></div></div>
-          {sum.endgame.games === 0 ? <p className="tiny">Пока нет партий, дошедших до эндшпиля.</p> : <>
-            <p className="st-big" data-testid="endgame-score">{pct(sum.endgame.scorePct)} очков <small>в {sum.endgame.games} партиях, дошедших до эндшпиля</small></p>
+        <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.endgame.eyebrow')}</div><h2>{t('stats.endgame.title')}</h2></div></div>
+          {sum.endgame.games === 0 ? <p className="tiny">{t('stats.endgame.none')}</p> : <>
+            <p className="st-big" data-testid="endgame-score">{t('stats.endgame.score', { pct: pct(sum.endgame.scorePct) })} <small>{t('stats.endgame.scoreIn', { n: sum.endgame.games })}</small></p>
             <WdlBar {...sum.endgame.wdl} />
-            <p className="tiny">Точность в эндшпиле: {pct(sum.endgame.acc)}.{sum.endgame.strong.n > 0 && ` Из ${sum.endgame.strong.n} партий, где вы входили в эндшпиль с преимуществом (65%+), выиграно ${sum.endgame.strong.won}.`}</p></>}
+            <p className="tiny">{t('stats.endgame.acc', { pct: pct(sum.endgame.acc) })}{sum.endgame.strong.n > 0 && t('stats.endgame.strong', { n: sum.endgame.strong.n, won: sum.endgame.strong.won })}</p></>}
         </section>
       </div>
 
@@ -100,12 +102,12 @@ export default function StatsView({ active, games, onGo }: Props) {
     <LearningStats puzzles={puzzles} openings={openings} onGo={onGo} />
 
     <section className="panel" data-testid="recs">
-        <div className="panel-head"><div><div className="eyebrow">ПЕРСОНАЛЬНО</div><h2>Рекомендации</h2></div></div>
-        {rec.needMore > 0 && <p className="st-info" data-testid="recs-more">Пока мало данных для выводов по партиям: разобрано {rec.reviewed} из минимум {MIN_REVIEWED}. Разберите ещё {rec.needMore} {rec.needMore === 1 ? 'партию' : 'партии'} (включите «Авторазбор» в настройках или нажмите «Разбор партии»). Выводы строятся только по партиям с разбором и учитывают фильтры выше.</p>}
-        {rec.recs.length === 0 && rec.needMore === 0 && <p className="st-info" data-testid="recs-none">По {rec.reviewed} разобранным партиям устойчивых проблем не найдено — так держать. Рекомендации появляются, когда одна и та же проблема повторяется в нескольких партиях.</p>}
+        <div className="panel-head"><div><div className="eyebrow">{t('stats.recs.eyebrow')}</div><h2>{t('stats.recs.title')}</h2></div></div>
+        {rec.needMore > 0 && <p className="st-info" data-testid="recs-more">{t('stats.recs.needMore', { reviewed: rec.reviewed, min: MIN_REVIEWED, more: tn('stats.recs.more', rec.needMore) })}</p>}
+        {rec.recs.length === 0 && rec.needMore === 0 && <p className="st-info" data-testid="recs-none">{t('stats.recs.none', { reviewed: rec.reviewed })}</p>}
         <div className="st-recs">{rec.recs.map(r => <article key={r.id} className="st-rec" data-testid={`rec-${r.id}`}>
           <b>{r.title}</b><p>{r.text}</p>
-          <small className="st-basis">На чём основано: {r.basis}.</small>
+          <small className="st-basis">{t('stats.recs.basis', { basis: r.basis })}</small>
           <button className="btn" onClick={() => onGo(r.action.go)}>{r.action.label} →</button>
         </article>)}</div>
       </section>

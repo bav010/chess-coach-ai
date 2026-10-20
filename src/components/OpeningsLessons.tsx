@@ -3,25 +3,30 @@ import { Chess, type Color, type Square } from 'chess.js'
 import Board, { type ArrowSpec } from './Board'
 import PromoPicker from './PromoPicker'
 import { useBoardInput } from '../hooks/useBoardInput'
-import { LESSONS, LEVEL_TEXT, compileLesson, type Lesson } from '../lib/lessons'
+import { useI18n } from '../i18n'
+import { LESSONS, compileLesson, type Lesson } from '../lib/lessons'
 import { lessonRepName } from '../lib/lessonSync'
 import { splitUci } from '../lib/game'
 import type { OpeningsData } from '../lib/openingsStore'
 
 type Props = { data: OpeningsData; update: (fn: (d: OpeningsData) => OpeningsData) => void; active: boolean }
 
+/** Сообщение хранится структурой (а не текстом), чтобы при смене языка пересобираться на новом языке. */
+type Msg = { kind: 'info' | 'ok' | 'bad'; ref: { k: 'none' } | { k: 'intro' } | { k: 'outro' } | { k: 'step'; i: number; ok: boolean } | { k: 'wrong'; i: number } }
+
 const WHITE_ARROW = '#d3ff72'
 const BLACK_ARROW = '#ffb066'
 
 /** Уроки дебютов: ходите за свою сторону, соперник отвечает, а после каждого хода — объяснение «почему так». */
 export default function OpeningsLessons({ data, update, active }: Props) {
+  const { t, tn, lang } = useI18n()
   const [lessonId, setLessonId] = useState<string | null>(null)
   const lesson = LESSONS.find(l => l.id === lessonId) ?? null
-  const steps = useMemo(() => (lesson ? compileLesson(lesson) : []), [lesson])
+  const steps = useMemo(() => (lesson ? compileLesson(lesson) : []), [lesson, lang]) // eslint-disable-line react-hooks/exhaustive-deps
   const [idx, setIdx] = useState(0)
   const [showHint, setShowHint] = useState(true)
   const [forced, setForced] = useState(false)
-  const [msg, setMsg] = useState<{ kind: 'info' | 'ok' | 'bad'; text: string }>({ kind: 'info', text: '' })
+  const [msg, setMsg] = useState<Msg>({ kind: 'info', ref: { k: 'none' } })
   const [mistakes, setMistakes] = useState(0)
   const [styleF, setStyleF] = useState<'all' | 'attack' | 'defense'>('all')
   const [sideF, setSideF] = useState<'all' | Color>('all')
@@ -44,7 +49,7 @@ export default function OpeningsLessons({ data, update, active }: Props) {
   function open(l: Lesson, hints = true) {
     setShowHint(hints)
     setLessonId(l.id); setIdx(0); setMistakes(0); setForced(false); countedRef.current = false
-    setMsg({ kind: 'info', text: l.intro })
+    setMsg({ kind: 'info', ref: { k: 'intro' } })
     input.clear()
   }
 
@@ -55,7 +60,7 @@ export default function OpeningsLessons({ data, update, active }: Props) {
     if (!active || !lesson || !next || userTurn) return
     const t = window.setTimeout(() => {
       setIdx(i => i + 1)
-      setMsg({ kind: 'info', text: `${next.no}${next.mover === 'w' ? '.' : '…'} ${next.san} — ${next.why}` })
+      setMsg({ kind: 'info', ref: { k: 'step', i: idx, ok: false } })
     }, idx === 0 ? 400 : 900)
     return () => clearTimeout(t)
   }, [active, lesson, next, userTurn, idx])
@@ -68,20 +73,23 @@ export default function OpeningsLessons({ data, update, active }: Props) {
       const cur = d.lessons[lesson.id] ?? { done: false, runs: 0, mistakes: 0 }
       return { ...d, lessons: { ...d.lessons, [lesson.id]: { done: true, runs: cur.runs + 1, mistakes: cur.mistakes + mistakes } } }
     })
-    setMsg({ kind: 'ok', text: lesson.outro })
+    setMsg({ kind: 'ok', ref: { k: 'outro' } })
   }, [lesson, finished, mistakes, update])
 
   function onUserMove(uci: string) {
     if (!next) return
     if (uci === next.uci) {
       setIdx(i => i + 1); setForced(false)
-      setMsg({ kind: 'ok', text: `✓ ${next.no}${next.mover === 'w' ? '.' : '…'} ${next.san} — ${next.why}` })
+      setMsg({ kind: 'ok', ref: { k: 'step', i: idx, ok: true } })
     } else {
       setMistakes(m => m + 1); setForced(true)
-      setMsg({ kind: 'bad', text: `✗ В этом дебюте здесь играют ${next.san} (стрелка на доске). Сыграйте его — объяснение появится после хода.` })
+      setMsg({ kind: 'bad', ref: { k: 'wrong', i: idx } })
     }
   }
 
+  const stepText = (i: number, ok: boolean) => { const st = steps[i]; return st ? `${ok ? '✓ ' : ''}${st.no}${st.mover === 'w' ? '.' : '…'} ${st.san} — ${st.why}` : '' }
+  const msgText = !lesson ? '' : msg.ref.k === 'intro' ? lesson.intro : msg.ref.k === 'outro' ? lesson.outro
+    : msg.ref.k === 'step' ? stepText(msg.ref.i, msg.ref.ok) : msg.ref.k === 'wrong' ? t('openings.lessons.wrongMove', { san: steps[msg.ref.i]?.san ?? '' }) : ''
   const lastRec = idx > 0 && steps[idx - 1] ? splitUci(steps[idx - 1].uci) : null
   const arrows: ArrowSpec[] = next && userTurn && (showHint || forced)
     ? [{ from: splitUci(next.uci).from as Square, to: splitUci(next.uci).to as Square, rank: 0, label: '★', color: next.mover === 'w' ? WHITE_ARROW : BLACK_ARROW }]
@@ -91,19 +99,19 @@ export default function OpeningsLessons({ data, update, active }: Props) {
     const done = LESSONS.filter(l => data.lessons[l.id]?.done).length
     const visible = LESSONS.filter(l => (styleF === 'all' || l.style === styleF) && (sideF === 'all' || l.side === sideF))
     const groups = [
-      { key: 'attack', title: 'Атака — захватить инициативу', text: 'Дебюты, где вы наступаете: быстрый центр, развитие, давление на короля соперника.', items: visible.filter(l => l.style === 'attack') },
-      { key: 'defense', title: 'Защита — надёжно удержать позицию', text: 'Дебюты и ответы на агрессию: как не попасться на ловушки, удержать центр и перехватить инициативу.', items: visible.filter(l => l.style === 'defense') },
+      { key: 'attack', title: t('openings.lessons.group.attack.title'), text: t('openings.lessons.group.attack.text'), items: visible.filter(l => l.style === 'attack') },
+      { key: 'defense', title: t('openings.lessons.group.defense.title'), text: t('openings.lessons.group.defense.text'), items: visible.filter(l => l.style === 'defense') },
     ]
     return <div data-testid="lessons-list">
       <section className="panel">
-        <div className="panel-head"><div><div className="eyebrow">УРОКИ</div><h2>Выберите дебют для изучения</h2></div><span className="pill" data-testid="lessons-progress">{done} из {LESSONS.length} пройдено</span></div>
-        <p className="muted">Вы играете за свою сторону, соперник отвечает ходами дебюта. После каждого хода — короткое объяснение, почему он сделан. На доске стрелка показывает нужный ход (её можно отключить, чтобы проверить себя). Пройденные уроки можно повторить без подсказок и добавить в репертуар для тренировки.</p>
-        <div className="chip-group"><small>СТИЛЬ</small>
-          {([['all', 'Все'], ['attack', 'Атака'], ['defense', 'Защита']] as const).map(([k, label]) => <button key={k} className={`chip ${styleF === k ? 'active' : ''}`} onClick={() => setStyleF(k)} data-testid={`style-${k}`}>{label}</button>)}
-          <small style={{ marginLeft: 12 }}>СТОРОНА</small>
-          {([['all', 'Любая'], ['w', 'Белые'], ['b', 'Чёрные']] as const).map(([k, label]) => <button key={k} className={`chip ${sideF === k ? 'active' : ''}`} onClick={() => setSideF(k)} data-testid={`side-filter-${k}`}>{label}</button>)}
+        <div className="panel-head"><div><div className="eyebrow">{t('openings.lessons.eyebrow')}</div><h2>{t('openings.lessons.pick')}</h2></div><span className="pill" data-testid="lessons-progress">{t('openings.lessons.progress', { done, total: LESSONS.length })}</span></div>
+        <p className="muted">{t('openings.lessons.intro')}</p>
+        <div className="chip-group"><small>{t('openings.lessons.style')}</small>
+          {(['all', 'attack', 'defense'] as const).map(k => <button key={k} className={`chip ${styleF === k ? 'active' : ''}`} onClick={() => setStyleF(k)} data-testid={`style-${k}`}>{t(`openings.lessons.style.${k}`)}</button>)}
+          <small style={{ marginLeft: 12 }}>{t('openings.lessons.sideLabel')}</small>
+          {(['all', 'w', 'b'] as const).map(k => <button key={k} className={`chip ${sideF === k ? 'active' : ''}`} onClick={() => setSideF(k)} data-testid={`side-filter-${k}`}>{t(`openings.lessons.side.${k}`)}</button>)}
         </div>
-        {visible.length === 0 && <p className="muted" style={{ marginTop: 14 }}>Нет уроков с такими параметрами.</p>}
+        {visible.length === 0 && <p className="muted" style={{ marginTop: 14 }}>{t('openings.lessons.none')}</p>}
         {groups.filter(g => g.items.length > 0).map(g => <div key={g.key} className="lesson-group" data-testid={`group-${g.key}`}>
           <h3>{g.title} <span className="pill">{g.items.length}</span></h3>
           <p className="tiny">{g.text}</p>
@@ -114,11 +122,11 @@ export default function OpeningsLessons({ data, update, active }: Props) {
                 <button className="lesson-open" onClick={() => open(l)} data-testid={`lesson-${l.id}`}>
                   <span className="eco">{l.eco}</span>
                   <b>{l.title}</b>
-                  <span className="lesson-meta">{l.side === 'w' ? '♔ за белых' : '♚ за чёрных'} · {LEVEL_TEXT[l.level]} · {Math.ceil(l.steps.length / 2)} ходов</span>
+                  <span className="lesson-meta">{l.side === 'w' ? t('openings.lessons.forWhite') : t('openings.lessons.forBlack')} · {t(`openings.lessons.level.${l.level}`)} · {tn('openings.lessons.moves', Math.ceil(l.steps.length / 2))}</span>
                   <span className="lesson-intro">{l.intro}</span>
                 </button>
-                {pr?.done && <div className="lesson-done"><em>✓ пройден · раз: {pr.runs}</em>
-                  <button className="btn" onClick={() => open(l, false)} data-testid={`repeat-${l.id}`}>Повторить без подсказок</button></div>}
+                {pr?.done && <div className="lesson-done"><em>{t('openings.lessons.doneRuns', { n: pr.runs })}</em>
+                  <button className="btn" onClick={() => open(l, false)} data-testid={`repeat-${l.id}`}>{t('openings.lessons.repeatNoHints')}</button></div>}
               </div>
             })}
           </div>
@@ -131,10 +139,10 @@ export default function OpeningsLessons({ data, update, active }: Props) {
   const lastEntry = log[log.length - 1]
   return <div className="main-grid" data-testid="lesson-view">
     <section className="panel board-panel" data-testid="lesson-board">
-      <div className="panel-head"><div><div className="eyebrow">УРОК · {lesson.eco}</div><h2>{lesson.title}</h2></div>
-        <span className="pill">{lesson.side === 'w' ? 'вы за белых' : 'вы за чёрных'}</span></div>
+      <div className="panel-head"><div><div className="eyebrow">{t('openings.lessons.lessonEyebrow', { eco: lesson.eco })}</div><h2>{lesson.title}</h2></div>
+        <span className="pill">{lesson.side === 'w' ? t('openings.lessons.youWhite') : t('openings.lessons.youBlack')}</span></div>
       <div className="puzzle-task" data-testid="lesson-progress">
-        {finished ? 'Урок пройден' : userTurn ? `Ваш ход (${Math.min(idx + 1, steps.length)} из ${steps.length})` : 'Ответ соперника…'}
+        {finished ? t('openings.lessons.finished') : userTurn ? t('openings.lessons.yourMove', { n: Math.min(idx + 1, steps.length), total: steps.length }) : t('openings.lessons.opponent')}
       </div>
       <div className="board-wrap">
         <Board chess={chess} orientation={orientation} selected={input.selected} legal={input.legal}
@@ -142,20 +150,20 @@ export default function OpeningsLessons({ data, update, active }: Props) {
           arrows={arrows} onSquareClick={input.onSquare} readOnly={!userTurn} />
       </div>
       {input.promo && <PromoPicker color={lesson.side} onPick={input.pickPromo} onCancel={input.cancelPromo} />}
-      <div className={`puzzle-msg lesson-msg ${msg.kind}`} data-testid="lesson-message" role="status"><span className="pulse" /> {msg.text}</div>
-      {finished && <p className="tiny" data-testid="lesson-info">Урок засчитан и добавлен в репертуар «{lessonRepName(lesson.side)}». Теперь его можно повторять: вкладка «Тренировка» → «Повторить выученное».</p>}
+      <div className={`puzzle-msg lesson-msg ${msg.kind}`} data-testid="lesson-message" role="status"><span className="pulse" /> {msgText}</div>
+      {finished && <p className="tiny" data-testid="lesson-info">{t('openings.lessons.counted', { name: lessonRepName(lesson.side) })}</p>}
       <div className="board-actions">
-        <label className="chip"><input type="checkbox" checked={showHint} onChange={e => setShowHint(e.target.checked)} data-testid="lesson-hint-toggle" /> Подсказывать стрелкой</label>
+        <label className="chip"><input type="checkbox" checked={showHint} onChange={e => setShowHint(e.target.checked)} data-testid="lesson-hint-toggle" /> {t('openings.lessons.hintToggle')}</label>
         {finished && <>
-          <button className="btn primary" onClick={() => open(lesson)} data-testid="lesson-again">↻ Пройти ещё раз</button>
+          <button className="btn primary" onClick={() => open(lesson)} data-testid="lesson-again">{t('openings.lessons.again')}</button>
         </>}
-        <button className="btn" onClick={close} data-testid="lesson-close">← К списку уроков</button>
+        <button className="btn" onClick={close} data-testid="lesson-close">{t('openings.lessons.back')}</button>
       </div>
     </section>
 
     <aside className="right-column">
       <section className="panel">
-        <div className="panel-head"><div><div className="eyebrow">ХОД УРОКА</div><h2>Что и почему</h2></div><span className="pill">ошибок: {mistakes}</span></div>
+        <div className="panel-head"><div><div className="eyebrow">{t('openings.lessons.logEyebrow')}</div><h2>{t('openings.lessons.logTitle')}</h2></div><span className="pill">{t('openings.lessons.mistakes', { n: mistakes })}</span></div>
         {log.length === 0 && <p className="muted">{lesson.intro}</p>}
         <ol className="lesson-log" data-testid="lesson-log" ref={logRef}>
           {log.map((s, i) => <li key={i} className={`${s.mover === lesson.side ? 'mine' : 'opp'} ${s === lastEntry ? 'last' : ''}`}>

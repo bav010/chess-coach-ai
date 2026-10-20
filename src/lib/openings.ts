@@ -2,7 +2,7 @@
 // это справочные данные, анализ Stockfish хранится и показывается отдельно.
 import { Chess } from 'chess.js'
 import { splitUci } from './game'
-import { ruName } from './openingNames'
+import { ruNameStatic } from './openingNames'
 
 export type Opening = { eco: string; name: string; moves: string[] }
 
@@ -87,7 +87,7 @@ export function searchOpenings(list: readonly Opening[], { query, eco, limit = 6
   let total = 0
   for (const o of list) {
     if (eco && o.eco[0] !== eco) continue
-    if (q && !(o.name.toLowerCase().includes(q) || ruName(o.name).toLowerCase().includes(q) || o.eco.toLowerCase().startsWith(q))) continue
+    if (q && !(o.name.toLowerCase().includes(q) || ruNameStatic(o.name).toLowerCase().includes(q) || o.eco.toLowerCase().startsWith(q))) continue
     total++
     if (items.length < limit) items.push(o)
   }

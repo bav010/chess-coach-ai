@@ -1,4 +1,5 @@
 import { CLASS_LABEL, CLASS_MARK, type MoveClass } from '../lib/classify'
+import { useI18n } from '../i18n'
 
 type Props = { cls: MoveClass; className?: string }
 
@@ -13,6 +14,7 @@ const PATHS: Partial<Record<MoveClass, string>> = {
 
 /** Значок оценки хода: цветной кружок с символом или рисунком (как в разборах партий на популярных шахматных сайтах). */
 export default function MoveMark({ cls, className = '' }: Props) {
+  useI18n() // перерисовка при смене языка (подпись берётся из CLASS_LABEL)
   const path = PATHS[cls]
   return <span className={`mark mark-${cls} ${className}`} title={CLASS_LABEL[cls]} role="img" aria-label={CLASS_LABEL[cls]} data-cls={cls}>
     {path

@@ -1,5 +1,7 @@
 import { Chess } from 'chess.js'
 import { START_FEN } from './game'
+import { t } from '../i18n'
+import { LocalizedError } from '../i18n/errors'
 
 export type ParsedPgn = {
   startFen: string
@@ -9,19 +11,19 @@ export type ParsedPgn = {
   result: string | null
 }
 
-/** Разбор PGN (в т.ч. с заголовком FEN). Бросает Error с понятным текстом, если партию прочитать нельзя. */
+/** Разбор PGN (в т.ч. с заголовком FEN). Бросает LocalizedError с понятным текстом, если партию прочитать нельзя. */
 export function parsePgn(text: string): ParsedPgn {
   const trimmed = text.trim()
-  if (!trimmed) throw new Error('Вставьте PGN или выберите файл.')
+  if (!trimmed) throw new LocalizedError('analysis.pgn.empty')
   const chess = new Chess()
   try {
     chess.loadPgn(trimmed)
   } catch (e) {
-    throw new Error(`Не удалось прочитать PGN: ${e instanceof Error ? e.message.split('\n')[0] : 'неверный формат'}`)
+    throw new LocalizedError('analysis.pgn.readFail', { detail: e instanceof Error ? e.message.split('\n')[0] : t('analysis.pgn.badFormat') })
   }
   const headers = chess.getHeaders()
   const history = chess.history({ verbose: true })
-  if (history.length === 0) throw new Error('В PGN нет ходов.')
+  if (history.length === 0) throw new LocalizedError('analysis.pgn.noMoves')
   const fen = headers.FEN && headers.SetUp !== '0' ? headers.FEN : START_FEN
   const pick = (v: string | null | undefined) => (v && v !== '?' ? v : null)
   return {

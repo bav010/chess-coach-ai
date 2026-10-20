@@ -2,10 +2,13 @@
 // Пароля нет — это разделение данных на устройстве, а не облачная учётная запись. Данные профиля по умолчанию
 // лежат под прежними ключами localStorage, поэтому ничего из сохранённого ранее не теряется.
 
+import { LocalizedError } from '../i18n/errors'
+
 export type Avatar = { emoji: string; color: string; image?: string }
 /** Привязка локального профиля к облачному аккаунту (вход по почте и паролю). */
 export type CloudLink = { userId: string; email: string }
-export type Profile = { id: string; name: string; avatar: Avatar; created: string; cloud?: CloudLink }
+/** ready — пользователь прошёл настройку аккаунта (имя и аватарка); до этого статистика недоступна. */
+export type Profile = { id: string; name: string; avatar: Avatar; created: string; cloud?: CloudLink; ready?: boolean }
 export type ProfileStore = { v: 1; current: string; list: Profile[] }
 
 export const DEFAULT_ID = 'default'
@@ -14,7 +17,7 @@ export const AVATAR_EMOJI = ['♞', '♛', '♚', '♜', '♝', '♟', '🦊', '
 export const AVATAR_COLORS = ['#d3ff72', '#6cb8ff', '#ff9a52', '#ff7ad9', '#b79cff', '#4fd1a5', '#ffd166', '#c4c7ce']
 export const NAME_MAX = 24
 
-export const defaultProfile = (): Profile => ({ id: DEFAULT_ID, name: 'Игрок', avatar: { emoji: '♞', color: '#d3ff72' }, created: new Date(0).toISOString() })
+export const defaultProfile = (): Profile => ({ id: DEFAULT_ID, name: 'Player', avatar: { emoji: '♞', color: '#d3ff72' }, created: new Date(0).toISOString() })
 
 function read(): ProfileStore {
   try {
@@ -52,14 +55,14 @@ export function cleanName(name: string): string {
 export function createProfile(name: string, avatar: Avatar): ProfileStore {
   const s = read()
   const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
-  s.list.push({ id, name: cleanName(name) || 'Игрок', avatar, created: new Date().toISOString() })
+  s.list.push({ id, name: cleanName(name) || 'Player', avatar, created: new Date().toISOString() })
   write(s)
   return s
 }
 
-export function updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'avatar'>>): ProfileStore {
+export function updateProfile(id: string, patch: Partial<Pick<Profile, 'name' | 'avatar' | 'ready'>>): ProfileStore {
   const s = read()
-  s.list = s.list.map(p => (p.id === id ? { ...p, ...(patch.name !== undefined ? { name: cleanName(patch.name) || p.name } : {}), ...(patch.avatar ? { avatar: patch.avatar } : {}) } : p))
+  s.list = s.list.map(p => (p.id === id ? { ...p, ...(patch.name !== undefined ? { name: cleanName(patch.name) || p.name } : {}), ...(patch.avatar ? { avatar: patch.avatar } : {}), ...(patch.ready !== undefined ? { ready: patch.ready } : {}) } : p))
   write(s)
   return s
 }
@@ -102,19 +105,30 @@ export function switchProfile(id: string) {
 /** Сжимает выбранное изображение до квадрата 96×96 (JPEG) — чтобы аватар занимал в хранилище несколько КБ. */
 export function imageToAvatar(file: File, size = 96): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) { reject(new Error('Выберите файл изображения.')); return }
+    if (!file.type.startsWith('image/')) { reject(new LocalizedError('app.avatar.notImage')); return }
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
       const c = document.createElement('canvas'); c.width = size; c.height = size
       const ctx = c.getContext('2d')
-      if (!ctx) { URL.revokeObjectURL(url); reject(new Error('Не удалось обработать изображение.')); return }
+      if (!ctx) { URL.revokeObjectURL(url); reject(new LocalizedError('app.avatar.processFail')); return }
       const m = Math.min(img.width, img.height)
       ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, size, size)
       URL.revokeObjectURL(url)
       resolve(c.toDataURL('image/jpeg', 0.82))
     }
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Не удалось открыть изображение.')) }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new LocalizedError('app.avatar.openFail')) }
     img.src = url
   })
+}
+
+/** Профиль без облачной привязки («гость»): сюда попадают данные до входа. Если такого нет — создаётся. */
+export function guestProfileId(): string {
+  const s = read()
+  const g = s.list.find(p => !p.cloud)
+  if (g) return g.id
+  const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+  s.list.push({ id, name: 'Player', avatar: { emoji: '♞', color: '#d3ff72' }, created: new Date().toISOString() })
+  write(s)
+  return id
 }

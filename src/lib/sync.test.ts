@@ -69,3 +69,15 @@ describe('слияние снимков', () => {
     expect(isSnapshot(snap())).toBe(true); expect(isSnapshot({ v: 2 })).toBe(false); expect(isSnapshot(null)).toBe(false)
   })
 })
+
+describe('профиль при слиянии', () => {
+  const prof = (name: string, ready: boolean) => ({ name, avatar: { emoji: '🦊', color: '#fff' }, ready })
+  it('новое устройство (настройка не пройдена) подхватывает имя и аватарку из облака', () => {
+    const m = mergeSnapshots(snap({ profile: prof('Player', false) }), snap({ profile: prof('Anna', true) }), false)
+    expect(m.profile.name).toBe('Anna'); expect(m.profile.ready).toBe(true)
+  })
+  it('уже настроенный локальный профиль не затирается облачным', () => {
+    const m = mergeSnapshots(snap({ profile: prof('Local', true) }), snap({ profile: prof('Cloud', true) }), false)
+    expect(m.profile.name).toBe('Local')
+  })
+})

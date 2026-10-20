@@ -1,4 +1,5 @@
 // Произвольная расстановка фигур: модель, перевод в FEN и проверка допустимости позиции.
+import { t } from '../i18n'
 import { Chess, type Color, type Square } from 'chess.js'
 import { START_FEN } from './game'
 
@@ -17,16 +18,16 @@ export const indexSquare = (i: number): Square => `${'abcdefgh'[i % 8]}${8 - Mat
 export function setupFromFen(fen: string): Setup {
   const parts = fen.trim().split(/\s+/)
   const rows = (parts[0] ?? '').split('/')
-  if (rows.length !== 8) throw new Error('В FEN должно быть 8 горизонталей, разделённых «/».')
+  if (rows.length !== 8) throw new Error(t('play.pos.rows'))
   const cells: Cells = []
   for (const row of rows) {
     let n = 0
     for (const ch of row) {
       if (/[1-8]/.test(ch)) { for (let k = 0; k < Number(ch); k++) cells.push(null); n += Number(ch) }
       else if (/[pnbrqkPNBRQK]/.test(ch)) { cells.push(`${ch === ch.toUpperCase() ? 'w' : 'b'}${ch.toLowerCase()}`); n++ }
-      else throw new Error(`Недопустимый символ «${ch}» в FEN.`)
+      else throw new Error(t('play.pos.badChar', { ch }))
     }
-    if (n !== 8) throw new Error('В каждой горизонтали FEN должно быть ровно 8 клеток.')
+    if (n !== 8) throw new Error(t('play.pos.rowLen'))
   }
   const turn: Color = parts[1] === 'b' ? 'b' : 'w'
   const c = parts[2] ?? '-'
@@ -65,21 +66,21 @@ export function setupToFen(s: Setup): string {
 /** Текст ошибки, если позицию нельзя анализировать, иначе null. */
 export function validateSetup(s: Setup): string | null {
   const count = (code: string) => s.cells.filter(c => c === code).length
-  if (count('wk') !== 1) return count('wk') === 0 ? 'Нет белого короля.' : 'Белых королей должно быть ровно один.'
-  if (count('bk') !== 1) return count('bk') === 0 ? 'Нет чёрного короля.' : 'Чёрных королей должно быть ровно один.'
+  if (count('wk') !== 1) return count('wk') === 0 ? t('play.pos.noWK') : t('play.pos.manyWK')
+  if (count('bk') !== 1) return count('bk') === 0 ? t('play.pos.noBK') : t('play.pos.manyBK')
   for (let i = 0; i < 8; i++) {
-    for (const j of [i, 56 + i]) if (s.cells[j]?.[1] === 'p') return 'Пешки не могут стоять на первой и восьмой горизонталях.'
+    for (const j of [i, 56 + i]) if (s.cells[j]?.[1] === 'p') return t('play.pos.pawnRank')
   }
   for (const c of ['w', 'b']) {
-    if (count(`${c}p`) > 8) return `Слишком много ${c === 'w' ? 'белых' : 'чёрных'} пешек (максимум 8).`
-    if (s.cells.filter(x => x?.[0] === c).length > 16) return `Слишком много ${c === 'w' ? 'белых' : 'чёрных'} фигур (максимум 16).`
+    if (count(`${c}p`) > 8) return t(c === 'w' ? 'play.pos.pawnsW' : 'play.pos.pawnsB')
+    if (s.cells.filter(x => x?.[0] === c).length > 16) return t(c === 'w' ? 'play.pos.piecesW' : 'play.pos.piecesB')
   }
   let chess: Chess
-  try { chess = new Chess(setupToFen(s)) } catch { return 'Такую позицию не удалось загрузить: проверьте расстановку.' }
+  try { chess = new Chess(setupToFen(s)) } catch { return t('play.pos.load') }
   // сторона, которая не ходит, не может стоять под шахом
   const idle: Color = s.turn === 'w' ? 'b' : 'w'
   const king = indexSquare(s.cells.indexOf(`${idle}k`))
-  if (chess.isAttacked(king, s.turn)) return `Король ${idle === 'w' ? 'белых' : 'чёрных'} под шахом, хотя ход не его: так не бывает. Смените очередь хода или переставьте фигуры.`
+  if (chess.isAttacked(king, s.turn)) return t(idle === 'w' ? 'play.pos.checkW' : 'play.pos.checkB')
   return null
 }
 

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useI18n } from '../i18n'
 import type { Chess, Color, Square } from 'chess.js'
 import { glyph } from '../lib/glyphs'
 import type { MoveClass } from '../lib/classify'
@@ -94,6 +95,7 @@ function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientati
 }
 
 export default function Board({ chess, orientation, selected, legal, lastMove, hint, arrows, mark, arrowStyle, onSquareClick, readOnly }: Props) {
+  const { t } = useI18n()
   const rows = useMemo(() => squaresFor(orientation), [orientation])
   const leftFile = orientation === 'w' ? 'a' : 'h'
   const bottomRank = orientation === 'w' ? '1' : '8'
@@ -105,7 +107,7 @@ export default function Board({ chess, orientation, selected, legal, lastMove, h
     }
   }
 
-  return <div className="board" role="grid" aria-label="Шахматная доска" data-orientation={orientation}>
+  return <div className="board" role="grid" aria-label={t('play.board')} data-orientation={orientation}>
     {rows.flatMap(row => row.map(sq => {
       const piece = chess.get(sq)
       const dark = ((sq.charCodeAt(0) - 97) + Number(sq[1])) % 2 === 1
@@ -118,7 +120,7 @@ export default function Board({ chess, orientation, selected, legal, lastMove, h
       ].filter(Boolean).join(' ')
       return <button key={sq} className={cls} disabled={readOnly} data-square={sq}
         onClick={() => onSquareClick(sq)}
-        aria-label={`${sq}${piece ? ` ${piece.color === 'w' ? 'белая' : 'чёрная'} фигура` : ''}`}>
+        aria-label={piece ? t(piece.color === 'w' ? 'play.sqWhite' : 'play.sqBlack', { sq }) : sq}>
         {piece && <span className={`piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`}>{glyph[piece.color + piece.type]}</span>}
         {mark && mark.square === sq && <MoveMark cls={mark.cls} className="sq-mark" />}
         {canMove && !piece && <span className="move-dot" />}

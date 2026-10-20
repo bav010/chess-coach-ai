@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { setLang } from '../i18n'
 import { START_FEN } from './game'
 import { parsePgn, toPgn } from './pgn'
 
@@ -18,7 +19,10 @@ describe('parsePgn', () => {
     expect(p.startFen).toBe('8/P6k/8/8/8/8/8/K7 w - - 0 1')
   })
   it('понятные ошибки', () => {
+    expect(() => parsePgn('')).toThrow(/Paste a PGN/)
+    setLang('ru')
     expect(() => parsePgn('')).toThrow(/Вставьте/)
+    setLang('en')
     expect(() => parsePgn('это не PGN')).toThrow()
     expect(() => parsePgn('1. e4 e4')).toThrow(/PGN/)
   })

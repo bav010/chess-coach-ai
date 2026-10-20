@@ -1,4 +1,5 @@
 // Резервная копия всего прогресса одним JSON-файлом: статистика партий, сессии, задачи, дебюты.
+import { LocalizedError } from '../i18n/errors'
 import { loadSessions, mergeSessions, type SavedSession } from '../storage'
 import { loadGames, mergeGames, saveGames, type GameStat } from './gameStats'
 import { loadPuzzleStats, savePuzzleStats, type PuzzleStats } from './puzzleStats'
@@ -21,8 +22,8 @@ export function makeBackup(): Backup {
 
 export function parseBackup(text: string): Backup {
   let d: Partial<Backup>
-  try { d = JSON.parse(text) as Partial<Backup> } catch { throw new Error('Файл не читается: это не JSON.') }
-  if (!d || d.app !== 'chess-coach-ai' || d.kind !== 'backup' || d.v !== 1) throw new Error('Это не резервная копия CHESS COACH AI.')
+  try { d = JSON.parse(text) as Partial<Backup> } catch { throw new LocalizedError('stats.backup.err.notJson') }
+  if (!d || d.app !== 'chess-coach-ai' || d.kind !== 'backup' || d.v !== 1) throw new LocalizedError('stats.backup.err.notBackup')
   return {
     ...(d as Backup),
     games: Array.isArray(d.games) ? d.games : [],

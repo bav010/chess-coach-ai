@@ -5,7 +5,7 @@ import Board from '../components/Board'
 import PromoPicker from '../components/PromoPicker'
 import PUZZLES from '../data/puzzles.json'
 import {
-  ANY_FILTER, LEVEL_LABEL, MATE_FILTER_LABEL, MAX_HINT, hintFor, judgeMove, mainTheme, matches, pickNext, solutionSan,
+  ANY_FILTER, LEVEL_LABEL, MATE_FILTER_LABEL, MAX_HINT, hintFor, judgeMove, mainTheme, matches, pickNext, puzzleWhy, solutionSan,
   type Evaluate, type Hint, type Level, type MateFilter, type Puzzle, type PuzzleFilter,
 } from '../lib/puzzles'
 import { THEME_LABEL, THEME_ORDER } from '../lib/puzzleThemes'
@@ -14,11 +14,14 @@ import {
   type PuzzleStats,
 } from '../lib/puzzleStats'
 import { splitUci } from '../lib/game'
+import { t, tn, useI18n } from '../i18n'
 
 const ALL = PUZZLES as unknown as Puzzle[]
 
 type Status = 'solving' | 'checking' | 'solved' | 'shown'
-type Msg = { kind: 'info' | 'ok' | 'bad'; text: string }
+/** Сообщение хранится функцией: текст строится при показе, поэтому меняет язык вместе с интерфейсом. */
+type Msg = { kind: 'info' | 'ok' | 'bad'; text: () => string }
+type HintReq = { p: Puzzle; fen: string; level: 1 | 2 | 3; idx: number }
 
 const evaluate: Evaluate = async fen => {
   const a = await puzzleEngine.analyse(fen, { depth: 16, movetime: 1500, multipv: 1 })
@@ -26,10 +29,10 @@ const evaluate: Evaluate = async fen => {
 }
 
 function taskText(p: Puzzle, side: Color): string {
-  const who = side === 'w' ? 'Ход белых' : 'Ход чёрных'
-  if (p.mate !== null) return `${who}. Мат в ${p.mate} ${p.mate === 1 ? 'ход' : 'хода'}.`
-  if (p.kind === 'defense') return `${who}. Найдите защиту от угрозы.`
-  return `${who}. Найдите ход, выигрывающий материал.`
+  const who = t(side === 'w' ? 'puzzles.task.white' : 'puzzles.task.black')
+  if (p.mate !== null) return tn('puzzles.task.mate', p.mate, { who })
+  if (p.kind === 'defense') return t('puzzles.task.defense', { who })
+  return t('puzzles.task.win', { who })
 }
 
 function replayFen(fen: string, ucis: readonly string[]): Chess {
@@ -39,13 +42,14 @@ function replayFen(fen: string, ucis: readonly string[]): Chess {
 }
 
 export default function PuzzleView({ active }: { active: boolean }) {
+  const { lang } = useI18n()
   const [stats, setStats] = useState<PuzzleStats>(() => loadPuzzleStats())
   const [filter, setFilter] = useState<PuzzleFilter>(ANY_FILTER)
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null)
   const [played, setPlayed] = useState<string[]>([])
   const [status, setStatus] = useState<Status>('solving')
-  const [msg, setMsg] = useState<Msg>({ kind: 'info', text: 'Выберите тему или сразу нажмите «Следующая задача».' })
-  const [hint, setHint] = useState<Hint | null>(null)
+  const [msg, setMsg] = useState<Msg>({ kind: 'info', text: () => t('puzzles.msg.start') })
+  const [hintReq, setHintReq] = useState<HintReq | null>(null)
   const [hintLevel, setHintLevel] = useState(0)
   const [selected, setSelected] = useState<Square | null>(null)
   const [legal, setLegal] = useState<Square[]>([])
@@ -85,14 +89,15 @@ export default function PuzzleView({ active }: { active: boolean }) {
     token.current++
     timers.current.forEach(clearTimeout); timers.current = []
     flags.current = { recorded: false, failed: false, hints: 0, elapsed: 0 }
-    setPuzzle(p); setPlayedBoth([]); setStatus('solving'); setHint(null); setHintLevel(0)
+    setPuzzle(p); setPlayedBoth([]); setStatus('solving'); setHintReq(null); setHintLevel(0)
     setSelected(null); setLegal([]); setPromo(null)
-    setMsg({ kind: 'info', text: taskText(p, new Chess(p.fen).turn()) })
+    const side = new Chess(p.fen).turn()
+    setMsg({ kind: 'info', text: () => taskText(p, side) })
   }, [setPlayedBoth])
 
   const next = useCallback((f: PuzzleFilter = filter) => {
     const p = pickNext(ALL, f, statsRef.current, puzzle?.id ?? null)
-    if (!p) { setPuzzle(null); setMsg({ kind: 'bad', text: 'Для этих параметров задач пока нет. Измените тему, сложность или тип.' }); return }
+    if (!p) { setPuzzle(null); setMsg({ kind: 'bad', text: () => t('puzzles.msg.none') }); return }
     load(p)
   }, [filter, load, puzzle])
 
@@ -124,22 +129,22 @@ export default function PuzzleView({ active }: { active: boolean }) {
 
   async function tryMove(uci: string) {
     if (!puzzle || !chess) return
-    setSelected(null); setLegal([]); setPromo(null); setHint(null)
+    setSelected(null); setLegal([]); setPromo(null); setHintReq(null)
     const my = token.current
     const cur = playedRef.current
     const fen = chess.fen()
     setStatus('checking')
-    setMsg({ kind: 'info', text: 'Проверяю ход…' })
+    setMsg({ kind: 'info', text: () => t('puzzles.msg.checking') })
     const j = await judgeMove(puzzle, cur, fen, uci, evaluate)
     if (my !== token.current) return
     if (j.type === 'unverified') {
-      setStatus('solving'); setMsg({ kind: 'bad', text: j.reason + ' Попробуйте ещё раз.' }); return
+      setStatus('solving'); setMsg({ kind: 'bad', text: () => t('puzzles.msg.unverified', { reason: t(j.reason) }) }); return
     }
     if (j.type === 'wrong') {
       flags.current.failed = true
       record(puzzle, 'failed')
       setStatus('solving')
-      setMsg({ kind: 'bad', text: `✗ ${j.reason} Попробуйте другой ход — задача засчитана как нерешённая. Можно нажать «Показать решение».` })
+      setMsg({ kind: 'bad', text: () => t('puzzles.msg.wrong', { reason: t(j.reason) }) })
       return
     }
     const withMove = [...cur, uci]
@@ -148,22 +153,22 @@ export default function PuzzleView({ active }: { active: boolean }) {
       setStatus('solved')
       if (!flags.current.failed) {
         record(puzzle, 'solved')
-        setMsg({ kind: 'ok', text: j.alt ? '✓ Верно! Это другое решение, но оно тоже проверено движком.' : '✓ Верно! Задача решена.' })
+        setMsg({ kind: 'ok', text: () => t(j.alt ? 'puzzles.msg.solvedAlt' : 'puzzles.msg.solved') })
       } else {
-        setMsg({ kind: 'ok', text: '✓ Теперь верно, но задача уже засчитана как нерешённая (была ошибка или показано решение).' })
+        setMsg({ kind: 'ok', text: () => t('puzzles.msg.solvedLate') })
       }
     }
     if (j.reply) {
-      setMsg({ kind: 'ok', text: '✓ Верно! Соперник отвечает…' })
+      setMsg({ kind: 'ok', text: () => t('puzzles.msg.replying') })
       later(() => {
         if (my !== token.current) return
         const all = [...withMove, j.reply!]
         setPlayedBoth(all)
         if (j.done) finish()
-        else { setStatus('solving'); setMsg({ kind: 'ok', text: '✓ Верно. Продолжайте — ваш ход.' }) }
+        else { setStatus('solving'); setMsg({ kind: 'ok', text: () => t('puzzles.msg.continueYourMove') }) }
       }, 600)
     } else if (j.done) finish()
-    else { setStatus('solving'); setMsg({ kind: 'ok', text: '✓ Верно. Продолжайте.' }) }
+    else { setStatus('solving'); setMsg({ kind: 'ok', text: () => t('puzzles.msg.continue') }) }
   }
 
   async function showHint() {
@@ -177,19 +182,19 @@ export default function PuzzleView({ active }: { active: boolean }) {
         const v = await evaluate(chess.fen())
         if (!v.bestMove) return
         p = { ...puzzle, line: [v.bestMove] }; idx = 0
-      } catch { setMsg({ kind: 'bad', text: 'Не удалось получить подсказку от движка.' }); return }
+      } catch { setMsg({ kind: 'bad', text: () => t('puzzles.msg.hintFail') }); return }
     }
     flags.current.hints++
     setHintLevel(level)
-    setHint(hintFor(p, chess.fen(), level, idx))
+    setHintReq({ p, fen: chess.fen(), level, idx })
   }
 
   function retry() {
     if (!puzzle) return
     token.current++
     timers.current.forEach(clearTimeout); timers.current = []
-    setPlayedBoth([]); setStatus('solving'); setSelected(null); setLegal([]); setPromo(null); setHint(null); setHintLevel(0)
-    setMsg({ kind: 'info', text: `Ещё одна попытка. ${taskText(puzzle, solver)}` })
+    setPlayedBoth([]); setStatus('solving'); setSelected(null); setLegal([]); setPromo(null); setHintReq(null); setHintLevel(0)
+    setMsg({ kind: 'info', text: () => t('puzzles.msg.retry', { task: taskText(puzzle, solver) }) })
   }
 
   function showSolution() {
@@ -198,16 +203,18 @@ export default function PuzzleView({ active }: { active: boolean }) {
     token.current++
     const my = token.current
     timers.current.forEach(clearTimeout); timers.current = []
-    setPlayedBoth([]); setSelected(null); setLegal([]); setPromo(null); setHint(null)
+    setPlayedBoth([]); setSelected(null); setLegal([]); setPromo(null); setHintReq(null)
     setStatus('shown')
-    setMsg({ kind: 'info', text: 'Решение: смотрите ходы на доске.' })
+    setMsg({ kind: 'info', text: () => t('puzzles.msg.solution') })
     puzzle.line.forEach((_, i) => later(() => { if (my === token.current) setPlayedBoth(puzzle.line.slice(0, i + 1)) }, 700 * (i + 1)))
   }
 
   function resetAll() {
-    if (window.confirm('Сбросить всю статистику решения задач в этом браузере?')) setStats(resetPuzzleStats())
+    if (window.confirm(t('puzzles.confirm.reset'))) setStats(resetPuzzleStats())
   }
 
+  // подсказка пересчитывается при смене языка, не сбрасывая уровень подсказок
+  const hint = useMemo<Hint | null>(() => (hintReq ? hintFor(hintReq.p, hintReq.fen, hintReq.level, hintReq.idx) : null), [hintReq, lang])
   const weak = weakThemes(stats)
   const lastMove = played.length && puzzle ? (() => { const u = splitUci(played[played.length - 1]); return { from: u.from as Square, to: u.to as Square } })() : null
   const total = ALL.length
@@ -219,7 +226,7 @@ export default function PuzzleView({ active }: { active: boolean }) {
   return <div className="main-grid" data-testid="puzzle-view">
     <section className="panel board-panel puzzle-panel" data-testid="puzzle-board" data-puzzle-id={puzzle?.id ?? ''} data-fen={puzzle?.fen ?? ''}>
       <div className="panel-head">
-        <div><div className="eyebrow">ТАКТИКА</div><h2>Тактический тренажёр</h2></div>
+        <div><div className="eyebrow">{t('puzzles.eyebrow.tactics')}</div><h2>{t('puzzles.title')}</h2></div>
         {puzzle && <span className="pill">{LEVEL_LABEL[puzzle.level]} · {THEME_LABEL[mainTheme(puzzle)]}</span>}
       </div>
       {chess && puzzle
@@ -232,63 +239,63 @@ export default function PuzzleView({ active }: { active: boolean }) {
           </div>
           {promo && <PromoPicker color={solver} onPick={p => void tryMove(`${promo.from}${promo.to}${p}`)} onCancel={() => { setPromo(null); setSelected(null); setLegal([]) }} />}
         </>
-        : <div className="empty-state"><span>♞</span><p>Задача не выбрана</p><small>{available === 0 ? 'Нет задач с такими параметрами.' : 'Нажмите «Следующая задача».'}</small></div>}
+        : <div className="empty-state"><span>♞</span><p>{t('puzzles.empty.title')}</p><small>{available === 0 ? t('puzzles.empty.noMatches') : t('puzzles.empty.pressNext')}</small></div>}
 
-      <div className={`puzzle-msg ${msg.kind}`} data-testid="puzzle-message" role="status"><span className="pulse" /> {msg.text}</div>
-      {engineErr && <p className="error-text">Движок не загрузился: ходы, отличные от решения, проверить не удастся.</p>}
-      {hint && <div className="puzzle-hint" data-testid="hint-text"><b>Подсказка {hint.level}/{MAX_HINT}</b><span>{hint.text}</span></div>}
+      <div className={`puzzle-msg ${msg.kind}`} data-testid="puzzle-message" role="status"><span className="pulse" /> {msg.text()}</div>
+      {engineErr && <p className="error-text">{t('puzzles.engineErr')}</p>}
+      {hint && <div className="puzzle-hint" data-testid="hint-text"><b>{t('puzzles.hint.title', { level: hint.level, max: MAX_HINT })}</b><span>{hint.text}</span></div>}
 
       {showExplain && puzzle && <div className="puzzle-explain" data-testid="puzzle-explain">
-        <b>{status === 'solved' && !flags.current.failed ? 'Разбор комбинации' : 'Решение и идея'}</b>
+        <b>{status === 'solved' && !flags.current.failed ? t('puzzles.explain.good') : t('puzzles.explain.solution')}</b>
         <code data-testid="puzzle-solution">{solutionSan(puzzle)}</code>
-        {puzzle.why.map((w, i) => <p key={i}>{w}</p>)}
+        {puzzleWhy(puzzle).map((w, i) => <p key={i}>{w}</p>)}
       </div>}
 
       <div className="board-actions">
-        <button className="btn primary" onClick={() => next()} data-testid="next-btn">Следующая задача</button>
-        <button className="btn" onClick={retry} disabled={!puzzle || status === 'checking'} data-testid="retry-btn">↻ Попробовать снова</button>
-        <button className="btn" onClick={() => void showHint()} disabled={!puzzle || status !== 'solving' || hintLevel >= MAX_HINT} data-testid="hint-btn">💡 Подсказка ({hintLevel}/{MAX_HINT})</button>
-        <button className="btn" onClick={showSolution} disabled={!puzzle || status === 'checking' || status === 'shown'} data-testid="solution-btn">Показать решение</button>
+        <button className="btn primary" onClick={() => next()} data-testid="next-btn">{t('puzzles.btn.next')}</button>
+        <button className="btn" onClick={retry} disabled={!puzzle || status === 'checking'} data-testid="retry-btn">{t('puzzles.btn.retry')}</button>
+        <button className="btn" onClick={() => void showHint()} disabled={!puzzle || status !== 'solving' || hintLevel >= MAX_HINT} data-testid="hint-btn">{t('puzzles.btn.hint', { level: hintLevel, max: MAX_HINT })}</button>
+        <button className="btn" onClick={showSolution} disabled={!puzzle || status === 'checking' || status === 'shown'} data-testid="solution-btn">{t('puzzles.btn.solution')}</button>
       </div>
-      <p className="tiny">Задач в базе: {total}. Каждая проверена Stockfish: мат — по оценке движка, выигрыш и защита — по разрыву с лучшей альтернативой. Время на задачу: {formatDuration(flags.current.elapsed)}.</p>
+      <p className="tiny">{t('puzzles.note.base', { total, time: formatDuration(flags.current.elapsed) })}</p>
     </section>
 
     <aside className="right-column">
       <section className="panel">
-        <div className="panel-head"><div><div className="eyebrow">ВЫБОР</div><h2>Тема и сложность</h2></div><span className="pill" data-testid="available-count">{available} задач</span></div>
-        <div className="chip-group"><small>ТЕМА</small></div>
+        <div className="panel-head"><div><div className="eyebrow">{t('puzzles.pick.eyebrow')}</div><h2>{t('puzzles.pick.title')}</h2></div><span className="pill" data-testid="available-count">{tn('puzzles.pick.count', available)}</span></div>
+        <div className="chip-group"><small>{t('puzzles.pick.theme')}</small></div>
         <div className="chips" data-testid="theme-chips">
-          <button className={`chip ${filter.theme === 'any' ? 'active' : ''}`} onClick={() => changeFilter({ theme: 'any' })} data-testid="theme-any">Любая</button>
+          <button className={`chip ${filter.theme === 'any' ? 'active' : ''}`} onClick={() => changeFilter({ theme: 'any' })} data-testid="theme-any">{t('puzzles.pick.anyTheme')}</button>
           {THEME_ORDER.map(t => <button key={t} className={`chip ${filter.theme === t ? 'active' : ''}`} onClick={() => changeFilter({ theme: t })} data-testid={`theme-${t}`}>{THEME_LABEL[t]}</button>)}
         </div>
-        <div className="chip-group" style={{ marginTop: 14 }}><small>СЛОЖНОСТЬ</small></div>
+        <div className="chip-group" style={{ marginTop: 14 }}><small>{t('puzzles.pick.level')}</small></div>
         <div className="chips" data-testid="level-chips">
-          {([0, 1, 2, 3] as const).map(l => <button key={l} className={`chip ${filter.level === l ? 'active' : ''}`} onClick={() => changeFilter({ level: l as Level | 0 })} data-testid={`level-${l}`}>{l === 0 ? 'Любая' : LEVEL_LABEL[l]}</button>)}
+          {([0, 1, 2, 3] as const).map(l => <button key={l} className={`chip ${filter.level === l ? 'active' : ''}`} onClick={() => changeFilter({ level: l as Level | 0 })} data-testid={`level-${l}`}>{l === 0 ? t('puzzles.level.any') : LEVEL_LABEL[l]}</button>)}
         </div>
-        <div className="chip-group" style={{ marginTop: 14 }}><small>ТИП</small></div>
+        <div className="chip-group" style={{ marginTop: 14 }}><small>{t('puzzles.pick.type')}</small></div>
         <div className="chips" data-testid="mate-chips">
           {(Object.keys(MATE_FILTER_LABEL) as MateFilter[]).map(m => <button key={m} className={`chip ${filter.mate === m ? 'active' : ''}`} onClick={() => changeFilter({ mate: m })} data-testid={`mate-${m}`}>{MATE_FILTER_LABEL[m]}</button>)}
         </div>
       </section>
 
       <section className="panel">
-        <div className="panel-head"><div><div className="eyebrow">ПРОГРЕСС</div><h2>Статистика задач</h2></div></div>
+        <div className="panel-head"><div><div className="eyebrow">{t('puzzles.stats.eyebrow')}</div><h2>{t('puzzles.stats.title')}</h2></div></div>
         <div className="stats">
-          <div><strong data-testid="stat-solved">{stats.solved}</strong><small>решено</small></div>
-          <div><strong data-testid="stat-percent">{successPercent(stats)}%</strong><small>успешных ({stats.attempted} задач)</small></div>
-          <div><strong data-testid="stat-clean">{stats.clean}</strong><small>без подсказок</small></div>
-          <div><strong data-testid="stat-time">{formatDuration(stats.timeMs)}</strong><small>время решения</small></div>
+          <div><strong data-testid="stat-solved">{stats.solved}</strong><small>{t('puzzles.stats.solved')}</small></div>
+          <div><strong data-testid="stat-percent">{successPercent(stats)}%</strong><small>{tn('puzzles.stats.percent', stats.attempted)}</small></div>
+          <div><strong data-testid="stat-clean">{stats.clean}</strong><small>{t('puzzles.stats.clean')}</small></div>
+          <div><strong data-testid="stat-time">{formatDuration(stats.timeMs)}</strong><small>{t('puzzles.stats.time')}</small></div>
         </div>
-        {themeStats.length > 0 && <table className="puzzle-themes" data-testid="theme-table"><thead><tr><th>Тема</th><th>Решено</th><th>%</th><th>Время</th></tr></thead><tbody>
+        {themeStats.length > 0 && <table className="puzzle-themes" data-testid="theme-table"><thead><tr><th>{t('puzzles.stats.colTheme')}</th><th>{t('puzzles.stats.colSolved')}</th><th>%</th><th>{t('puzzles.stats.colTime')}</th></tr></thead><tbody>
           {themeStats.map(({ t, s }) => <tr key={t}><td>{THEME_LABEL[t]}</td><td>{s!.solved}/{s!.tried}</td><td>{Math.round((s!.solved / s!.tried) * 100)}%</td><td>{formatDuration(s!.timeMs)}</td></tr>)}
         </tbody></table>}
         {weak.length > 0 && <div className="weak-box" data-testid="weak-themes">
-          <b>Стоит потренировать</b>
+          <b>{t('puzzles.weak.title')}</b>
           <div className="chips">{weak.slice(0, 3).map(w => <button key={w.theme} className="chip" onClick={() => changeFilter({ theme: w.theme, mate: 'any', level: 0 })} data-testid={`weak-${w.theme}`}>{THEME_LABEL[w.theme]} · {w.percent}%</button>)}</div>
-          <p className="tiny">По ошибкам в этих темах подобраны задачи: нажмите, чтобы получить ещё.</p>
+          <p className="tiny">{t('puzzles.weak.note')}</p>
         </div>}
-        <p className="progress-note">Статистика хранится в этом браузере и сохраняется после перезапуска.</p>
-        <button className="btn" onClick={resetAll} disabled={stats.attempted === 0} data-testid="reset-puzzle-stats">Сбросить статистику</button>
+        <p className="progress-note">{t('puzzles.stats.storage')}</p>
+        <button className="btn" onClick={resetAll} disabled={stats.attempted === 0} data-testid="reset-puzzle-stats">{t('puzzles.btn.reset')}</button>
       </section>
     </aside>
   </div>

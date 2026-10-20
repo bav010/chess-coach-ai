@@ -1,3 +1,5 @@
+import { getLang } from '../i18n'
+
 // Русские названия основных семейств дебютов (остальные части названия — как в каталоге, на английском).
 const FAMILY: Record<string, string> = {
   'Sicilian Defense': 'Сицилианская защита', 'Ruy Lopez': 'Испанская партия', 'French Defense': 'Французская защита',
@@ -22,11 +24,22 @@ const FAMILY: Record<string, string> = {
   'Colle System': 'Система Колле', 'Budapest Defense': 'Будапештский гамбит', 'Torre Attack': 'Атака Торре', 'Stonewall Attack': 'Атака «Стоунволл»',
 }
 
-/** «Sicilian Defense: Najdorf Variation» → «Сицилианская защита: Najdorf Variation». */
+/**
+ * Opening name in the current language. English: the catalog original; Russian: «Sicilian Defense: Najdorf Variation»
+ * → «Сицилианская защита: Najdorf Variation». (Name kept as `ruName` for existing callers.)
+ */
 export function ruName(name: string): string {
+  return getLang() === 'en' ? name : ruNameStatic(name)
+}
+
+/** Always the Russian form (independent of the UI language) — use it to build search indexes so Russian queries work in any language. */
+export function ruNameStatic(name: string): string {
   const i = name.indexOf(':')
   const family = i < 0 ? name : name.slice(0, i)
   const rest = i < 0 ? '' : name.slice(i)
   const ru = FAMILY[family]
   return ru ? `${ru}${rest}` : name
 }
+
+/** Language-neutral alias of ruName. */
+export const openingName = ruName

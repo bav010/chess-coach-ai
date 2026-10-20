@@ -24,6 +24,8 @@ import {
   type PositionEval, type ReviewMove,
 } from '../lib/review'
 import { summarizeReview, type GameReview } from '../lib/gameStats'
+import { useI18n, type Key, type Params } from '../i18n'
+import { errorText } from '../i18n/errors'
 import { gameKey, loadReview, saveReview, type SavedSession, type TrainerEntry } from '../storage'
 
 export type GameSeed = {
@@ -56,9 +58,13 @@ type Tab = 'analysis' | 'review'
 
 type ReviewState = { evals: PositionEval[]; running: boolean; done: number; total: number }
 
-const NAMES: Record<Color, string> = { w: 'Белые', b: 'Чёрные' }
+/** Сообщение под доской хранится как ключи перевода (а не готовый текст), чтобы смена языка обновляла и его. */
+type MsgPart = { k: Key; p?: Params } | { err: unknown; fb: Key }
+type Msg = MsgPart[]
+const m1 = (k: Key, p?: Params): Msg => [{ k, p }]
 
 export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onReviewDone, onDownload, onOpenSession, onResetProgress, engineState, engineLabel, active }: Props) {
+  const { t, tn } = useI18n()
   const [startFen, setStartFen] = useState(seed?.startFen ?? START_FEN)
   const [ucis, setUcis] = useState<string[]>(seed?.ucis ?? [])
   const [viewPly, setViewPly] = useState(seed?.ucis.length ?? 0)
@@ -67,7 +73,8 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   const [selected, setSelected] = useState<Square | null>(null)
   const [legal, setLegal] = useState<Square[]>([])
   const [promo, setPromo] = useState<{ from: Square; to: Square } | null>(null)
-  const [message, setMessage] = useState(seed ? 'Партия загружена. Листайте ходы или запустите разбор.' : 'Выбери белую фигуру, затем клетку для хода.')
+  const [msg, setMessage] = useState<Msg>(m1(seed ? 'analysis.view.msgLoaded' : 'analysis.view.msgSelectWhite'))
+  const message = msg.map(x => ('err' in x ? errorText(x.err, x.fb) : t(x.k, x.p))).join(' ')
   const [showSettings, setShowSettings] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
@@ -164,7 +171,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
     } catch (e) {
       if (!ac.signal.aborted) {
         setReview(r => (r ? { ...r, running: false } : r))
-        setMessage(e instanceof Error ? e.message : 'Ошибка разбора партии')
+        setMessage([{ err: e, fb: 'analysis.err.review' }])
       }
     }
   }, [review, fens, startFen, records, prefs.reviewQuality, gKey, ucis, userColor, onReviewDone])
@@ -211,11 +218,11 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   }
 
   // ---------- ходы и навигация ----------
-  function describe(next: Chess) {
-    return next.isCheckmate() ? 'Мат! Отличная работа.'
-      : next.isDraw() ? 'Ничья.'
-      : next.isCheck() ? 'Шах! Проверь безопасность короля.'
-      : 'Ход принят. Жду следующий ход.'
+  function describe(next: Chess): MsgPart {
+    return { k: next.isCheckmate() ? 'analysis.view.msgMate'
+      : next.isDraw() ? 'analysis.view.msgDraw'
+      : next.isCheck() ? 'analysis.view.msgCheck'
+      : 'analysis.view.msgAccepted' }
   }
 
   function clearSelection() { setSelected(null); setLegal([]); setPromo(null) }
@@ -229,7 +236,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       const list = [...ucis.slice(0, viewPly), uci]
       setUcis(list); setViewPly(list.length)
       clearSelection()
-      setMessage(describe(next) + (truncated ? ' (продолжение партии с этой позиции)' : ''))
+      setMessage(truncated ? [describe(next), { k: 'analysis.view.msgContinued' }] : [describe(next)])
     } catch { clearSelection() }
   }
 
@@ -241,7 +248,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       const lastRank = square[1] === '8' || square[1] === '1'
       if (mover?.type === 'p' && lastRank) {
         setPromo({ from: selected, to: square })
-        setMessage('Выбери фигуру для превращения пешки.')
+        setMessage(m1('analysis.view.msgPromo'))
       } else {
         applyMove(selected, square)
       }
@@ -250,40 +257,40 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
     if (piece && piece.color === chess.turn()) {
       setSelected(square)
       setLegal(chess.moves({ square, verbose: true }).map(m => m.to))
-      setMessage(`Выбрана ${piece.color === 'w' ? 'белая' : 'чёрная'} фигура на ${square}.`)
+      setMessage(m1(piece.color === 'w' ? 'analysis.view.msgSelectedW' : 'analysis.view.msgSelectedB', { sq: square }))
     } else { clearSelection() }
   }
 
   function newGame() {
     setStartFen(START_FEN); setUcis([]); setViewPly(0); setUserColor(null); setOrientation('w')
-    clearSelection(); setTab('analysis'); setMessage('Новая партия. Белые ходят первыми.')
+    clearSelection(); setTab('analysis'); setMessage(m1('analysis.view.msgNew'))
   }
 
   function undo() {
     if (ucis.length === 0) return
     const list = ucis.slice(0, ucis.length - 1)
     setUcis(list); setViewPly(Math.min(viewPly, list.length))
-    clearSelection(); setMessage('Последний ход отменён.')
+    clearSelection(); setMessage(m1('analysis.view.msgUndone'))
   }
 
   function loadPgn(p: ParsedPgn) {
     setStartFen(p.startFen); setUcis(p.ucis); setViewPly(p.ucis.length); setUserColor(null); setOrientation('w')
     clearSelection(); setShowImport(false); setTab('analysis')
-    setMessage(`Партия загружена${p.white || p.black ? `: ${p.white ?? '?'} — ${p.black ?? '?'}` : ''}. Листайте ходы или запустите разбор.`)
+    setMessage(p.white || p.black ? m1('analysis.view.msgLoadedPlayers', { white: p.white ?? '?', black: p.black ?? '?' }) : m1('analysis.view.msgLoaded'))
   }
 
   function loadPosition(fen: string) {
     setStartFen(fen); setUcis([]); setViewPly(0); setUserColor(null)
     setOrientation(new Chess(fen).turn())
     clearSelection(); setShowEditor(false); setTab('analysis')
-    setMessage('Позиция расставлена. Анализ запущен: можно играть ходы за обе стороны.')
+    setMessage(m1('analysis.view.msgPosition'))
   }
 
   function saveSession() {
     const full = chessAtPly(startFen, ucis, ucis.length)
     const st = statusOf(full)
     onSaveSession({ result: st.over ? st.result : 'in_progress', plies: ucis.length, pgn: toPgn(startFen, ucis, {}) })
-    setMessage('Тренировочная сессия сохранена в этом браузере.')
+    setMessage(m1('analysis.view.msgSaved'))
   }
 
   const goto = useCallback((ply: number) => {
@@ -318,7 +325,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   const trainerSummary = report
     ? { solved: Object.values(trainerProgress).filter(e => e.solved).length, total: report.moves.filter(m => isCritical(m.cls)).length }
     : null
-  const names = { w: NAMES.w, b: NAMES.b }
+  const names = { w: t('analysis.side.w'), b: t('analysis.side.b') }
 
   if (trainerOn && report) {
     return <div className="trainer-wrap">
@@ -329,14 +336,14 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
 
   return <div className="main-grid">
     <section className="panel board-panel">
-      <div className="panel-head"><div><div className="eyebrow">АНАЛИЗ</div><h2>Шахматная доска</h2></div><span className="pill">Локальная партия</span></div>
+      <div className="panel-head"><div><div className="eyebrow">{t('analysis.view.eyebrow')}</div><h2>{t('analysis.view.title')}</h2></div><span className="pill">{t('analysis.view.localGame')}</span></div>
 
       <div className="toolbar">
-        <label className="toggle"><input type="checkbox" checked={prefs.showPanel} onChange={e => onPrefs({ showPanel: e.target.checked })} data-testid="toggle-panel" /> Показывать анализ</label>
-        <label className="toggle"><input type="checkbox" checked={prefs.showBar} onChange={e => onPrefs({ showBar: e.target.checked })} data-testid="toggle-bar" /> Шкала оценки</label>
-        <label className="toggle"><input type="checkbox" checked={prefs.showArrows} onChange={e => onPrefs({ showArrows: e.target.checked })} data-testid="toggle-arrows" /> Стрелки</label>
-        <label className="toggle"><input type="checkbox" checked={prefs.showMarks} onChange={e => onPrefs({ showMarks: e.target.checked })} data-testid="toggle-marks" /> Оценка ходов</label>
-        <button className="link-btn" onClick={() => setShowSettings(s => !s)} data-testid="settings-btn">{showSettings ? 'Скрыть настройки' : 'Настройки'}</button>
+        <label className="toggle"><input type="checkbox" checked={prefs.showPanel} onChange={e => onPrefs({ showPanel: e.target.checked })} data-testid="toggle-panel" /> {t('analysis.view.showAnalysis')}</label>
+        <label className="toggle"><input type="checkbox" checked={prefs.showBar} onChange={e => onPrefs({ showBar: e.target.checked })} data-testid="toggle-bar" /> {t('analysis.view.evalBar')}</label>
+        <label className="toggle"><input type="checkbox" checked={prefs.showArrows} onChange={e => onPrefs({ showArrows: e.target.checked })} data-testid="toggle-arrows" /> {t('analysis.view.arrows')}</label>
+        <label className="toggle"><input type="checkbox" checked={prefs.showMarks} onChange={e => onPrefs({ showMarks: e.target.checked })} data-testid="toggle-marks" /> {t('analysis.view.moveRatings')}</label>
+        <button className="link-btn" onClick={() => setShowSettings(s => !s)} data-testid="settings-btn">{showSettings ? t('analysis.view.hideSettings') : t('analysis.view.settings')}</button>
       </div>
       {showSettings && <AnalysisSettings prefs={prefs} onChange={onPrefs} />}
 
@@ -354,19 +361,19 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       <div className="board-message"><span className="pulse"/> {message}</div>
 
       <div className="nav-row">
-        <button className="btn" onClick={() => goto(0)} disabled={viewPly === 0} aria-label="В начало">⏮</button>
-        <button className="btn" onClick={() => goto(viewPly - 1)} disabled={viewPly === 0} aria-label="Назад" data-testid="nav-prev">◀</button>
-        <button className="btn" onClick={() => goto(viewPly + 1)} disabled={viewPly >= ucis.length} aria-label="Вперёд" data-testid="nav-next">▶</button>
-        <button className="btn" onClick={() => goto(ucis.length)} disabled={viewPly >= ucis.length} aria-label="В конец">⏭</button>
-        <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="flip">⇅ Перевернуть</button>
+        <button className="btn" onClick={() => goto(0)} disabled={viewPly === 0} aria-label={t('analysis.view.toStart')}>⏮</button>
+        <button className="btn" onClick={() => goto(viewPly - 1)} disabled={viewPly === 0} aria-label={t('analysis.view.back')} data-testid="nav-prev">◀</button>
+        <button className="btn" onClick={() => goto(viewPly + 1)} disabled={viewPly >= ucis.length} aria-label={t('analysis.view.forward')} data-testid="nav-next">▶</button>
+        <button className="btn" onClick={() => goto(ucis.length)} disabled={viewPly >= ucis.length} aria-label={t('analysis.view.toEnd')}>⏭</button>
+        <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="flip">{t('analysis.view.flip')}</button>
       </div>
 
       <div className="board-actions">
-        <button className="btn primary" onClick={newGame}>＋ Новая партия</button>
-        <button className="btn" onClick={undo} disabled={ucis.length === 0}>↶ Отменить ход</button>
-        <button className="btn" onClick={saveSession} disabled={ucis.length === 0}>Сохранить сессию</button>
-        <button className="btn" onClick={() => setShowImport(s => !s)} data-testid="import-btn">Загрузить PGN</button>
-        <button className={`btn ${showEditor ? 'active' : ''}`} onClick={() => setShowEditor(s => !s)} data-testid="editor-btn">Расставить позицию</button>
+        <button className="btn primary" onClick={newGame}>{t('analysis.view.newGame')}</button>
+        <button className="btn" onClick={undo} disabled={ucis.length === 0}>{t('analysis.view.undo')}</button>
+        <button className="btn" onClick={saveSession} disabled={ucis.length === 0}>{t('analysis.view.saveSession')}</button>
+        <button className="btn" onClick={() => setShowImport(s => !s)} data-testid="import-btn">{t('analysis.view.loadPgn')}</button>
+        <button className={`btn ${showEditor ? 'active' : ''}`} onClick={() => setShowEditor(s => !s)} data-testid="editor-btn">{t('analysis.view.editor')}</button>
       </div>
       {showImport && <PgnImport onLoad={loadPgn} />}
       {showEditor && <PositionEditor initialFen={chess.fen()} onApply={loadPosition} onCancel={() => setShowEditor(false)} />}
@@ -374,10 +381,10 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
 
     <aside className="right-column">
       <div className="tabs" role="tablist">
-        <button role="tab" className={`tab ${tab === 'analysis' ? 'active' : ''}`} aria-selected={tab === 'analysis'} onClick={() => setTab('analysis')}>Анализ</button>
-        <button role="tab" className={`tab ${tab === 'review' ? 'active' : ''}`} aria-selected={tab === 'review'} onClick={() => setTab('review')} data-testid="tab-review">Разбор партии</button>
+        <button role="tab" className={`tab ${tab === 'analysis' ? 'active' : ''}`} aria-selected={tab === 'analysis'} onClick={() => setTab('analysis')}>{t('analysis.view.tabAnalysis')}</button>
+        <button role="tab" className={`tab ${tab === 'review' ? 'active' : ''}`} aria-selected={tab === 'review'} onClick={() => setTab('review')} data-testid="tab-review">{t('analysis.view.tabReview')}</button>
       </div>
-      {tab === 'analysis' && !prefs.showPanel && <section className="panel"><p className="muted">Панель анализа скрыта. Включите «Показывать анализ» над доской — позиция и результаты сохранены.</p></section>}
+      {tab === 'analysis' && !prefs.showPanel && <section className="panel"><p className="muted">{t('analysis.view.panelHidden')}</p></section>}
       {tab === 'analysis' && prefs.showPanel && <AnalysisPanel fen={fen} turn={chess.turn()} entry={entry} score={score} busy={an.busy} error={an.error}
           engineState={engineState} engineLabel={engineLabel} status={status} live={prefs.showMarks ? viewMove : null} marksOn={prefs.showMarks} analysisOn={analysisOn} />}
       {tab === 'review' && <ReviewSection
@@ -387,7 +394,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         quality={prefs.reviewQuality} onQuality={q => onPrefs({ reviewQuality: q })} engineError={engineState === 'error'} />}
 
       <section className="panel moves-panel">
-        <div className="panel-head"><div><div className="eyebrow">ХОД ПАРТИИ</div><h2>Нотация</h2></div><span className="move-count">{ucis.length} полуходов</span></div>
+        <div className="panel-head"><div><div className="eyebrow">{t('analysis.view.movesEyebrow')}</div><h2>{t('analysis.view.notation')}</h2></div><span className="move-count">{tn('analysis.view.plies', ucis.length)}</span></div>
         <MoveList records={records} viewPly={viewPly} onSelect={goto} marks={marks} />
       </section>
       <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />

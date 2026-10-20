@@ -10,6 +10,7 @@
 // Результат зависит от глубины анализа и параметров движка и является оценкой, а не истиной.
 import type { Color } from 'chess.js'
 import { forColor, winPercentFor, type Score } from './eval'
+import { t } from '../i18n'
 
 export type Thresholds = {
   /** Потеря до этого значения — «отличный» ход (почти не хуже лучшего, хотя и не первая линия движка). */
@@ -31,17 +32,10 @@ export const CLASS_ORDER: MoveClass[] = [
   'brilliant', 'great', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'miss', 'blunder',
 ]
 
-export const CLASS_LABEL: Record<MoveClass, string> = {
-  brilliant: 'Блестящий ход',
-  great: 'Сильный ход',
-  best: 'Лучший ход',
-  excellent: 'Отличный ход',
-  good: 'Хороший ход',
-  book: 'Дебютный ход',
-  inaccuracy: 'Неточность',
-  mistake: 'Ошибка',
-  miss: 'Упущенный шанс',
-  blunder: 'Зевок',
+/** Названия оценок на текущем языке (читаются в момент обращения, поэтому следуют за сменой языка). */
+export const CLASS_LABEL = {} as Record<MoveClass, string>
+for (const k of CLASS_ORDER) {
+  Object.defineProperty(CLASS_LABEL, k, { enumerable: true, get: () => t(`analysis.class.${k}`) })
 }
 
 export const CLASS_MARK: Record<MoveClass, string> = {

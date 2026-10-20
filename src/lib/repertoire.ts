@@ -46,7 +46,7 @@ export function addLine(rep: Repertoire, moves: readonly string[], name: string,
     lines[idx] = { ...lines[idx], moves: [...moves], name: name || lines[idx].name }
     return { rep: { ...rep, lines }, status: 'extended' }
   }
-  return { rep: { ...rep, lines: [...rep.lines, { id: makeId('l'), name: name || 'Без названия', moves: [...moves], note }] }, status: 'added' }
+  return { rep: { ...rep, lines: [...rep.lines, { id: makeId('l'), name: name || '@line:untitled', moves: [...moves], note }] }, status: 'added' }
 }
 
 export const removeLine = (rep: Repertoire, id: string): Repertoire => ({ ...rep, lines: rep.lines.filter(l => l.id !== id) })

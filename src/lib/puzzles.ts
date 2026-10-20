@@ -4,8 +4,8 @@
 import { Chess } from 'chess.js'
 import { winPercentFor } from './eval'
 import { splitUci } from './game'
-import { PIECE_NAME } from './glyphs'
-import { THEME_IDEA, THEME_ORDER, type ThemeId } from './puzzleThemes'
+import { t, tn, type Key } from '../i18n'
+import { THEME_IDEA, THEME_ORDER, balance, detectThemes, type ThemeId } from './puzzleThemes'
 import { uciToSan } from './san'
 import type { PuzzleStats } from './puzzleStats'
 
@@ -29,17 +29,14 @@ export type Puzzle = {
   why: string[]
 }
 
-export const LEVEL_LABEL: Record<Level, string> = { 1: 'Лёгкая', 2: 'Средняя', 3: 'Сложная' }
+/** Названия сложности на текущем языке (геттеры). */
+export const LEVEL_LABEL = {} as Record<Level, string>
+for (const l of [1, 2, 3] as const) Object.defineProperty(LEVEL_LABEL, l, { enumerable: true, get: () => t(`puzzles.level.${l}`) })
 
 export type MateFilter = 'any' | 'm1' | 'm2' | 'm3' | 'material'
 
-export const MATE_FILTER_LABEL: Record<MateFilter, string> = {
-  any: 'Любые',
-  m1: 'Мат в 1 ход',
-  m2: 'Мат в 2 хода',
-  m3: 'Мат в 3+ хода',
-  material: 'Выигрыш материала и защита',
-}
+export const MATE_FILTER_LABEL = {} as Record<MateFilter, string>
+for (const m of ['any', 'm1', 'm2', 'm3', 'material'] as const) Object.defineProperty(MATE_FILTER_LABEL, m, { enumerable: true, get: () => t(`puzzles.mf.${m}`) })
 
 export type PuzzleFilter = { theme: ThemeId | 'any'; level: Level | 0; mate: MateFilter }
 export const ANY_FILTER: PuzzleFilter = { theme: 'any', level: 0, mate: 'any' }
@@ -80,8 +77,9 @@ export type Evaluate = (fen: string) => Promise<EngineVerdict>
 
 export type MoveJudgement =
   | { type: 'correct'; /** Ответ соперника (null — решение закончено ходом решающего). */ reply: string | null; done: boolean; alt: boolean }
-  | { type: 'wrong'; reason: string }
-  | { type: 'unverified'; reason: string }
+  /** reason — ключ словаря (puzzles.reason.*); переводится при показе. */
+  | { type: 'wrong'; reason: Key }
+  | { type: 'unverified'; reason: Key }
 
 /** Сколько ходов решающего содержит решение. */
 export const solverMoves = (p: Puzzle) => Math.ceil(p.line.length / 2)
@@ -105,7 +103,7 @@ export async function judgeMove(p: Puzzle, played: readonly string[], fen: strin
   const i = played.length
   const onScript = played.every((m, k) => m === p.line[k])
   const after = fenAfter(fen, uci)
-  if (!after) return { type: 'wrong', reason: 'Недопустимый ход.' }
+  if (!after) return { type: 'wrong', reason: 'puzzles.reason.illegal' }
 
   if (onScript && uci === p.line[i]) {
     const reply = p.line[i + 1] ?? null
@@ -114,11 +112,11 @@ export async function judgeMove(p: Puzzle, played: readonly string[], fen: strin
   if (after.isCheckmate()) return { type: 'correct', reply: null, done: true, alt: !onScript || uci !== p.line[i] }
 
   const made = i / 2 + 1 // сколько ходов решающего уже сделано, включая этот
-  if (p.kind === 'mate' && p.mate !== null && made >= p.mate) return { type: 'wrong', reason: 'Мат не поставлен вовремя.' }
-  if (after.isDraw() || after.isGameOver()) return { type: 'wrong', reason: 'Ход ведёт к ничьей — это не решение.' }
+  if (p.kind === 'mate' && p.mate !== null && made >= p.mate) return { type: 'wrong', reason: 'puzzles.reason.notInTime' }
+  if (after.isDraw() || after.isGameOver()) return { type: 'wrong', reason: 'puzzles.reason.draw' }
 
   let v: EngineVerdict
-  try { v = await evaluate(after.fen()) } catch { return { type: 'unverified', reason: 'Не удалось проверить ход движком.' } }
+  try { v = await evaluate(after.fen()) } catch { return { type: 'unverified', reason: 'puzzles.reason.unverified' } }
 
   // v — с точки зрения соперника (его очередь)
   const solverMate = v.mate !== null && v.mate < 0 ? -v.mate : null
@@ -132,7 +130,7 @@ export async function judgeMove(p: Puzzle, played: readonly string[], fen: strin
     const winBest = winPercentFor({ cp: target, mate: null }, 'w')
     ok = winNow >= winBest - ALT_WIN_TOLERANCE && (p.kind === 'defense' || (solverCp ?? 10_000) >= 150)
   }
-  if (!ok) return { type: 'wrong', reason: p.kind === 'mate' ? 'Это не ведёт к мату в нужное число ходов.' : 'Этот ход упускает выигрыш — соперник получает контригру.' }
+  if (!ok) return { type: 'wrong', reason: p.kind === 'mate' ? 'puzzles.reason.notMate' : 'puzzles.reason.losesWin' }
 
   const reply = v.bestMove
   const done = made >= solverMoves(p)
@@ -150,15 +148,15 @@ export function hintFor(p: Puzzle, fen: string, level: 1 | 2 | 3, idx = 0): Hint
   const uci = p.line[idx]
   if (level === 1) {
     const t = mainTheme(p)
-    const base = p.mate !== null ? `Это мат в ${p.mate} ${p.mate === 1 ? 'ход' : 'хода'}. ` : ''
+    const base = p.mate !== null ? `${tn('puzzles.hint.mateIn', p.mate)} ` : ''
     return { level, text: `${base}${THEME_IDEA[t]}` }
   }
   if (!uci) return { level, text: '' }
   const { from, to } = splitUci(uci)
   const piece = new Chess(fen).get(from)
-  const name = piece ? PIECE_NAME[piece.type] : 'фигурой'
-  if (level === 2) return { level, text: `Сходите фигурой с поля ${from} (${name}).`, square: from }
-  return { level, text: `Ход: ${uciToSan(fen, uci)} (${from} → ${to}).`, square: from, target: to }
+  const name = piece ? t(`puzzles.pc.nom.${piece.type}`) : t('puzzles.pc.any')
+  if (level === 2) return { level, text: t('puzzles.hint.piece', { from, name }), square: from }
+  return { level, text: t('puzzles.hint.move', { san: uciToSan(fen, uci) ?? uci, from, to }), square: from, target: to }
 }
 
 /** Решение в виде записи ходов: «23.Qxh7+ Kxh7 24.Rh3#». */
@@ -176,3 +174,23 @@ export function solutionSan(p: Puzzle): string {
 }
 
 export const THEMES_FOR_UI: ThemeId[] = THEME_ORDER
+
+/**
+ * Пояснение к решению на текущем языке: строится по позиции и линии (а не берётся из сохранённого текста),
+ * поэтому при смене языка меняется без перезагрузки. Если определение тем разошлось с базой — показываем сохранённое.
+ */
+export function puzzleWhy(p: Puzzle): string[] {
+  try {
+    const det = detectThemes(p.fen, p.line, { mate: p.kind === 'mate' ? p.mate : null, defense: p.kind === 'defense' })
+    if (det.explain.length === 0 || det.themes.join() !== p.themes.join()) return p.why
+    const out = [...det.explain]
+    if (p.kind === 'win') {
+      const c = new Chess(p.fen)
+      const solver = c.turn()
+      const base = balance(c, solver)
+      for (const u of p.line) c.move(splitUci(u))
+      out.push(t('puzzles.why.result', { gain: balance(c, solver) - base }))
+    }
+    return out
+  } catch { return p.why }
+}

@@ -83,7 +83,7 @@ describe('подсказки', () => {
     const h1 = hintFor(M1, M1.fen, 1)
     const h2 = hintFor(M1, M1.fen, 2)
     const h3 = hintFor(M1, M1.fen, 3)
-    expect(h1.text).toMatch(/мат в 1/)
+    expect(h1.text).toMatch(/mate in 1/i)
     expect(h1.text).not.toMatch(/a8/)
     expect(h2.square).toBe('a1')
     expect(h2.text).not.toMatch(/a8/)
@@ -151,7 +151,7 @@ describe('определение тем', () => {
   it('связка: слон связывает коня с королём и затем выигрывает его', () => {
     const d = detectThemes('4k3/3n4/8/8/8/8/4B3/4K3 w - - 0 1', ['e2b5', 'e8f8', 'b5d7'], { mate: null })
     expect(d.themes).toContain('pin')
-    expect(d.explain.join(' ')).toMatch(/Связка/)
+    expect(d.explain.join(' ')).toMatch(/Pin/)
   })
   it('без выигрыша связанной фигуры связка не объявляется', () => {
     const d = detectThemes('4k3/3n4/8/8/8/8/4B3/4K3 w - - 0 1', ['e2b5', 'e8f8', 'e1d1'], { mate: null })
@@ -178,5 +178,19 @@ describe('база задач', () => {
     }
     for (const l of [1, 2, 3]) expect(puzzles.filter(p => p.level === l).length, `level ${l}`).toBeGreaterThan(0)
     for (const m of [1, 2, 3]) expect(puzzles.filter(p => p.mate === m).length, `mate ${m}`).toBeGreaterThan(0)
+  })
+})
+
+describe('локализация задач', () => {
+  const puzzles = PUZZLES as unknown as Puzzle[]
+  it('пояснения по-русски совпадают с сохранёнными в базе, по-английски — не пустые', async () => {
+    const { setLang } = await import('../i18n')
+    const { puzzleWhy } = await import('./puzzles')
+    try {
+      setLang('ru')
+      for (const p of puzzles) expect(puzzleWhy(p), p.id).toEqual(p.why)
+      setLang('en')
+      for (const p of puzzles) { const w = puzzleWhy(p); expect(w.length, p.id).toBeGreaterThan(0); expect(w.join(' '), p.id).not.toMatch(/[А-Яа-яЁё]/) }
+    } finally { setLang('en') }
   })
 })

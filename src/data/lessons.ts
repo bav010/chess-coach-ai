@@ -1,5 +1,7 @@
 // Уроки дебютов: ходы и объяснения «почему именно так». Тексты написаны для начинающих.
 import type { Color } from 'chess.js'
+import { getLang } from '../i18n'
+import { LESSONS_EN } from './lessonsEn'
 
 export type LessonStep = [san: string, why: string]
 
@@ -17,7 +19,8 @@ export type Lesson = {
   outro: string
 }
 
-export const LESSONS: Lesson[] = [
+/** Russian originals. Moves (SAN) are shared by all languages; texts of other languages live in lessonsEn.ts. */
+export const LESSONS_RU: Lesson[] = [
   {
     id: 'italian', title: 'Итальянская партия', eco: 'C50', side: 'w', level: 1, style: 'attack',
     intro: 'Один из старейших и самых понятных дебютов: быстро развиваем фигуры, целимся в слабое поле f7 и готовим центр.',
@@ -729,3 +732,19 @@ export const LESSONS: Lesson[] = [
     outro: 'Против Лондона важно сразу атаковать центр белых: c5, Qb6 и размены дают чёрным инициативу.',
   },
 ]
+
+/**
+ * Lessons in the current language: title / intro / outro / steps[i][1] are resolved at access time
+ * (getters), so a language switch is picked up without reloading and nothing translated is persisted.
+ */
+export const LESSONS: Lesson[] = LESSONS_RU.map(ru => {
+  const en = LESSONS_EN[ru.id]
+  const pick = <T,>(r: T, e: T | undefined): T => (getLang() === 'en' && e !== undefined ? e : r)
+  return {
+    id: ru.id, eco: ru.eco, side: ru.side, level: ru.level, style: ru.style,
+    get title() { return pick(ru.title, en?.title) },
+    get intro() { return pick(ru.intro, en?.intro) },
+    get outro() { return pick(ru.outro, en?.outro) },
+    get steps(): LessonStep[] { return ru.steps.map(([san, why], i) => [san, pick(why, en?.steps[i])] as LessonStep) },
+  }
+})

@@ -5,6 +5,8 @@
 // В приложении два независимых экземпляра (два Worker'а): один для анализа и разбора партий,
 // другой для ходов бота. Так анализ и игра не мешают друг другу и не сбивают настройки силы.
 
+import { LocalizedError } from './i18n/errors'
+
 /** Одна линия (вариант) из вывода движка. Оценка — с точки зрения стороны, чей ход. */
 export type PvLine = {
   multipv: number
@@ -81,7 +83,7 @@ export class Engine {
       try {
         worker = new Worker(ENGINE_URL)
       } catch (e) {
-        reject(e instanceof Error ? e : new Error('Не удалось создать Worker'))
+        reject(e instanceof Error ? e : new LocalizedError('analysis.err.worker'))
         return
       }
       this.worker = worker
@@ -89,7 +91,7 @@ export class Engine {
         const line = String(ev.data)
         this.listeners.forEach(l => l(line))
       }
-      worker.onerror = () => reject(new Error('Не удалось загрузить движок Stockfish'))
+      worker.onerror = () => reject(new LocalizedError('analysis.err.engine'))
       const uciOk = this.waitFor(l => l === 'uciok')
       this.send('uci')
       uciOk

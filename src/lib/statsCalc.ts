@@ -3,6 +3,7 @@ import type { Phase } from './game'
 import type { GameStat, Outcome } from './gameStats'
 import { weakThemes, type PuzzleStats } from './puzzleStats'
 import { THEME_LABEL } from './puzzleThemes'
+import { t, tn } from '../i18n'
 
 export type Filters = {
   period: 'all' | '7' | '30' | '90' | '365'
@@ -123,8 +124,7 @@ export type Rec = {
   action: { label: string; go: 'tactics' | 'openings' | 'analysis' | 'play' }
 }
 
-const plural = (n: number, a: string, b: string, c: string) => { const m = n % 100, k = n % 10; return m >= 11 && m <= 14 ? c : k === 1 ? a : k >= 2 && k <= 4 ? b : c }
-const games_ = (n: number) => `${n} ${plural(n, 'партии', 'партиях', 'партиях')}`
+const games_ = (n: number) => tn('stats.rec.inGames', n)
 
 export type RecResult = { recs: Rec[]; reviewed: number; needMore: number }
 
@@ -139,10 +139,10 @@ export function recommend(games: readonly GameStat[], puzzles: PuzzleStats): Rec
   if (weak.length > 0) {
     const w = weak[0]
     recs.push({
-      id: 'puzzle-theme', title: `Слабая тактическая тема: ${THEME_LABEL[w.theme].toLowerCase()}`,
-      text: `В задачах этой темы вы решаете ${w.percent}% — это заметно ниже остальных. Порешайте задачи на эту тему.`,
-      basis: `${w.tried} попыток по теме в задачах`, keys: [],
-      action: { label: 'К задачам', go: 'tactics' },
+      id: 'puzzle-theme', title: t('stats.rec.puzzleTheme.title', { theme: THEME_LABEL[w.theme].toLowerCase() }),
+      text: t('stats.rec.puzzleTheme.text', { pct: w.percent }),
+      basis: t('stats.rec.puzzleTheme.basis', { n: w.tried }), keys: [],
+      action: { label: t('stats.act.puzzles'), go: 'tactics' },
     })
   }
   if (n < MIN_REVIEWED) return { recs, reviewed: n, needMore: MIN_REVIEWED - n }
@@ -152,58 +152,57 @@ export function recommend(games: readonly GameStat[], puzzles: PuzzleStats): Rec
   const moves = rev.reduce((s, g) => s + g.review!.moves, 0)
   if (totBlunders >= 4 && blunders.length >= Math.ceil(n * 0.5) && totBlunders / moves >= 0.02) {
     recs.push({
-      id: 'blunders', title: 'Частые грубые ошибки',
-      text: 'Зевки встречаются в большинстве ваших партий. Перед каждым ходом проверяйте шахи, взятия и угрозы соперника; разберите свои ошибки в тренировке.',
-      basis: `${totBlunders} зевков в ${games_(blunders.length)} из ${n} разобранных (${(totBlunders / moves * 100).toFixed(1)} на 100 ходов)`,
-      keys: blunders.map(g => g.key), action: { label: 'Разобрать партию', go: 'analysis' },
+      id: 'blunders', title: t('stats.rec.blunders.title'),
+      text: t('stats.rec.blunders.text'),
+      basis: t('stats.rec.blunders.basis', { blunders: totBlunders, games: games_(blunders.length), n, rate: (totBlunders / moves * 100).toFixed(1) }),
+      keys: blunders.map(g => g.key), action: { label: t('stats.act.review'), go: 'analysis' },
     })
   }
   const hungGames = rev.filter(g => g.review!.hung > 0)
   const hung = rev.reduce((s, g) => s + g.review!.hung, 0)
   if (hung >= 3 && hungGames.length >= 3) {
     recs.push({
-      id: 'hung', title: 'Потери фигур',
-      text: 'Несколько раз после вашего хода соперник сразу забирал фигуру. Тренируйте тактику на двойные удары и связки, чтобы замечать угрозы заранее.',
-      basis: `${hung} потерь фигур в ${games_(hungGames.length)} из ${n} разобранных`,
-      keys: hungGames.map(g => g.key), action: { label: 'К задачам', go: 'tactics' },
+      id: 'hung', title: t('stats.rec.hung.title'),
+      text: t('stats.rec.hung.text'),
+      basis: t('stats.rec.hung.basis', { hung, games: games_(hungGames.length), n }),
+      keys: hungGames.map(g => g.key), action: { label: t('stats.act.puzzles'), go: 'tactics' },
     })
   }
   const missGames = rev.filter(g => g.review!.missed > 0)
   const missed = rev.reduce((s, g) => s + g.review!.missed, 0)
   if (missed >= 3 && missGames.length >= 3) {
     recs.push({
-      id: 'missed', title: 'Пропуск тактики',
-      text: 'Вы не используете моменты, когда соперник ошибся или был возможен мат. Решайте задачи на поиск выигрыша — привычка искать форсированные ходы развивается именно так.',
-      basis: `${missed} упущенных шансов в ${games_(missGames.length)} из ${n} разобранных`,
-      keys: missGames.map(g => g.key), action: { label: 'К задачам', go: 'tactics' },
+      id: 'missed', title: t('stats.rec.missed.title'),
+      text: t('stats.rec.missed.text'),
+      basis: t('stats.rec.missed.basis', { missed, games: games_(missGames.length), n }),
+      keys: missGames.map(g => g.key), action: { label: t('stats.act.puzzles'), go: 'tactics' },
     })
   }
   const adv = rev.filter(g => g.outcome && (g.review!.peakWin ?? 0) >= 80)
   const notWon = adv.filter(g => g.outcome !== 'win')
   if (adv.length >= 4 && notWon.length >= 3 && notWon.length / adv.length >= 0.4) {
     recs.push({
-      id: 'convert', title: 'Трудно реализовать преимущество',
-      text: 'У вас были выигрышные позиции, но победа не достигалась. Потренируйтесь доводить выигранные позиции до победы против бота (расставьте их в режиме анализа) и изучите базовые эндшпили.',
-      basis: `${notWon.length} из ${adv.length} партий с шансами на победу 80%+ не выиграны`,
-      keys: notWon.map(g => g.key), action: { label: 'Играть с ботом', go: 'play' },
+      id: 'convert', title: t('stats.rec.convert.title'),
+      text: t('stats.rec.convert.text'),
+      basis: t('stats.rec.convert.basis', { notWon: notWon.length, adv: adv.length }),
+      keys: notWon.map(g => g.key), action: { label: t('stats.act.play'), go: 'play' },
     })
   }
   const s = summarize(rev)
   const overall = s.acc
-  const ph: { p: Phase; label: string; go: Rec['action']['go']; tip: string }[] = [
-    { p: 'opening', label: 'дебюте', go: 'openings', tip: 'Выучите и повторяйте свои дебютные линии в режиме «Дебюты».' },
-    { p: 'middlegame', label: 'миттельшпиле', go: 'tactics', tip: 'Тактические задачи лучше всего прокачивают миттельшпиль.' },
-    { p: 'endgame', label: 'эндшпиле', go: 'play', tip: 'Играйте эндшпили против бота из позиций, расставленных в редакторе.' },
+  const ph: { p: Phase; go: Rec['action']['go'] }[] = [
+    { p: 'opening', go: 'openings' }, { p: 'middlegame', go: 'tactics' }, { p: 'endgame', go: 'play' },
   ]
   if (overall !== null) {
     for (const x of ph) {
       const v = s.phases[x.p]
       if (v.acc !== null && v.n >= 25 && overall - v.acc >= 10) {
+        const phase = t(`stats.rec.phase.${x.p}`)
         recs.push({
-          id: `phase-${x.p}`, title: `Слабее всего — игра в ${x.label}`,
-          text: `Точность в ${x.label} на ${Math.round(overall - v.acc)} п. п. ниже вашей средней. ${x.tip}`,
-          basis: `${v.n} ходов в ${x.label} по ${n} разобранным партиям: точность ${Math.round(v.acc)}% против ${Math.round(overall)}% в среднем`,
-          keys: rev.filter(g => g.review!.phases[x.p].n > 0).map(g => g.key), action: { label: x.go === 'openings' ? 'К дебютам' : x.go === 'tactics' ? 'К задачам' : 'Играть с ботом', go: x.go },
+          id: `phase-${x.p}`, title: t('stats.rec.phase.title', { phase }),
+          text: t('stats.rec.phase.text', { phase, gap: Math.round(overall - v.acc), tip: t(`stats.rec.phase.tip.${x.p}`) }),
+          basis: t('stats.rec.phase.basis', { phase, moves: v.n, n, acc: Math.round(v.acc), overall: Math.round(overall) }),
+          keys: rev.filter(g => g.review!.phases[x.p].n > 0).map(g => g.key), action: { label: x.go === 'openings' ? t('stats.act.openings') : x.go === 'tactics' ? t('stats.act.puzzles') : t('stats.act.play'), go: x.go },
         })
       }
     }
@@ -211,10 +210,10 @@ export function recommend(games: readonly GameStat[], puzzles: PuzzleStats): Rec
   const eg = s.endgame
   if (eg.games >= 4 && eg.scorePct !== null && eg.scorePct < 40) {
     recs.push({
-      id: 'endgame-score', title: 'Эндшпили даются тяжело',
-      text: 'В партиях, дошедших до эндшпиля, вы набираете мало очков. Разберите такие партии и потренируйте базовые эндшпили.',
-      basis: `${eg.games} партий дошли до эндшпиля, результат ${eg.scorePct}% очков`,
-      keys: rev.filter(g => g.endgame).map(g => g.key), action: { label: 'Играть с ботом', go: 'play' },
+      id: 'endgame-score', title: t('stats.rec.endgame.title'),
+      text: t('stats.rec.endgame.text'),
+      basis: t('stats.rec.endgame.basis', { games: eg.games, pct: eg.scorePct }),
+      keys: rev.filter(g => g.endgame).map(g => g.key), action: { label: t('stats.act.play'), go: 'play' },
     })
   }
   return { recs, reviewed: n, needMore: 0 }

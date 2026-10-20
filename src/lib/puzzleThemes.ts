@@ -5,38 +5,25 @@
 import { Chess, type Color, type PieceSymbol, type Square } from 'chess.js'
 import { PIECE_VALUE, splitUci } from './game'
 import { sacrificeValue } from './tactics'
+import { t, tn } from '../i18n'
 
 export type ThemeId = 'fork' | 'pin' | 'doubleAttack' | 'discovered' | 'deflection' | 'mateCombo' | 'defense' | 'mate'
 
-export const THEME_LABEL: Record<ThemeId, string> = {
-  fork: 'Вилка',
-  pin: 'Связка',
-  doubleAttack: 'Двойное нападение',
-  discovered: 'Вскрытое нападение',
-  deflection: 'Отвлечение защитника',
-  mateCombo: 'Матовые комбинации',
-  defense: 'Тактическая защита',
-  mate: 'Мат',
-}
+const THEME_IDS: ThemeId[] = ['fork', 'pin', 'doubleAttack', 'discovered', 'deflection', 'mateCombo', 'defense', 'mate']
+
+/** Названия тем на текущем языке (геттеры: текст берётся в момент чтения, а не при загрузке модуля). */
+export const THEME_LABEL = {} as Record<ThemeId, string>
+for (const id of THEME_IDS) Object.defineProperty(THEME_LABEL, id, { enumerable: true, get: () => t(`puzzles.theme.${id}`) })
 
 /** Темы, которые выбирает пользователь (мат — отдельным фильтром по длине). */
 export const THEME_ORDER: ThemeId[] = ['fork', 'pin', 'doubleAttack', 'discovered', 'deflection', 'mateCombo', 'defense']
 
-export const THEME_IDEA: Record<ThemeId, string> = {
-  fork: 'Одним ходом атакуйте сразу две цели — соперник сможет спасти только одну.',
-  pin: 'Ищите фигуру, которая прикрывает более ценную: связав её, можно выиграть материал.',
-  doubleAttack: 'Создайте две угрозы одновременно — защититься от обеих не получится.',
-  discovered: 'Уберите свою фигуру с линии так, чтобы за ней открылась атака другой фигуры.',
-  deflection: 'Заставьте защитника покинуть свой пост — то, что он защищал, останется без прикрытия.',
-  mateCombo: 'Ищите принудительные шахи и жертвы, которые не оставляют королю полей для отступления.',
-  defense: 'У соперника есть угроза. Найдите единственный ход, который её отражает.',
-  mate: 'Ищите шахи: король соперника должен остаться без полей и защиты.',
-}
+/** Идея темы для подсказки (на текущем языке). */
+export const THEME_IDEA = {} as Record<ThemeId, string>
+for (const id of THEME_IDS) Object.defineProperty(THEME_IDEA, id, { enumerable: true, get: () => t(`puzzles.idea.${id}`) })
 
-const NOM: Record<PieceSymbol, string> = { p: 'пешка', n: 'конь', b: 'слон', r: 'ладья', q: 'ферзь', k: 'король' }
-const ACC: Record<PieceSymbol, string> = { p: 'пешку', n: 'коня', b: 'слона', r: 'ладью', q: 'ферзя', k: 'короля' }
-const INS: Record<PieceSymbol, string> = { p: 'пешкой', n: 'конём', b: 'слоном', r: 'ладьёй', q: 'ферзём', k: 'королём' }
-const GEN: Record<PieceSymbol, string> = { p: 'пешки', n: 'коня', b: 'слона', r: 'ладьи', q: 'ферзя', k: 'короля' }
+type Case = 'nom' | 'acc' | 'ins' | 'gen'
+const pc = (c: Case, type: PieceSymbol) => t(`puzzles.pc.${c}.${type}`)
 
 type Pc = { type: PieceSymbol; color: Color; square: Square }
 
@@ -158,7 +145,7 @@ export function detectThemes(startFen: string, line: readonly string[], opts: De
 
   if (opts.defense) {
     themes.push('defense')
-    explain.push('Тактическая защита: у соперника была сильная угроза, и только этот ход её отражает.')
+    explain.push(t('puzzles.why.defense'))
   }
 
   if (opts.mate !== null) {
@@ -166,18 +153,18 @@ export function detectThemes(startFen: string, line: readonly string[], opts: De
     if (opts.mate >= 2) {
       themes.push('mateCombo')
       const sac = sacrificeValue(startFen, line, solver)
-      explain.push(`Матовая комбинация: мат в ${opts.mate} хода${opts.mate >= 5 ? 'х' : ''}${sac >= 2 ? ' с жертвой материала' : ''} — каждый шах отнимает у короля поля.`)
+      explain.push(tn('puzzles.why.mateCombo', opts.mate, { sac: sac >= 2 ? t('puzzles.why.sac') : '' }))
     } else {
-      explain.push('Мат в один ход: король под шахом, и ему некуда отойти и нечем закрыться.')
+      explain.push(t('puzzles.why.mate1'))
     }
   }
 
   // --- вилка: ходящая фигура атакует две слабые цели
-  const forkTargets = weakTargets(after, solver).filter(t => t.attackers.includes(m1.to))
-  if (mover.type !== 'k' && forkTargets.length >= 2 && (winsAny(forkTargets.map(t => t.target.square)) || matesLater)) {
+  const forkTargets = weakTargets(after, solver).filter(w => w.attackers.includes(m1.to))
+  if (mover.type !== 'k' && forkTargets.length >= 2 && (winsAny(forkTargets.map(w => w.target.square)) || matesLater)) {
     themes.push('fork')
     const [a, b] = forkTargets
-    explain.push(`Вилка: ${NOM[mover.type]} на ${m1.to} одновременно атакует ${ACC[a.target.type]} на ${a.target.square} и ${ACC[b.target.type]} на ${b.target.square}.`)
+    explain.push(t('puzzles.why.fork', { mover: pc('nom', mover.type), sq: m1.to, a: pc('acc', a.target.type), asq: a.target.square, b: pc('acc', b.target.type), bsq: b.target.square }))
   }
 
   // --- связка: новая связка, и связанная фигура затем выигрывается
@@ -187,33 +174,32 @@ export function detectThemes(startFen: string, line: readonly string[], opts: De
   if (goodPin) {
     themes.push('pin')
     const abs = goodPin.behind.type === 'k'
-    const behind = abs ? 'королём' : `${INS[goodPin.behind.type]}`
-    explain.push(`Связка: ${NOM[goodPin.slider.type]} на ${goodPin.slider.square} связывает ${ACC[goodPin.pinned.type]} на ${goodPin.pinned.square} с ${behind} на ${goodPin.behind.square}${abs ? ' — связанная фигура не может ходить' : ' — уходя, она подставит более ценную фигуру'}.`)
+    explain.push(t('puzzles.why.pin', { slider: pc('nom', goodPin.slider.type), ssq: goodPin.slider.square, pinned: pc('acc', goodPin.pinned.type), psq: goodPin.pinned.square, behind: pc('ins', goodPin.behind.type), bsq: goodPin.behind.square, tail: t(abs ? 'puzzles.why.pinAbs' : 'puzzles.why.pinRel') }))
   }
 
   // --- вскрытое нападение: другой слайдер начинает атаковать слабую цель
   for (const s of piecesOf(after, solver)) {
     if ((s.type !== 'b' && s.type !== 'r' && s.type !== 'q') || s.square === m1.from || s.square === m1.to) continue
-    const found = weakTargets(after, solver).find(t => t.attackers.includes(s.square) && !before.attackers(t.target.square, solver).includes(s.square))
+    const found = weakTargets(after, solver).find(w => w.attackers.includes(s.square) && !before.attackers(w.target.square, solver).includes(s.square))
     if (found && (found.target.type === 'k' || wins(found.target.square) || matesLater)) {
       themes.push('discovered')
       explain.push(found.target.type === 'k'
-        ? `Вскрытый шах: когда ${NOM[mover.type]} уходит с ${m1.from}, ${NOM[s.type]} на ${s.square} даёт шах королю.`
-        : `Вскрытое нападение: ${NOM[mover.type]} уходит с ${m1.from}, и ${NOM[s.type]} на ${s.square} атакует ${ACC[found.target.type]} на ${found.target.square}.`)
+        ? t('puzzles.why.discCheck', { mover: pc('nom', mover.type), from: m1.from, slider: pc('nom', s.type), ssq: s.square })
+        : t('puzzles.why.disc', { mover: pc('nom', mover.type), from: m1.from, slider: pc('nom', s.type), ssq: s.square, target: pc('acc', found.target.type), tsq: found.target.square }))
       break
     }
   }
 
   // --- двойное нападение: две новые угрозы от разных фигур (не вилка)
   if (!themes.includes('fork') && !themes.includes('discovered')) {
-    const old = new Set(weakTargets(before, solver).map(t => t.target.square))
-    const nowT = weakTargets(after, solver).filter(t => t.target.type !== 'k')
-    const fresh = nowT.filter(t => !old.has(t.target.square))
+    const old = new Set(weakTargets(before, solver).map(w => w.target.square))
+    const nowT = weakTargets(after, solver).filter(w => w.target.type !== 'k')
+    const fresh = nowT.filter(w => !old.has(w.target.square))
     // две угрозы после хода, хотя бы одна — новая, и обе реализуются или ведут к мату
-    if (nowT.length >= 2 && fresh.length >= 1 && (winsAny(nowT.map(t => t.target.square)) || matesLater)) {
+    if (nowT.length >= 2 && fresh.length >= 1 && (winsAny(nowT.map(w => w.target.square)) || matesLater)) {
       themes.push('doubleAttack')
-      const [a, b] = [fresh[0], nowT.find(t => t.target.square !== fresh[0].target.square)!]
-      explain.push(`Двойное нападение: сразу две угрозы — ${ACC[a.target.type]} на ${a.target.square} и ${ACC[b.target.type]} на ${b.target.square}; защитить обе нельзя.`)
+      const [a, b] = [fresh[0], nowT.find(w => w.target.square !== fresh[0].target.square)!]
+      explain.push(t('puzzles.why.double', { a: pc('acc', a.target.type), asq: a.target.square, b: pc('acc', b.target.type), bsq: b.target.square }))
     }
   }
 
@@ -228,7 +214,7 @@ export function detectThemes(startFen: string, line: readonly string[], opts: De
       const mates = st[3]?.isCheckmate()
       if (defended && (wasCapture || mates)) {
         themes.push('deflection')
-        explain.push(`Отвлечение: жертва ${GEN[mover.type]} на ${m1.to} уводит ${ACC[D.type]} с ${r1.from} — поле ${m2.to} остаётся без защиты.`)
+        explain.push(t('puzzles.why.deflect', { mover: pc('gen', mover.type), sq: m1.to, d: pc('acc', D.type), from: r1.from, tsq: m2.to }))
       }
     }
   }

@@ -29,7 +29,7 @@ describe('deriveGame / upsertGame', () => {
     expect(g.src).toBe('analysis'); expect(g.outcome).toBeNull()
   })
   it('повторное сохранение той же партии не дублируется, а дополняет запись', () => {
-    const a = deriveGame({ created_at: '2026-10-01T10:00:00Z', result: '1-0', pgn: pgn(['e2e4', 'e7e5'], 'Вы', 'Бот (~900)', '1-0') })!
+    const a = deriveGame({ created_at: '2026-10-01T10:00:00Z', result: '1-0', pgn: pgn(['e2e4', 'e7e5'], 'You', 'Bot (~900)', '1-0') })!
     const b = deriveGame({ created_at: '2026-10-02T10:00:00Z', result: '1-0', pgn: pgn(['e2e4', 'e7e5'], '?', '?', '1-0') })!
     expect(a.key).toBe(b.key)
     const list = upsertGame(upsertGame([], a), b)
@@ -37,7 +37,7 @@ describe('deriveGame / upsertGame', () => {
     expect(upsertGame(list, b)).toBe(list)
   })
   it('синхронизация сессий идемпотентна', () => {
-    const s = { id: 1, created_at: '2026-10-01T10:00:00Z', result: '1-0' as const, plies: 2, pgn: pgn(['e2e4', 'e7e5'], 'Вы', 'Бот (~900)', '1-0') }
+    const s = { id: 1, created_at: '2026-10-01T10:00:00Z', result: '1-0' as const, plies: 2, pgn: pgn(['e2e4', 'e7e5'], 'You', 'Bot (~900)', '1-0') }
     const once = syncFromSessions([], [s, s])
     expect(once).toHaveLength(1)
     expect(syncFromSessions(once, [s])).toBe(once)
@@ -89,7 +89,7 @@ describe('рекомендации', () => {
     const gs = [1, 2, 3, 4, 5, 6].map(i => mk(i, { review: rv({ counts: { blunder: i <= 4 ? 2 : 0 }, hung: i <= 3 ? 1 : 0 }) }))
     const r = recommend(gs, EMPTY_STATS)
     const b = r.recs.find(x => x.id === 'blunders')!
-    expect(b.basis).toMatch(/8 зевков/); expect(b.keys).toHaveLength(4)
+    expect(b.basis).toMatch(/8 blunders/); expect(b.keys).toHaveLength(4)
     expect(r.recs.find(x => x.id === 'hung')).toBeTruthy()
   })
   it('единичный зевок не даёт рекомендации', () => {
@@ -127,7 +127,22 @@ describe('итог разбора', () => {
 describe('резервная копия', () => {
   it('отклоняет чужие файлы', () => {
     expect(() => parseBackup('не json')).toThrow()
-    expect(() => parseBackup('{"a":1}')).toThrow(/не резервная копия/)
+    expect(() => parseBackup('{"a":1}')).toThrow(/not a CHESS COACH AI backup/)
     expect(parseBackup('{"app":"chess-coach-ai","kind":"backup","v":1}').games).toEqual([])
+  })
+})
+
+describe('локализация статистики', () => {
+  it('рекомендации строятся на текущем языке; партии со старым тегом «Вы» читаются', async () => {
+    const { setLang } = await import('../i18n')
+    const old = deriveGame({ created_at: '2026-10-01T10:00:00Z', result: '1-0', pgn: pgn(['e2e4', 'e7e5'], 'Вы', 'Бот (~900)', '1-0') })!
+    const cur = deriveGame({ created_at: '2026-10-01T10:00:00Z', result: '1-0', pgn: pgn(['e2e4', 'e7e5'], 'You', 'Bot (~900)', '1-0') })!
+    expect(old.color).toBe('w'); expect(cur.color).toBe('w'); expect(cur.opp).toBe(900)
+    const puz = { ...EMPTY_STATS, attempted: 20, solved: 5, byTheme: { fork: { tried: 10, solved: 2 } } } as typeof EMPTY_STATS
+    try {
+      setLang('ru'); const ru = recommend([], puz).recs[0]
+      setLang('en'); const en = recommend([], puz).recs[0]
+      if (ru && en) { expect(ru.title).not.toBe(en.title); expect(en.action.label).toBe('To puzzles'); expect(ru.action.label).toBe('К задачам') }
+    } finally { setLang('en') }
   })
 })

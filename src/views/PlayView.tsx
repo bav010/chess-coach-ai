@@ -18,6 +18,7 @@ import type { Prefs } from '../lib/prefs'
 import { toPgn } from '../lib/pgn'
 import type { SavedSession } from '../storage'
 import type { GameSeed } from './AnalysisView'
+import { t as tg, useI18n, type Key } from '../i18n'
 
 type Props = {
   prefs: Prefs
@@ -35,16 +36,15 @@ type ManualEnd = { result: '1-0' | '0-1' | '1/2-1/2'; reason: EndReason }
 
 const nowMs = () => performance.now()
 
-const REASON_TEXT: Record<EndReason, string> = {
-  checkmate: 'мат', stalemate: 'пат', insufficient: 'недостаточно материала', threefold: 'троекратное повторение позиции',
-  fifty: 'правило 50 ходов', resign: 'сдача', timeout: 'время вышло', 'timeout-insufficient': 'время вышло, но у соперника нет материала для мата',
-  agreed: 'ничья по соглашению',
-}
+const reasonText = (r: EndReason): string => tg(`play.reason.${r}` as Key)
+
+/** Строка состояния: ключ перевода (переводится при показе, чтобы следовать языку) или итог партии. */
+type Msg = Key | 'end' | ''
 
 function resultText(r: '1-0' | '0-1' | '1/2-1/2', user: Color): string {
-  if (r === '1/2-1/2') return 'Ничья'
+  if (r === '1/2-1/2') return tg('play.result.draw')
   const winner: Color = r === '1-0' ? 'w' : 'b'
-  return winner === user ? 'Вы победили' : 'Победил бот'
+  return winner === user ? tg('play.result.win') : tg('play.result.loss')
 }
 
 export function formatBalance(b: number): string {
@@ -52,14 +52,16 @@ export function formatBalance(b: number): string {
 }
 
 export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDownload, onOpenSession, onResetProgress, onReview, engineError }: Props) {
+  const { t, tn } = useI18n()
   const [cfg, setCfg] = useState<GameConfig | null>(null)
   const [gameId, setGameId] = useState(0)
   const [ucis, setUcisState] = useState<string[]>([])
   const ucisRef = useRef<string[]>([])
   const [viewPly, setViewPly] = useState<number | null>(null)
   const [manualEnd, setManualEnd] = useState<ManualEnd | null>(null)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<Msg>('')
   const [thinking, setThinking] = useState(false)
+  /** Текст ошибки движка; '' — общая ошибка (подпись переводится при показе). */
   const [botError, setBotError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Square | null>(null)
   const [legal, setLegal] = useState<Square[]>([])
@@ -110,7 +112,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     savedRef.current = false
     setUcis([]); setViewPly(null); setManualEnd(null); setBotError(null)
     setSelected(null); setLegal([]); setPromo(null); setConfirmResign(false); setThinking(false)
-    setMessage(c.userColor === 'w' ? 'Ваш ход: вы играете белыми.' : 'Вы играете чёрными — бот ходит первым.')
+    setMessage(c.userColor === 'w' ? 'play.msg.startWhite' : 'play.msg.startBlack')
     setCfg(c)
     setGameId(g => g + 1)
   }
@@ -137,10 +139,10 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     return true
   }, [setUcis])
 
-  function describeMove(chess: Chess, mover: Color): string {
-    if (chess.isCheckmate()) return mover === user ? 'Мат! Вы победили.' : 'Мат. Бот победил.'
-    if (chess.isCheck()) return 'Шах! Проверь безопасность короля.'
-    return mover === user ? 'Ход принят. Бот думает…' : 'Бот сходил. Ваш ход.'
+  function describeMove(chess: Chess, mover: Color): Msg {
+    if (chess.isCheckmate()) return mover === user ? 'play.msg.mateYou' : 'play.msg.mateBot'
+    if (chess.isCheck()) return 'play.msg.check'
+    return mover === user ? 'play.msg.accepted' : 'play.msg.botMoved'
   }
 
   function applyUserMove(uci: string) {
@@ -212,7 +214,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       try { c.move(splitUci(uci)) } catch { return }
       setMessage(describeMove(c, bot))
     })()
-      .catch(e => { if (alive) setBotError(e instanceof Error ? e.message : 'Ошибка движка') })
+      .catch(e => { if (alive) setBotError(e instanceof Error ? e.message : '') })
       .finally(() => { if (alive) setThinking(false) })
     return () => { alive = false; ac.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -243,12 +245,11 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     clockRef.current?.stop(nowMs())
     botEngine.stop()
     setConfirmResign(false); setSelected(null); setLegal([]); setPromo(null)
-    const why = REASON_TEXT[end.reason]
-    setMessage(`${resultText(end.result, cfg.userColor)}: ${why}.`)
+    setMessage('end')
     if (ucisRef.current.length > 0) {
       const pgn = toPgn(START_FEN, ucisRef.current, {
-        Event: 'Chess Coach AI', White: cfg.userColor === 'w' ? 'Вы' : `Бот (~${cfg.elo})`,
-        Black: cfg.userColor === 'b' ? 'Вы' : `Бот (~${cfg.elo})`, Result: end.result,
+        Event: 'Chess Coach AI', White: cfg.userColor === 'w' ? 'You' : `Bot (~${cfg.elo})`,
+        Black: cfg.userColor === 'b' ? 'You' : `Bot (~${cfg.elo})`, Result: end.result,
         TimeControl: cfg.tc.whiteMs === null ? '-' : `${Math.round(cfg.tc.whiteMs / 1000)}+${Math.round(cfg.tc.incrementMs / 1000)}`,
       })
       onSaveSession({ result: end.result, plies: ucisRef.current.length, pgn })
@@ -269,7 +270,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   async function offerDraw() {
     if (!cfg || over || turn !== user) return
     const plies = ucisRef.current.length
-    setMessage('Бот обдумывает предложение ничьей…')
+    setMessage('play.msg.drawThinking')
     try {
       const a = await botEngine.analyse(rep.chess.fen(), { depth: 12, movetime: 600, multipv: 1 })
       if (ucisRef.current.length !== plies || repRef.current.chess.isGameOver()) return
@@ -279,10 +280,10 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       if (plies >= 20 && botCp <= 30) {
         setManualEnd({ result: '1/2-1/2', reason: 'agreed' })
       } else {
-        setMessage(plies < 20 ? 'Бот отклонил ничью: слишком рано.' : 'Бот отклонил ничью: считает свою позицию лучше.')
+        setMessage(plies < 20 ? 'play.msg.drawEarly' : 'play.msg.drawBetter')
       }
     } catch {
-      setMessage('Не удалось получить ответ бота.')
+      setMessage('play.msg.drawFail')
     }
   }
 
@@ -306,7 +307,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       snapsRef.current = snapsRef.current.slice(0, next.length + 1)
     }
     setSelected(null); setLegal([]); setPromo(null); setConfirmResign(false)
-    setMessage('Ход отменён: позиция, история и часы возвращены.')
+    setMessage('play.msg.undone')
   }
 
   const reviewable = over && ucis.length > 0
@@ -322,62 +323,64 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   }
 
   const clockFor = (c: Color) => hasClock
-    ? <ClockView ms={clockRef.current?.remaining(c, nowMs()) ?? 0} active={!over && clockRef.current?.activeSide === c} label={c === 'w' ? 'белые' : 'чёрные'} />
+    ? <ClockView ms={clockRef.current?.remaining(c, nowMs()) ?? 0} active={!over && clockRef.current?.activeSide === c} label={c === 'w' ? t('play.clockWhite') : t('play.clockBlack')} />
     : null
   const top = opposite(user)
+  const tcText = cfg.tcDesc.kind === 'none' ? t('play.tc.none') : cfg.tcDesc.kind === 'preset' ? cfg.tcDesc.label
+    : t(cfg.tcDesc.delay ? 'play.tc.customDelay' : 'play.tc.custom', { you: cfg.tcDesc.you, bot: cfg.tcDesc.bot, inc: cfg.tcDesc.inc, delay: cfg.tcDesc.delay })
 
   return <div className="main-grid">
     <section className="panel board-panel play-panel" data-testid="play-board">
-      <div className="panel-head"><div><div className="eyebrow">ИГРА</div><h2>Партия с ботом</h2></div><span className="pill">Бот ≈ {cfg.elo} ELO · {cfg.tcLabel}</span></div>
-      <PlayerStrip color={top} name={`Бот (≈${cfg.elo})`} captured={top === 'w' ? caps.byWhite : caps.byBlack}
+      <div className="panel-head"><div><div className="eyebrow">{t('play.eyebrow')}</div><h2>{t('play.title')}</h2></div><span className="pill">{t('play.pill', { elo: cfg.elo, tc: tcText })}</span></div>
+      <PlayerStrip color={top} name={t('play.botName', { elo: cfg.elo })} captured={top === 'w' ? caps.byWhite : caps.byBlack}
         advantage={top === 'w' ? Math.max(0, caps.balance) : Math.max(0, -caps.balance)} clock={clockFor(top)} active={!over && turn === top} />
       <div className="board-wrap">
         <Board chess={shownChess} orientation={user} selected={selected} legal={legal}
           lastMove={lastRec ? { from: lastRec.from, to: lastRec.to } : null}
           onSquareClick={onSquare} readOnly={over || viewing || turn !== user} />
       </div>
-      <PlayerStrip color={user} name="Вы" captured={user === 'w' ? caps.byWhite : caps.byBlack}
+      <PlayerStrip color={user} name={t('play.you')} captured={user === 'w' ? caps.byWhite : caps.byBlack}
         advantage={user === 'w' ? Math.max(0, caps.balance) : Math.max(0, -caps.balance)} clock={clockFor(user)} active={!over && turn === user} />
       {promo && <PromoPicker color={user} onPick={p => applyUserMove(`${promo.from}${promo.to}${p}`)} onCancel={() => { setPromo(null); setSelected(null); setLegal([]) }} />}
 
       <div className="play-status" data-testid="play-status">
-        <span className="balance" data-testid="material-balance" title="Материал по взятым фигурам (П=1, К=С=3, Л=5, Ф=9): + в пользу белых">Материал: <b>{balanceText}</b></span>
-        <span>Ход: <b>{over ? '—' : turn === user ? 'ваш' : 'бота'}</b></span>
-        <span>Последний ход: <b>{lastRec ? lastRec.san : '—'}</b></span>
-        {thinking && !over && <span className="thinking" data-testid="bot-thinking">Бот думает…</span>}
+        <span className="balance" data-testid="material-balance" title={t('play.materialTip')}>{t('play.material')}: <b>{balanceText}</b></span>
+        <span>{t('play.turn')}: <b>{over ? '—' : turn === user ? t('play.turnYou') : t('play.turnBot')}</b></span>
+        <span>{t('play.lastMove')}: <b>{lastRec ? lastRec.san : '—'}</b></span>
+        {thinking && !over && <span className="thinking" data-testid="bot-thinking">{t('play.thinking')}</span>}
       </div>
-      <div className="board-message" data-testid="play-message"><span className="pulse" /> {message}</div>
-      {botError && <p className="error-text">{botError}</p>}
+      <div className="board-message" data-testid="play-message"><span className="pulse" /> {message === 'end' ? (end.over ? t('play.msg.end', { result: resultText(end.result, user), reason: reasonText(end.reason) }) : '') : message ? t(message) : ''}</div>
+      {botError && <p className="error-text">{botError || t('play.engineError')}</p>}
       {over && <div className="result-box" data-testid="game-result">
-        <b>{resultText(end.result, user)}</b> · {end.result} · {REASON_TEXT[end.reason]}
+        <b>{resultText(end.result, user)}</b> · {end.result} · {reasonText(end.reason)}
       </div>}
-      {viewing && <div className="board-actions"><button className="btn" onClick={() => setViewPly(null)}>К текущей позиции ⏭</button></div>}
+      {viewing && <div className="board-actions"><button className="btn" onClick={() => setViewPly(null)}>{t('play.toCurrent')}</button></div>}
 
       <div className="board-actions">
-        <button className="btn primary" onClick={toSetup} data-testid="new-game">＋ Новая партия</button>
-        <button className="btn" onClick={() => startGame(cfg)} data-testid="restart">↻ Заново</button>
-        <button className="btn" onClick={undo} disabled={!canUndo} data-testid="undo">↶ Отменить ход</button>
-        <button className="btn" onClick={() => void offerDraw()} disabled={over || turn !== user || ucis.length < 2} data-testid="offer-draw">½ Предложить ничью</button>
-        <button className={`btn ${confirmResign ? 'danger' : ''}`} onClick={resign} disabled={over} data-testid="resign">{confirmResign ? 'Точно сдаться?' : '⚑ Сдаться'}</button>
-        {confirmResign && <button className="btn" onClick={() => setConfirmResign(false)}>Нет</button>}
+        <button className="btn primary" onClick={toSetup} data-testid="new-game">{t('play.newGame')}</button>
+        <button className="btn" onClick={() => startGame(cfg)} data-testid="restart">{t('play.restart')}</button>
+        <button className="btn" onClick={undo} disabled={!canUndo} data-testid="undo">{t('play.undo')}</button>
+        <button className="btn" onClick={() => void offerDraw()} disabled={over || turn !== user || ucis.length < 2} data-testid="offer-draw">{t('play.offerDraw')}</button>
+        <button className={`btn ${confirmResign ? 'danger' : ''}`} onClick={resign} disabled={over} data-testid="resign">{confirmResign ? t('play.resignConfirm') : t('play.resign')}</button>
+        {confirmResign && <button className="btn" onClick={() => setConfirmResign(false)}>{t('play.no')}</button>}
       </div>
       {reviewable && <div className="board-actions">
         <button className="btn primary" data-testid="review-btn"
-          onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}>🔍 Разобрать партию</button>
+          onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}>{t('play.review')}</button>
       </div>}
     </section>
 
     <aside className="right-column">
       <section className="panel moves-panel">
-        <div className="panel-head"><div><div className="eyebrow">ХОД ПАРТИИ</div><h2>Нотация</h2></div><span className="move-count">{ucis.length} полуходов</span></div>
+        <div className="panel-head"><div><div className="eyebrow">{t('play.movesEyebrow')}</div><h2>{t('play.notation')}</h2></div><span className="move-count">{tn('play.plies', ucis.length)}</span></div>
         <MoveList records={rep.records} viewPly={shownPly} onSelect={p => setViewPly(p === ucis.length ? null : p)} />
         <div className="nav-row">
-          <button className="btn" onClick={() => setViewPly(0)} disabled={ucis.length === 0 || shownPly === 0} aria-label="В начало">⏮</button>
-          <button className="btn" onClick={() => setViewPly(Math.max(0, shownPly - 1))} disabled={shownPly === 0} aria-label="Назад">◀</button>
-          <button className="btn" onClick={() => setViewPly(shownPly + 1 >= ucis.length ? null : shownPly + 1)} disabled={!viewing} aria-label="Вперёд">▶</button>
-          <button className="btn" onClick={() => setViewPly(null)} disabled={!viewing} aria-label="В конец">⏭</button>
+          <button className="btn" onClick={() => setViewPly(0)} disabled={ucis.length === 0 || shownPly === 0} aria-label={t('play.navStart')}>⏮</button>
+          <button className="btn" onClick={() => setViewPly(Math.max(0, shownPly - 1))} disabled={shownPly === 0} aria-label={t('play.navBack')}>◀</button>
+          <button className="btn" onClick={() => setViewPly(shownPly + 1 >= ucis.length ? null : shownPly + 1)} disabled={!viewing} aria-label={t('play.navForward')}>▶</button>
+          <button className="btn" onClick={() => setViewPly(null)} disabled={!viewing} aria-label={t('play.navEnd')}>⏭</button>
         </div>
-        <p className="tiny">Просмотр истории не мешает партии: часы и бот продолжают работать.</p>
+        <p className="tiny">{t('play.historyNote')}</p>
       </section>
       <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />
     </aside>

@@ -15,14 +15,16 @@ import { phaseOf, type MoveRecord, type Phase } from './game'
 import type { ReviewQuality } from './prefs'
 import { pvToSan, uciToSan } from './san'
 import type { StoredEval } from '../storage'
+import { t } from '../i18n'
 
 /** Результат анализа позиции с точки зрения стороны, чей ход (как отдаёт движок). */
 export type PositionEval = StoredEval
 
-export const QUALITY: Record<ReviewQuality, { label: string; depth: number; movetime: number }> = {
-  fast: { label: 'Быстро', depth: 12, movetime: 400 },
-  normal: { label: 'Обычно', depth: 14, movetime: 800 },
-  deep: { label: 'Глубоко', depth: 18, movetime: 2000 },
+/** Параметры качества разбора; подпись (label) берётся на текущем языке в момент обращения. */
+export const QUALITY: Record<ReviewQuality, { readonly label: string; depth: number; movetime: number }> = {
+  fast: { get label() { return t('analysis.quality.fast') }, depth: 12, movetime: 400 },
+  normal: { get label() { return t('analysis.quality.normal') }, depth: 14, movetime: 800 },
+  deep: { get label() { return t('analysis.quality.deep') }, depth: 18, movetime: 2000 },
 }
 
 export const REVIEW_MULTIPV = 2

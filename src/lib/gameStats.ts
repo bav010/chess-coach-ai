@@ -66,7 +66,8 @@ export function deriveGame(s: Pick<SavedSession, 'created_at' | 'result' | 'pgn'
   try {
     const p = parsePgn(s.pgn)
     const white = p.white, black = p.black
-    const color: Color | null = white === 'Вы' ? 'w' : black === 'Вы' ? 'b' : null
+    const isMe = (n: string | null | undefined) => n === 'Вы' || n === 'You' // 'Вы' — партии, сохранённые до локализации
+    const color: Color | null = isMe(white) ? 'w' : isMe(black) ? 'b' : null
     const botName = color === 'w' ? black : color === 'b' ? white : null
     const m = botName ? /~(\d+)/.exec(botName) : null
     const { records } = replay(p.startFen, p.ucis)

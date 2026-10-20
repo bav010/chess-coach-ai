@@ -1,4 +1,5 @@
 import type { Color, PieceSymbol } from 'chess.js'
+import { t } from '../i18n'
 
 /** Символы фигур для доски (контурные — белые, заливка — чёрные). */
 export const glyph: Record<string, string> = {
@@ -10,11 +11,13 @@ export const glyph: Record<string, string> = {
 const FILLED: Record<PieceSymbol, string> = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
 export const capturedGlyph = (type: PieceSymbol): string => FILLED[type]
 
-export const PIECE_NAME: Record<PieceSymbol, string> = {
-  p: 'пешка', n: 'конь', b: 'слон', r: 'ладья', q: 'ферзь', k: 'король',
+/** Названия фигур на текущем языке (читаются в момент обращения, поэтому следуют за сменой языка). */
+export const PIECE_NAME = {} as Record<PieceSymbol, string>
+for (const k of ['p', 'n', 'b', 'r', 'q', 'k'] as const) {
+  Object.defineProperty(PIECE_NAME, k, { enumerable: true, get: () => t(`analysis.piece.${k}`) })
 }
 
-export const colorName = (c: Color): string => (c === 'w' ? 'белые' : 'чёрные')
+export const colorName = (c: Color): string => t(`analysis.color.${c}`)
 
 /** «белых» / «чёрных» — для оборотов «оценка для …», «ход за …». */
-export const colorGen = (c: Color): string => (c === 'w' ? 'белых' : 'чёрных')
+export const colorGen = (c: Color): string => t(`analysis.colorGen.${c}`)

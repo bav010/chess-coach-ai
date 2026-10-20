@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { analysisEngine } from '../engine'
+import { errorText } from '../i18n/errors'
 import { getCached, isTerminalFen, peekCache, putCache, type CacheEntry } from '../lib/analysisCache'
 
 export type AnalysisOptions = {
@@ -27,7 +28,7 @@ const SECONDARY = { depth: 16, movetime: 3000 }
 export function usePositionAnalysis({ fens, enabled, multipv }: AnalysisOptions): AnalysisState {
   const [, setVersion] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ e: unknown } | null>(null)
   const key = `${enabled}|${multipv}|${fens.join('|')}`
   const fensRef = useRef(fens)
   fensRef.current = fens
@@ -59,12 +60,13 @@ export function usePositionAnalysis({ fens, enabled, multipv }: AnalysisOptions)
         bump()
       }
     })()
-      .catch(e => { if (alive) setError(e instanceof Error ? e.message : 'Ошибка анализа') })
+      .catch(e => { if (alive) setError({ e }) })
       .finally(() => { if (alive) setBusy(false) })
 
     return () => { alive = false; ac.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
-  return { get: peekCache, busy: busy && enabled, error }
+  // текст ошибки строится при каждом вызове — следует за языком интерфейса
+  return { get: peekCache, busy: busy && enabled, error: error ? errorText(error.e, 'analysis.err.analysis') : null }
 }

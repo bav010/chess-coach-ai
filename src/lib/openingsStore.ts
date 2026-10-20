@@ -1,5 +1,6 @@
 // Хранение репертуаров и прогресса повторений в localStorage (статический сайт, без сервера).
 import { pk } from './profile'
+import { LocalizedError } from '../i18n/errors'
 import type { Repertoire } from './repertoire'
 import type { CardState } from './srs'
 
@@ -43,6 +44,6 @@ export function exportOpenings(d: OpeningsData): string { return JSON.stringify(
 
 export function importOpenings(text: string): OpeningsData {
   const d = JSON.parse(text) as Partial<OpeningsData>
-  if (d.v !== 1 || !Array.isArray(d.repertoires)) throw new Error('Это не файл репертуара CHESS COACH AI.')
+  if (d.v !== 1 || !Array.isArray(d.repertoires)) throw new LocalizedError('openings.store.notRepFile')
   return { ...EMPTY_OPENINGS, ...d, repertoires: d.repertoires, cards: d.cards ?? {}, lessons: d.lessons ?? {}, stats: { ...EMPTY_OPENINGS.stats, ...(d.stats ?? {}) } } as OpeningsData
 }

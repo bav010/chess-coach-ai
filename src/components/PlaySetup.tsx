@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../i18n'
 import type { Color } from 'chess.js'
 import { ELO_MAX, ELO_MIN, ELO_PRESETS, ENGINE_MIN_ELO, clampElo } from '../lib/bot'
 import { NO_CLOCK, TIME_PRESETS, fromPreset, type TimeControl } from '../lib/clock'
@@ -8,7 +9,8 @@ export type GameConfig = {
   elo: number
   userColor: Color
   tc: TimeControl
-  tcLabel: string
+  /** Описание контроля времени (не текст): подпись строится при показе, чтобы следовать языку. */
+  tcDesc: { kind: 'none' } | { kind: 'preset'; label: string } | { kind: 'custom'; you: number; bot: number; inc: number; delay: number }
 }
 
 type Props = {
@@ -22,6 +24,7 @@ type ColorChoice = Color | 'random'
 
 /** Настройки перед партией: сила бота (ELO), цвет, контроль времени. */
 export default function PlaySetup({ prefs, onPrefs, onStart, engineError }: Props) {
+  const { t } = useI18n()
   const [elo, setElo] = useState(1400)
   const [color, setColor] = useState<ColorChoice>('w')
   const [tcId, setTcId] = useState('5+3')
@@ -33,7 +36,7 @@ export default function PlaySetup({ prefs, onPrefs, onStart, engineError }: Prop
   function start() {
     const userColor: Color = color === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : color
     let tc: TimeControl = NO_CLOCK
-    let tcLabel = 'без часов'
+    let tcDesc: GameConfig['tcDesc'] = { kind: 'none' }
     if (tcId === 'custom') {
       const you = Math.max(0.1, youMin) * 60_000
       const bot = Math.max(0.1, botMin) * 60_000
@@ -43,57 +46,55 @@ export default function PlaySetup({ prefs, onPrefs, onStart, engineError }: Prop
         incrementMs: Math.max(0, incSec) * 1000,
         delayMs: Math.max(0, delaySec) * 1000,
       }
-      tcLabel = `${youMin}/${botMin} мин +${incSec}${delaySec ? ` задержка ${delaySec}` : ''}`
+      tcDesc = { kind: 'custom', you: youMin, bot: botMin, inc: incSec, delay: delaySec }
     } else if (tcId !== 'none') {
       const preset = TIME_PRESETS.flatMap(g => g.items).find(p => p.id === tcId)
-      if (preset) { tc = fromPreset(preset); tcLabel = preset.label }
+      if (preset) { tc = fromPreset(preset); tcDesc = { kind: 'preset', label: preset.label } }
     }
-    onStart({ elo: clampElo(elo), userColor, tc, tcLabel })
+    onStart({ elo: clampElo(elo), userColor, tc, tcDesc })
   }
 
   const approx = elo < ENGINE_MIN_ELO
 
   return <section className="panel setup-panel" data-testid="play-setup">
-    <div className="panel-head"><div><div className="eyebrow">ИГРА</div><h2>Партия с ботом</h2></div><span className="pill">Stockfish в браузере</span></div>
+    <div className="panel-head"><div><div className="eyebrow">{t('play.eyebrow')}</div><h2>{t('play.title')}</h2></div><span className="pill">{t('play.engineBadge')}</span></div>
 
-    <div className="sub-head">Сила бота</div>
+    <div className="sub-head">{t('play.setup.strength')}</div>
     <div className="chips">
-      {ELO_PRESETS.map(p => <button key={p.elo} className={`chip ${elo === p.elo ? 'active' : ''}`} onClick={() => setElo(p.elo)}>{p.label} · {p.elo}</button>)}
+      {ELO_PRESETS.map(p => <button key={p.elo} className={`chip ${elo === p.elo ? 'active' : ''}`} onClick={() => setElo(p.elo)}>{t(`play.level.${p.id}`)} · {p.elo}</button>)}
     </div>
     <div className="elo-row">
-      <input type="range" min={ELO_MIN} max={ELO_MAX} step={50} value={elo} onChange={e => setElo(Number(e.target.value))} aria-label="Рейтинг бота" />
-      <input type="number" min={ELO_MIN} max={ELO_MAX} value={elo} onChange={e => setElo(Number(e.target.value) || ELO_MIN)} onBlur={() => setElo(clampElo(elo))} aria-label="ELO бота" data-testid="elo-input" />
+      <input type="range" min={ELO_MIN} max={ELO_MAX} step={50} value={elo} onChange={e => setElo(Number(e.target.value))} aria-label={t('play.setup.botRating')} />
+      <input type="number" min={ELO_MIN} max={ELO_MAX} value={elo} onChange={e => setElo(Number(e.target.value) || ELO_MIN)} onBlur={() => setElo(clampElo(elo))} aria-label={t('play.setup.botElo')} data-testid="elo-input" />
     </div>
-    <p className="tiny">Рейтинг приблизительный: сила бота действительно ограничивается в Stockfish (UCI_Elo),
-      но реальный уровень зависит от времени на ход и позиции.
-      {approx ? ` Ниже ${ENGINE_MIN_ELO} у Stockfish нет встроенного ограничения, поэтому бот дополнительно допускает «человеческие» промахи — это грубая калибровка.` : ''}</p>
+    <p className="tiny">{t('play.setup.eloNote')}{approx ? t('play.setup.eloLow', { min: ENGINE_MIN_ELO }) : ''}</p>
 
-    <div className="sub-head">Ваш цвет</div>
+    <div className="sub-head">{t('play.setup.yourColor')}</div>
     <div className="chips">
-      {([['w', '♔ Белые'], ['b', '♚ Чёрные'], ['random', '🎲 Случайно']] as const).map(([v, l]) =>
+      {([['w', t('play.setup.white')], ['b', t('play.setup.black')], ['random', t('play.setup.random')]] as const).map(([v, l]) =>
         <button key={v} className={`chip ${color === v ? 'active' : ''}`} onClick={() => setColor(v)} data-testid={`color-${v}`}>{l}</button>)}
     </div>
 
-    <div className="sub-head">Время</div>
+    <div className="sub-head">{t('play.setup.time')}</div>
     <div className="chips">
-      <button className={`chip ${tcId === 'none' ? 'active' : ''}`} onClick={() => setTcId('none')} data-testid="tc-none">Без часов</button>
+      <button className={`chip ${tcId === 'none' ? 'active' : ''}`} onClick={() => setTcId('none')} data-testid="tc-none">{t('play.setup.noClock')}</button>
       {TIME_PRESETS.map(g => <div className="chip-group" key={g.category}><small>{g.category}</small>
         {g.items.map(p => <button key={p.id} className={`chip ${tcId === p.id ? 'active' : ''}`} onClick={() => setTcId(p.id)} data-testid={`tc-${p.id}`}>{p.label}</button>)}
       </div>)}
-      <button className={`chip ${tcId === 'custom' ? 'active' : ''}`} onClick={() => setTcId('custom')} data-testid="tc-custom">Своё</button>
+      <button className={`chip ${tcId === 'custom' ? 'active' : ''}`} onClick={() => setTcId('custom')} data-testid="tc-custom">{t('play.setup.custom')}</button>
     </div>
     {tcId === 'custom' && <div className="settings-grid">
-      <label>Ваше время, мин <input type="number" min={0.1} step={0.5} value={youMin} onChange={e => setYouMin(Number(e.target.value))} data-testid="custom-you" /></label>
-      <label>Время бота, мин <input type="number" min={0.1} step={0.5} value={botMin} onChange={e => setBotMin(Number(e.target.value))} data-testid="custom-bot" /></label>
-      <label>Добавка за ход, с <input type="number" min={0} value={incSec} onChange={e => setIncSec(Number(e.target.value))} data-testid="custom-inc" /></label>
-      <label>Задержка, с <input type="number" min={0} value={delaySec} onChange={e => setDelaySec(Number(e.target.value))} data-testid="custom-delay" /></label>
+      <label>{t('play.setup.yourMin')} <input type="number" min={0.1} step={0.5} value={youMin} onChange={e => setYouMin(Number(e.target.value))} data-testid="custom-you" /></label>
+      <label>{t('play.setup.botMin')} <input type="number" min={0.1} step={0.5} value={botMin} onChange={e => setBotMin(Number(e.target.value))} data-testid="custom-bot" /></label>
+      <label>{t('play.setup.incSec')} <input type="number" min={0} value={incSec} onChange={e => setIncSec(Number(e.target.value))} data-testid="custom-inc" /></label>
+      <label>{t('play.setup.delaySec')} <input type="number" min={0} value={delaySec} onChange={e => setDelaySec(Number(e.target.value))} data-testid="custom-delay" /></label>
     </div>}
 
-    <label className="check setup-check"><input type="checkbox" checked={prefs.autoReview} onChange={e => onPrefs({ autoReview: e.target.checked })} /> Сразу разбирать партию после окончания</label>
+    <label className="check setup-check"><input type="checkbox" checked={prefs.autoReview} onChange={e => onPrefs({ autoReview: e.target.checked })} /> {t('play.setup.autoReview')}</label>
 
-    {engineError && <p className="error-text">Не удалось загрузить движок: играть с ботом нельзя. Обновите страницу.</p>}
+    {engineError && <p className="error-text">{t('play.setup.engineFail')}</p>}
     <div className="board-actions">
-      <button className="btn primary" onClick={start} disabled={engineError} data-testid="start-game">▶ Начать партию</button>
+      <button className="btn primary" onClick={start} disabled={engineError} data-testid="start-game">{t('play.setup.start')}</button>
     </div>
   </section>
 }

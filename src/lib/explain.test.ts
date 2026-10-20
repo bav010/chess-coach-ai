@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { setLang } from '../i18n'
 import { START_FEN, replay } from './game'
 import { assessMove, type PositionEval } from './review'
 import { explainMove } from './explain'
@@ -7,6 +8,9 @@ const line = (cp: number | null, mate: number | null, pv: string[]) => ({ multip
 const ev = (cp: number | null, mate: number | null, pv: string[]): PositionEval => ({ depth: 12, lines: [line(cp, mate, pv)] })
 
 describe('explainMove', () => {
+  beforeEach(() => setLang('ru'))
+  afterEach(() => setLang('en'))
+
   it('грубая ошибка с разрешённым матом: только проверяемые факты', () => {
     const r = replay(START_FEN, ['f2f3', 'e7e5', 'g2g4', 'd8h4'])
     const m = assessMove(r.records[2], 2, ev(-90, null, ['d2d4']), ev(null, 1, ['d8h4']))!
@@ -38,5 +42,27 @@ describe('explainMove', () => {
   it('без оценок — null (нечего объяснять)', () => {
     const r = replay(START_FEN, ['e2e4'])
     expect(assessMove(r.records[0], 0, null, null)).toBeNull()
+  })
+})
+
+describe('explainMove (English)', () => {
+  beforeEach(() => setLang('en'))
+  it('builds the same facts in English', () => {
+    const r = replay(START_FEN, ['f2f3', 'e7e5', 'g2g4', 'd8h4'])
+    const m = assessMove(r.records[2], 2, ev(-90, null, ['d2d4']), ev(null, 1, ['d8h4']))!
+    const text = explainMove(m).join(' ')
+    expect(text).toContain('Move g4 played (White): blunder.')
+    expect(text).toContain('The engine recommended d4')
+    expect(text).toContain('mate in 1')
+  })
+  it('language switch changes texts of the same move without recomputation', () => {
+    const r = replay(START_FEN, ['e2e4'])
+    const m = assessMove(r.records[0], 0, ev(30, null, ['e2e4']), ev(-30, null, ['e7e5']))!
+    const en = explainMove(m).join(' ')
+    setLang('ru')
+    const ru = explainMove(m).join(' ')
+    setLang('en')
+    expect(en).toContain('opening theory')
+    expect(ru).toContain('дебютной теории')
   })
 })

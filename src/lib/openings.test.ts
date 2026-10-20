@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { setLang } from '../i18n'
 import { Chess } from 'chess.js'
 import OPENINGS from '../data/openings.json'
 import { buildCatalog, continuations, nodeAt, openingAt, sanRows, searchOpenings } from './openings'
@@ -9,6 +10,8 @@ const rows = OPENINGS as unknown as [string, string, string][]
 const cat = buildCatalog(rows)
 
 describe('каталог дебютов', () => {
+  beforeEach(() => setLang('ru'))
+  afterEach(() => setLang('en'))
   it('большой каталог, все линии воспроизводятся', () => {
     expect(rows.length).toBeGreaterThan(3000)
     for (const [, , uci] of rows.filter((_, i) => i % 15 === 0)) {

@@ -12,7 +12,7 @@ import type { Repertoire } from './repertoire'
 export type Snapshot = {
   v: 1
   updatedAt: string
-  profile: { name: string; avatar: Avatar }
+  profile: { name: string; avatar: Avatar; ready?: boolean }
   prefs: Prefs
   games: GameStat[]
   sessions: SavedSession[]
@@ -43,7 +43,7 @@ export function collectSnapshot(): Snapshot {
   const st = loadProfiles()
   const me = st.list.find(p => p.id === st.current) ?? st.list[0]
   return {
-    v: 1, updatedAt: new Date().toISOString(), profile: { name: me.name, avatar: me.avatar }, prefs: loadPrefs(),
+    v: 1, updatedAt: new Date().toISOString(), profile: { name: me.name, avatar: me.avatar, ready: !!me.ready }, prefs: loadPrefs(),
     games: loadGames(), sessions: loadSessions(), puzzles: loadPuzzleStats(), openings: loadOpenings(), gamesResetAt: loadMeta().resetAt,
   }
 }
@@ -122,8 +122,10 @@ export function mergeSnapshots(local: Snapshot, remote: Snapshot, preferRemoteSe
   for (const s of [...local.sessions, ...remote.sessions]) if (s && typeof s.pgn === 'string' && !sessionsMap.has(s.pgn)) sessionsMap.set(s.pgn, s)
   const sessions = [...sessionsMap.values()].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 200)
   const pref = preferRemoteSettings ? remote : local
+  // профиль, прошедший настройку, главнее непройденного (новое устройство подхватывает имя и аватарку из облака)
+  const profile = pref.profile.ready || !remote.profile?.ready ? pref.profile : remote.profile
   return {
-    v: 1, updatedAt: new Date().toISOString(), profile: pref.profile, prefs: pref.prefs,
+    v: 1, updatedAt: new Date().toISOString(), profile: { ...profile, ready: !!(profile.ready || local.profile.ready || remote.profile?.ready) }, prefs: pref.prefs,
     games, sessions, puzzles: mergePuzzles(local.puzzles, remote.puzzles), openings: mergeOpenings(local.openings, remote.openings), gamesResetAt: resetAt,
   }
 }
@@ -137,6 +139,6 @@ export function applySnapshot(s: Snapshot) {
   savePrefs(s.prefs)
   saveMeta({ resetAt: s.gamesResetAt })
   const st = loadProfiles()
-  updateProfile(st.current, { name: s.profile.name, avatar: s.profile.avatar })
+  updateProfile(st.current, { name: s.profile.name, avatar: s.profile.avatar, ...(s.profile.ready ? { ready: true } : {}) })
 }
 

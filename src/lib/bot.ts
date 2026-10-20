@@ -13,14 +13,14 @@ export const ELO_MAX = 3200
 export const ENGINE_MIN_ELO = 1320
 export const ENGINE_MAX_ELO = 3190
 
-export const ELO_PRESETS: { label: string; elo: number }[] = [
-  { label: 'Новичок', elo: 600 },
-  { label: 'Любитель', elo: 1000 },
-  { label: 'Клубный игрок', elo: 1400 },
-  { label: 'Сильный любитель', elo: 1800 },
-  { label: 'Эксперт', elo: 2200 },
-  { label: 'Мастер', elo: 2600 },
-  { label: 'Максимум', elo: 3200 },
+export const ELO_PRESETS: { id: 'novice' | 'amateur' | 'club' | 'strong' | 'expert' | 'master' | 'max'; elo: number }[] = [
+  { id: 'novice', elo: 600 },
+  { id: 'amateur', elo: 1000 },
+  { id: 'club', elo: 1400 },
+  { id: 'strong', elo: 1800 },
+  { id: 'expert', elo: 2200 },
+  { id: 'master', elo: 2600 },
+  { id: 'max', elo: 3200 },
 ]
 
 export type BotSettings = {

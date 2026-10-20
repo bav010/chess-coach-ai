@@ -1,6 +1,7 @@
 import type { MoveRecord } from '../lib/game'
 import { CLASS_LABEL, hasIcon, type MoveClass } from '../lib/classify'
 import MoveMark from './MoveMark'
+import { useI18n } from '../i18n'
 
 type Props = {
   records: readonly MoveRecord[]
@@ -12,6 +13,7 @@ type Props = {
 }
 
 export default function MoveList({ records, viewPly, onSelect, marks }: Props) {
+  const { t } = useI18n()
   const rows = Math.ceil(records.length / 2)
   const cell = (ply: number) => {
     const r = records[ply - 1]
@@ -27,7 +29,7 @@ export default function MoveList({ records, viewPly, onSelect, marks }: Props) {
   }
   return <div className="move-list">
     {records.length === 0
-      ? <div className="empty-state"><span>♘</span><p>Твоя партия начинается здесь.</p><small>Сделай ход на доске</small></div>
+      ? <div className="empty-state"><span>♘</span><p>{t('analysis.moves.empty')}</p><small>{t('analysis.moves.emptyHint')}</small></div>
       : Array.from({ length: rows }, (_, i) =>
         <div className="move-row" key={i}><span>{i + 1}.</span>{cell(i * 2 + 1)}{cell(i * 2 + 2)}</div>)}
   </div>
