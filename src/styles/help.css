@@ -1,0 +1,17 @@
+.help-page{display:grid;gap:16px;max-width:1000px}
+.help-intro{margin:0;color:var(--n12);font-size:14px}
+.help-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.help-card{display:flex;flex-direction:column;gap:8px}.help-card p{margin:0;font-size:13px;color:var(--n12);line-height:1.5}.help-card .btn{margin-top:auto;align-self:flex-start;text-decoration:none}
+.help-card-top{display:flex;align-items:center;gap:12px}.help-card h3{margin:0;font-size:16px;color:var(--n15)}
+.help-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;border:1px solid var(--n6);background:var(--n1);color:var(--accent-ink)}
+.help-card .help-start{color:var(--n11);font-size:12px}
+.help-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;color:var(--accent-ink)}.help-head h2{margin:0;font-size:17px;color:var(--n15)}
+.help-page section>p{margin:0 0 10px;font-size:13px;color:var(--n12);line-height:1.5}
+.help-classes{list-style:none;margin:6px 0 12px;padding:0;display:grid;gap:8px}
+.help-classes li{display:grid;grid-template-columns:28px 150px 1fr;gap:10px;align-items:center;font-size:13px;color:var(--n12)}.help-classes b{color:var(--n14)}
+.help-mark{display:inline-grid;place-items:center;width:24px;height:24px}
+.help-table{border-collapse:collapse;width:100%;font-size:13px}.help-table th{text-align:left;font:500 10px 'DM Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--n10);padding:6px 10px;border-bottom:1px solid var(--n6)}
+.help-table td{padding:10px;border-bottom:1px solid var(--n5);color:var(--n12)}.help-table td:first-child{white-space:nowrap;width:1%}
+kbd{display:inline-block;min-width:28px;text-align:center;padding:3px 8px;border:1px solid var(--n7);border-bottom-width:2px;border-radius:6px;background:var(--n1);color:var(--n14);font:500 12px 'DM Mono',monospace}
+.help-list{margin:0;padding-left:20px;display:grid;gap:8px;font-size:13px;color:var(--n12);line-height:1.5}
+@media(max-width:560px){.help-classes li{grid-template-columns:28px 1fr}.help-classes li span:last-child{grid-column:2}}

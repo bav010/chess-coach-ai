@@ -1,3 +1,5 @@
+import { useBoardKeys } from '../hooks/useBoardKeys'
+import { useRoute } from '../lib/route'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chess, type Color, type Square } from 'chess.js'
 import { botEngine } from '../engine'
@@ -91,6 +93,13 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
 
   const shownPly = viewPly ?? ucis.length
   const viewing = viewPly !== null && viewPly !== ucis.length
+  const playRoute = useRoute().name === 'play'
+  useBoardKeys(playRoute && cfg !== null, {
+    prev: () => setViewPly(Math.max(0, shownPly - 1)),
+    next: () => setViewPly(shownPly + 1 >= ucis.length ? null : shownPly + 1),
+    first: () => setViewPly(0),
+    last: () => setViewPly(null),
+  })
   const shownChess = useMemo(() => {
     if (!viewing) return rep.chess
     return new Chess(shownPly === 0 ? START_FEN : rep.records[shownPly - 1].fenAfter)

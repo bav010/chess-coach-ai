@@ -9,12 +9,18 @@ import { en as enAnalysis } from './en/analysis'
 import { en as enPuzzles } from './en/puzzles'
 import { en as enOpenings } from './en/openings'
 import { en as enStats } from './en/stats'
+import { en as enHome } from './en/home'
+import { en as enSettings } from './en/settings'
+import { en as enHelp } from './en/help'
 import { ru as ruApp } from './ru/app'
 import { ru as ruPlay } from './ru/play'
 import { ru as ruAnalysis } from './ru/analysis'
 import { ru as ruPuzzles } from './ru/puzzles'
 import { ru as ruOpenings } from './ru/openings'
 import { ru as ruStats } from './ru/stats'
+import { ru as ruHome } from './ru/home'
+import { ru as ruSettings } from './ru/settings'
+import { ru as ruHelp } from './ru/help'
 
 export type Lang = 'en' | 'ru'
 export const LANGS: readonly Lang[] = ['en', 'ru']
@@ -22,12 +28,12 @@ export const LANG_NAMES: Record<Lang, string> = { en: 'English', ru: 'Русск
 export const DEFAULT_LANG: Lang = 'en'
 export const LANG_KEY = 'chess-coach-ai:lang:v1'
 
-export const EN = { ...enApp, ...enPlay, ...enAnalysis, ...enPuzzles, ...enOpenings, ...enStats }
+export const EN = { ...enApp, ...enPlay, ...enAnalysis, ...enPuzzles, ...enOpenings, ...enStats, ...enHome, ...enSettings, ...enHelp }
 export type Key = keyof typeof EN
 type Dict = Record<string, string>
 const DICTS: Record<Lang, Dict> = {
   en: EN,
-  ru: { ...ruApp, ...ruPlay, ...ruAnalysis, ...ruPuzzles, ...ruOpenings, ...ruStats },
+  ru: { ...ruApp, ...ruPlay, ...ruAnalysis, ...ruPuzzles, ...ruOpenings, ...ruStats, ...ruHome, ...ruSettings, ...ruHelp },
 }
 /** Для тестов: словари целиком. */
 export const dictionaries = DICTS

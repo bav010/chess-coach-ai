@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { useBoardKeys } from '../hooks/useBoardKeys'
+import { useRoute } from '../lib/route'
 import { Chess, type Color, type Square } from 'chess.js'
 import { puzzleEngine } from '../engine'
 import Board, { type ArrowSpec } from './Board'
@@ -67,6 +69,8 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
   /** Загружает линию на доску с начала: стрелки с номерами показывают все её ходы по порядку. */
   function load(moves: string[], name: Title = null) { setPath(moves); setCursor(0); setEngine(null); setInfo(null); setTitle(name); input.clear() }
   function goto(i: number) { setCursor(Math.max(0, Math.min(path.length, i))); setEngine(null); input.clear() }
+  const openingsRoute = useRoute().name === 'openings'
+  useBoardKeys(openingsRoute, { prev: () => goto(cursor - 1), next: () => goto(cursor + 1), first: () => goto(0), last: () => goto(path.length), flip: () => setOrientation(o => (o === 'w' ? 'b' : 'w')) })
 
   const found = catalog ? openingAt(catalog.root, shown) : null
   const conts = useMemo(() => (catalog ? continuations(catalog.root, shown) : []), [catalog, shown])

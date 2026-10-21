@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chess, type Color, type Square } from 'chess.js'
 import { analysisEngine } from '../engine'
 import AnalysisPanel from '../components/AnalysisPanel'
-import AnalysisSettings from '../components/AnalysisSettings'
+import Icon from '../components/Icon'
+import { hrefFor } from '../lib/route'
 import Board, { type ArrowSpec } from '../components/Board'
 import EvalBar from '../components/EvalBar'
 import MoveList from '../components/MoveList'
@@ -24,6 +25,7 @@ import {
   type PositionEval, type ReviewMove,
 } from '../lib/review'
 import { summarizeReview, type GameReview } from '../lib/gameStats'
+import { useBoardKeys } from '../hooks/useBoardKeys'
 import { useI18n, type Key, type Params } from '../i18n'
 import { errorText } from '../i18n/errors'
 import { gameKey, loadReview, saveReview, type SavedSession, type TrainerEntry } from '../storage'
@@ -75,7 +77,6 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   const [promo, setPromo] = useState<{ from: Square; to: Square } | null>(null)
   const [msg, setMessage] = useState<Msg>(m1(seed ? 'analysis.view.msgLoaded' : 'analysis.view.msgSelectWhite'))
   const message = msg.map(x => ('err' in x ? errorText(x.err, x.fb) : t(x.k, x.p))).join(' ')
-  const [showSettings, setShowSettings] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [tab, setTab] = useState<Tab>('analysis')
@@ -297,19 +298,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
     setViewPly(Math.max(0, Math.min(ucis.length, ply))); clearSelection()
   }, [ucis.length])
 
-  useEffect(() => {
-    if (trainerOn || !active) return
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return
-      if (e.key === 'ArrowLeft') { e.preventDefault(); goto(viewPly - 1) }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); goto(viewPly + 1) }
-      else if (e.key === 'Home') goto(0)
-      else if (e.key === 'End') goto(ucis.length)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [goto, viewPly, ucis.length, trainerOn, active])
+  useBoardKeys(active && !trainerOn, { prev: () => goto(viewPly - 1), next: () => goto(viewPly + 1), first: () => goto(0), last: () => goto(ucis.length), flip: () => setOrientation(o => (o === 'w' ? 'b' : 'w')) })
 
   const viewMove: ReviewMove | null = report?.moves.find(m => m.ply === viewPly) ?? live
   const marks = useMemo(() => {
@@ -343,9 +332,8 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         <label className="toggle"><input type="checkbox" checked={prefs.showBar} onChange={e => onPrefs({ showBar: e.target.checked })} data-testid="toggle-bar" /> {t('analysis.view.evalBar')}</label>
         <label className="toggle"><input type="checkbox" checked={prefs.showArrows} onChange={e => onPrefs({ showArrows: e.target.checked })} data-testid="toggle-arrows" /> {t('analysis.view.arrows')}</label>
         <label className="toggle"><input type="checkbox" checked={prefs.showMarks} onChange={e => onPrefs({ showMarks: e.target.checked })} data-testid="toggle-marks" /> {t('analysis.view.moveRatings')}</label>
-        <button className="link-btn" onClick={() => setShowSettings(s => !s)} data-testid="settings-btn">{showSettings ? t('analysis.view.hideSettings') : t('analysis.view.settings')}</button>
+        <a className="icon-btn toolbar-settings" href={hrefFor('settings')} title={t('analysis.view.settings')} aria-label={t('analysis.view.settings')} data-testid="settings-btn"><Icon name="settings" size={18} /></a>
       </div>
-      {showSettings && <AnalysisSettings prefs={prefs} onChange={onPrefs} />}
 
       <div className="board-row">
         {prefs.showBar && <EvalBar score={score} orientation={orientation} busy={an.busy} />}

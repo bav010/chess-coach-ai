@@ -1,0 +1,51 @@
+/* Главная страница. Только переменные темы (--n0…--n15, --accent, --accent-ink): работает в тёмной и светлой темах. */
+.home{display:grid;gap:22px;padding-bottom:12px}
+.home a{color:inherit;text-decoration:none}
+.home a:focus-visible,.home button:focus-visible,.home summary:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px;border-radius:10px}
+.home-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:26px 0 4px}
+.home-hero-text{display:grid;gap:12px;max-width:640px}
+.home-hero h1{font-size:clamp(34px,4.6vw,58px);line-height:1.07;letter-spacing:-2.2px;margin:0;font-weight:800;color:var(--n15)}
+.home-hero h1 em{font-style:normal;color:var(--accent-ink)}
+.home-hero p{margin:0;color:var(--n11);font-size:15px}
+.home-cta{display:inline-flex;align-items:center;gap:14px;justify-self:start;margin-top:6px;padding:12px 18px;border-radius:12px;background:var(--accent);color:#171b13!important;font-size:13px;transition:transform .15s,filter .15s}
+.home-cta span{display:grid;gap:2px}.home-cta b{font-size:14px}.home-cta small{font-size:11px;opacity:.75}
+.home-cta:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.home-badge{display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid var(--n6);border-radius:14px;background:var(--n2);color:var(--accent-ink);min-width:260px}
+.home-badge div{display:grid;gap:3px}.home-badge b{font-size:11px;letter-spacing:1.4px;color:var(--n15)}.home-badge small{font-size:11px;color:var(--n11)}
+.home-stats{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px 28px;padding:12px 16px;border:1px solid var(--n6);border-radius:12px;background:var(--n2)}
+.home-stat{display:grid;gap:3px;align-content:center;min-width:92px;position:relative}
+.home-stat small,.home-card-desc{color:var(--n11)}
+.home-stat small{font:500 10px 'DM Mono',monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--n10)}
+.home-stat strong{font-size:19px;color:var(--n14);letter-spacing:-.4px;font-weight:700}
+.home-flame{position:absolute;right:-2px;top:0;color:var(--warn)}
+.home-more{margin-left:auto;display:inline-flex;align-items:center;gap:4px;align-self:center;font-size:12px;color:var(--n11)!important}.home-more:hover{color:var(--accent-ink)!important}
+.home-note{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--n12)!important;flex:1;flex-wrap:wrap}.home-note b{color:var(--accent-ink);margin-left:auto}
+.home-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(min-width:1100px){.home-cards{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:700px){.home-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.home-card{position:relative;display:grid;gap:8px;align-content:start;padding:20px 20px 22px;border:1px solid var(--n6);border-radius:16px;background:var(--n2);transition:transform .16s,border-color .16s,box-shadow .16s}
+.home-card b{font-size:17px;color:var(--n15);letter-spacing:-.3px}
+.home-card-desc{font-size:13px;line-height:1.45;padding-right:18px}
+.home-card-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;border:1px solid var(--n6);background:var(--n4);color:var(--accent-ink);margin-bottom:4px}
+.home-card-go{position:absolute;right:18px;bottom:20px;color:var(--n9);transition:transform .16s,color .16s}
+.home-card:hover{transform:translateY(-3px);border-color:var(--accent-ink);box-shadow:0 12px 28px var(--shadow)}.home-card:hover .home-card-go{transform:translateX(3px);color:var(--accent-ink)}
+.home-lower{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.home-daily{display:grid;grid-template-columns:minmax(150px,230px) 1fr;gap:20px;align-items:center}
+.home-daily-board{width:100%}.home-daily-board .board{max-width:230px;border-width:3px;pointer-events:none}
+.home-daily-board .rank-label,.home-daily-board .file-label{display:none}
+.home-daily-board .piece{font-size:clamp(16px,2.2vw,26px)}.home-daily-board .square{overflow:hidden}
+.home-daily-info{display:grid;gap:10px;justify-items:start}.home-daily-info h2{margin:0;font-size:19px;letter-spacing:-.4px}
+.home-daily-side{margin:0;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--n12)}
+.home-dot{width:12px;height:12px;border-radius:50%;border:1px solid var(--n9);display:inline-block}.home-dot.w{background:#f2f2e8}.home-dot.b{background:#171b13}
+.home-daily-meta{display:grid;gap:6px;margin:0;font-size:13px}.home-daily-meta div{display:flex;gap:10px}.home-daily-meta dt{color:var(--n10);min-width:64px}.home-daily-meta dd{margin:0;color:var(--n14);font-weight:600}
+.home-solved{margin:0;display:flex;align-items:center;gap:6px;color:var(--accent-ink);font-size:12px}
+.home-side{display:grid;gap:14px}
+.home-overview summary{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:var(--n13);list-style:none}.home-overview summary::-webkit-details-marker{display:none}
+.home-overview summary::after{content:'';margin-left:auto;width:7px;height:7px;border-right:1.7px solid var(--n10);border-bottom:1.7px solid var(--n10);transform:rotate(45deg);transition:transform .15s}.home-overview details[open] summary::after{transform:rotate(-135deg)}
+.home-steps{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:12px}
+.home-steps li{display:flex;gap:12px;align-items:flex-start}.home-steps div{display:grid;gap:2px}.home-steps b{font-size:13px;color:var(--n14)}.home-steps small{font-size:12px;color:var(--n11)}
+.home-step-n{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--n6);background:var(--n4);color:var(--accent-ink)}
+.home-quick{display:flex;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.home-lower{grid-template-columns:1fr}.home-badge{min-width:0}}
+@media(max-width:560px){.home{gap:16px}.home-hero{padding-top:14px}.home-hero h1{letter-spacing:-1.4px}.home-badge{display:none}.home-cards{grid-template-columns:1fr}.home-card{padding:16px}.home-daily-board .piece{font-size:24px}.home-daily{grid-template-columns:1fr}.home-daily-board .board{max-width:240px;margin:0 auto}.home-stats{gap:10px 18px}.home-more{margin-left:0;width:100%}.home-quick .btn{flex:1}}
+@media(prefers-reduced-motion:reduce){.home-card,.home-cta,.home-card-go,.home-overview summary::after{transition:none}.home-card:hover,.home-cta:hover{transform:none}}

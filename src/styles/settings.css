@@ -1,0 +1,17 @@
+.set-page{display:grid;gap:16px;max-width:980px}
+.set-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--accent-ink)}.set-head h2{margin:0;font-size:17px;color:var(--n15);letter-spacing:-.2px}
+.set-sub{font:500 10px 'DM Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--n10);margin:4px 0 8px}
+.seg{display:inline-flex;border:1px solid var(--n6);border-radius:12px;background:var(--n1);padding:3px;gap:3px;flex-wrap:wrap}
+.seg-btn{display:inline-flex;align-items:center;gap:8px;border:0;background:none;color:var(--n12);padding:9px 16px;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer}
+.seg-btn:hover{background:var(--n4)}.seg-btn.active{background:var(--accent);color:#171b13}.seg-btn:focus-visible,.sw:focus-visible{outline:2px solid var(--accent-ink);outline-offset:2px}
+.set-board-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,260px);gap:24px;align-items:start}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{display:grid;justify-items:center;gap:6px;border:1px solid var(--n6);background:var(--n1);color:var(--n12);border-radius:12px;padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;min-width:78px}
+.sw:hover{border-color:var(--n9)}.sw.active{border-color:var(--accent-ink);color:var(--accent-ink);box-shadow:0 0 0 1px var(--accent-ink)}
+.sw-checker{width:40px;height:40px;border-radius:6px;display:block;background-size:50% 50%;border:1px solid var(--n6)}
+.set-colors{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0;font-size:12px;color:var(--n12)}.set-colors label{display:flex;align-items:center;gap:8px}
+.set-colors input[type=color]{width:44px;height:30px;padding:0;border:1px solid var(--n6);border-radius:6px;background:var(--n1);cursor:pointer}
+.set-check{margin:14px 0 6px;font-size:13px}
+.set-preview{max-width:260px;border-width:3px;pointer-events:none}.set-preview .piece{font-size:clamp(14px,3.2vw,26px)}
+.toolbar-settings{width:32px;height:32px;border-radius:8px;text-decoration:none}
+@media(max-width:700px){.set-board-grid{grid-template-columns:1fr}.set-preview{max-width:300px}}

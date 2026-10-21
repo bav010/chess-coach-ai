@@ -41,7 +41,7 @@ function replayFen(fen: string, ucis: readonly string[]): Chess {
   return c
 }
 
-export default function PuzzleView({ active }: { active: boolean }) {
+export default function PuzzleView({ active, puzzleId = null }: { active: boolean; puzzleId?: string | null }) {
   const { lang } = useI18n()
   const [stats, setStats] = useState<PuzzleStats>(() => loadPuzzleStats())
   const [filter, setFilter] = useState<PuzzleFilter>(ANY_FILTER)
@@ -106,6 +106,13 @@ export default function PuzzleView({ active }: { active: boolean }) {
     setFilter(f)
     next(f)
   }
+
+  // переход по адресу #/tactics/<id> (например, «Задача дня» с главной) открывает именно эту задачу
+  useEffect(() => {
+    if (!active || !puzzleId || puzzle?.id === puzzleId) return
+    const p = ALL.find(x => x.id === puzzleId)
+    if (p) load(p)
+  }, [active, puzzleId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const chess = useMemo(() => (puzzle ? replayFen(puzzle.fen, played) : null), [puzzle, played])
   const solver: Color = puzzle ? new Chess(puzzle.fen).turn() : 'w'

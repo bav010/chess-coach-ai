@@ -12,6 +12,14 @@ import Avatar from './components/Avatar'
 import LanguageSwitch from './components/LanguageSwitch'
 import { cloudConfigured } from './lib/cloud'
 import { useI18n } from './i18n'
+import Icon, { type IconName } from './components/Icon'
+import Drawer from './components/Drawer'
+import ModeBar from './components/ModeBar'
+import HomeView from './views/HomeView'
+import SettingsView from './views/SettingsView'
+import HelpView from './views/HelpView'
+import { MODES, hrefFor, navigate, useRoute, type ModeName, type RouteName } from './lib/route'
+import { saveLast, loadLast } from './lib/lastMode'
 import { errorText } from './i18n/errors'
 import { loadProfiles, type ProfileStore } from './lib/profile'
 import { useCloud, useServerStatus } from './hooks/useCloud'
@@ -19,7 +27,6 @@ import { markGamesReset } from './lib/sync'
 import { attachReview, backfillReviews, deriveGame, loadGames, saveGames, syncFromSessions, upsertGame, type GameReview, type GameStat } from './lib/gameStats'
 
 type EngineState = 'loading' | 'ready' | 'error'
-type Mode = 'analysis' | 'play' | 'tactics' | 'openings' | 'account'
 
 const isYou = (n: string | null | undefined) => n === 'You' || n === 'Вы'
 
@@ -35,11 +42,11 @@ function downloadPgn(s: SavedSession) {
 
 export default function App() {
   const { t } = useI18n()
-  const [mode, setMode] = useState<Mode>('analysis')
-  const [lastMode, setLastMode] = useState<Exclude<Mode, 'account'>>('analysis')
+  const route = useRoute()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
   const [profiles, setProfiles] = useState<ProfileStore>(() => loadProfiles())
   const me = profiles.list.find(p => p.id === profiles.current) ?? profiles.list[0]
-  function go(m: Mode) { if (m !== 'account') setLastMode(m); setMode(m) }
   const [seed, setSeed] = useState<GameSeed | null>(null)
   const [engineState, setEngineState] = useState<EngineState>('loading')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadSessions())
@@ -58,7 +65,10 @@ export default function App() {
   useEffect(() => { setProfiles(loadProfiles()) }, [cloud.status, cloud.user?.id])
   // после входа без завершённой настройки (имя и аватарка) сразу открываем настройку аккаунта
   const needSetup = cloud.status === 'in' && !me.ready
-  useEffect(() => { if (needSetup) setMode('account') }, [needSetup])
+  useEffect(() => { if (needSetup) navigate('stats') }, [needSetup])
+  // последний открытый режим — для кнопки «Продолжить» на главной
+  useEffect(() => { if ((MODES as readonly string[]).includes(route.name)) saveLast({ name: route.name as ModeName, arg: route.arg, at: Date.now() }) }, [route.name, route.arg])
+  useEffect(() => { setMenuOpen(false); window.scrollTo?.(0, 0) }, [route.name])
   function changeGames(fn: (g: GameStat[]) => GameStat[]) {
     setGames(cur => { const next = fn(cur); if (next !== cur) saveGames(next); return next })
   }
@@ -84,7 +94,7 @@ export default function App() {
   /** Разбор сыгранной партии: переходим в режим анализа с этой партией (исходная остаётся в истории сессий). */
   function reviewGame(game: Omit<GameSeed, 'nonce'>) {
     setSeed({ ...game, nonce: Date.now() })
-    setMode('analysis')
+    navigate('analysis')
   }
 
   /** Сохранённая партия — в режим анализа одним кликом (с запуском разбора). */
@@ -94,7 +104,7 @@ export default function App() {
       // партии из режима «Игра с ботом» подписаны «You» (раньше — «Вы») — по этому восстанавливаем, за кого играл пользователь
       const userColor = isYou(p.white) ? 'w' : isYou(p.black) ? 'b' : null
       setSeed({ startFen: p.startFen, ucis: p.ucis, userColor, autoReview: true, nonce: Date.now() })
-      setMode('analysis')
+      navigate('analysis')
     } catch (e) {
       window.alert(errorText(e, 'app.err.openGame'))
     }
@@ -113,57 +123,67 @@ export default function App() {
   const authPending = cloud.status === 'loading'
   const signedOut = cloud.status === 'out'
 
+  const onAccountRoute = route.name === 'stats' || route.name === 'profile' || route.name === 'account'
+  const accountTab = route.name === 'profile' ? 'profile' : route.name === 'account' ? 'account' : 'stats'
+  const TITLES: Partial<Record<RouteName, { icon: IconName; title: string }>> = {
+    analysis: { icon: 'analysis', title: t('app.mode.analysis') }, play: { icon: 'play', title: t('app.mode.play') },
+    tactics: { icon: 'tactics', title: t('app.mode.tactics') }, openings: { icon: 'openings', title: t('app.mode.openings') },
+    stats: { icon: 'stats', title: t('nav.stats') }, profile: { icon: 'user', title: t('nav.profile') }, account: { icon: 'cloud', title: t('nav.account') },
+    settings: { icon: 'settings', title: t('nav.settings') }, help: { icon: 'help', title: t('nav.help') },
+  }
+  const bar = TITLES[route.name]
+  const accountGo = () => navigate(cloud.status === 'out' || cloud.status === 'loading' ? 'stats' : 'stats')
+
   return <main className="app-shell">
+    <a className="skip-link" href="#main">{t('nav.skip')}</a>
     <header className="topbar">
-      <div className="brand-mark">♞</div>
-      <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">{t('app.brandSub')}</div></div>
+      <button className="icon-btn menu-btn" onClick={() => setMenuOpen(o => !o)} aria-label={t('nav.menu')} title={t('nav.menu')} aria-expanded={menuOpen} data-testid="menu-btn"><Icon name="menu" size={22} /></button>
+      <a className="brand" href={hrefFor('home')} aria-label={t('nav.logo')} title={t('nav.logo')} data-testid="logo">
+        <div className="brand-mark">♞</div>
+        <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">{t('app.brandSub')}</div></div>
+      </a>
       <div className="top-status" title={engineStatus} role="status" data-testid="top-status" data-state={cloudConfigured ? server : engineState}><i className={statusDot} />{statusText}</div>
-      <LanguageSwitch compact />
       {signedOut || authPending
-        ? <button className={`signin-btn ${mode === 'account' ? 'active' : ''}`} disabled={authPending} onClick={() => (mode === 'account' ? setMode(lastMode) : setMode('account'))}
-            title={authPending ? t('app.signin.checking') : t('app.signin.title')} data-testid="signin-btn">{authPending ? '…' : t('app.signin')}</button>
-        : <button className={`avatar-btn ${mode === 'account' ? 'active' : ''} ${cloud.status === 'in' ? 'cloud-on' : ''}`} onClick={() => (mode === 'account' ? setMode(lastMode) : setMode('account'))}
+        ? <button className="signin-btn" disabled={authPending} onClick={accountGo}
+            title={authPending ? t('app.signin.checking') : t('app.signin.title')} data-testid="signin-btn"><Icon name="user" size={16} /><span>{authPending ? '…' : t('app.signin')}</span></button>
+        : <button className={`avatar-btn ${onAccountRoute ? 'active' : ''} ${cloud.status === 'in' ? 'cloud-on' : ''}`} onClick={() => navigate('profile')}
             aria-label={t('app.account.aria', { name: shownName })} title={t('app.account.title')} data-testid="account-btn">
             <Avatar profile={me} size={34} /><span className="avatar-name">{shownName}</span>
           </button>}
     </header>
+    <Drawer open={menuOpen} onClose={closeMenu} current={route.name} />
 
     {cloud.news && <div className="sync-banner" role="status" data-testid="sync-news"><span>{t('app.sync.newer')}</span>
       <button className="btn" disabled={cloud.busy} onClick={() => void cloud.applyNews()} data-testid="sync-news-apply">{cloud.busy ? t('app.sync.refreshing') : t('app.sync.refresh')}</button></div>}
 
-    <section className="hero">
-      <div><h1>{t('app.hero.line1')}<br/><em>{t('app.hero.line2')}</em></h1>
-        <p>{t('app.hero.sub')}</p></div>
-        <div className="hero-badge"><span>♟</span><div><b>{t('app.hero.badge')}</b><small>{t('app.hero.badgeSub')}</small></div></div>
-    </section>
+    <div id="main" className="page" tabIndex={-1}>
+    {bar && <ModeBar icon={bar.icon} title={bar.title} />}
 
-    <nav className="mode-tabs" role="tablist" aria-label={t('app.nav.aria')}>
-      <button role="tab" aria-selected={mode === 'analysis'} className={`mode-tab ${mode === 'analysis' ? 'active' : ''}`} onClick={() => go('analysis')} data-testid="mode-analysis">{t('app.mode.analysis')}</button>
-      <button role="tab" aria-selected={mode === 'play'} className={`mode-tab ${mode === 'play' ? 'active' : ''}`} onClick={() => go('play')} data-testid="mode-play">{t('app.mode.play')}</button>
-      <button role="tab" aria-selected={mode === 'tactics'} className={`mode-tab ${mode === 'tactics' ? 'active' : ''}`} onClick={() => go('tactics')} data-testid="mode-tactics">{t('app.mode.tactics')}</button>
-      <button role="tab" aria-selected={mode === 'openings'} className={`mode-tab ${mode === 'openings' ? 'active' : ''}`} onClick={() => go('openings')} data-testid="mode-openings">{t('app.mode.openings')}</button>
-    </nav>
+    {route.name === 'home' && <HomeView games={games} cloud={cloud} me={me} shownName={shownName} last={loadLast()} sessions={sessions} onOpenSession={openSession} />}
 
-    {/* Оба режима остаются смонтированными: партия с ботом и её часы не теряются при переключении вкладок */}
-    <div hidden={mode !== 'analysis'}>
+    {/* Режимы остаются смонтированными: партия с ботом и её часы не теряются при уходе на другую страницу */}
+    <div hidden={route.name !== 'analysis'}>
       <AnalysisView key={seed?.nonce ?? 0} seed={seed} prefs={prefs} onPrefs={updatePrefs} sessions={sessions}
         onSaveSession={saveSession} onReviewDone={reviewDone} onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress}
-        engineState={engineState} engineLabel={engineLabel} active={mode === 'analysis'} />
+        engineState={engineState} engineLabel={engineLabel} active={route.name === 'analysis'} />
     </div>
-    <div hidden={mode !== 'play'}>
+    <div hidden={route.name !== 'play'}>
       <PlayView prefs={prefs} onPrefs={updatePrefs} sessions={sessions} onSaveSession={saveSession}
         onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} />
     </div>
-    <div hidden={mode !== 'tactics'}>
-      <PuzzleView active={mode === 'tactics'} />
+    <div hidden={route.name !== 'tactics'}>
+      <PuzzleView active={route.name === 'tactics'} puzzleId={route.name === 'tactics' ? route.arg : null} />
     </div>
-    <div hidden={mode !== 'openings'}>
-      <OpeningsView active={mode === 'openings'} />
+    <div hidden={route.name !== 'openings'}>
+      <OpeningsView active={route.name === 'openings'} />
     </div>
-    <div hidden={mode !== 'account'}>
-      <AccountView active={mode === 'account'} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
-        onGo={m => go(m)} onBack={() => setMode(lastMode)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
+    <div hidden={!onAccountRoute}>
+      <AccountView active={onAccountRoute} tab={accountTab} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
+        onGo={m => navigate(m)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.4.2-beta</span></footer>
+    {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
+    {route.name === 'help' && <HelpView />}
+    </div>
+    <footer><span>CHESS COACH AI <i>•</i> v0.5.0-beta</span></footer>
   </main>
 }

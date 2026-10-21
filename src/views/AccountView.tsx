@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import Avatar from '../components/Avatar'
 import BackupPanel from '../components/BackupPanel'
 import CloudPanel from '../components/CloudPanel'
-import LanguageSwitch from '../components/LanguageSwitch'
 import type { CloudApi } from '../hooks/useCloud'
 import StatsView from './StatsView'
 import type { GameStat } from '../lib/gameStats'
@@ -10,19 +9,20 @@ import {
   AVATAR_COLORS, AVATAR_EMOJI, NAME_MAX, imageToAvatar, updateProfile,
   type Avatar as AvatarT, type Profile, type ProfileStore,
 } from '../lib/profile'
+import { navigate, hrefFor } from '../lib/route'
 import { useI18n } from '../i18n'
 import { errorText } from '../i18n/errors'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
-type Tab = 'stats' | 'profile' | 'settings' | 'data'
+type Tab = 'stats' | 'profile' | 'account'
 type Props = {
   active: boolean
+  tab: Tab
   games: GameStat[]
   profiles: ProfileStore
   cloud: CloudApi
   onProfiles: (s: ProfileStore) => void
   onGo: (m: Go) => void
-  onBack: () => void
   onResetGames: () => void
 }
 
@@ -73,12 +73,10 @@ function ProfileEditor({ me, onProfiles, setup, defaultName, onReady }: { me: Pr
  * Страница аккаунта. Порядок: вход или регистрация по почте → настройка (имя и аватарка) → статистика и настройки.
  * Если облако не подключено в сборке (cloud.status === 'off'), работает локальный режим без входа.
  */
-export default function AccountView({ active, games, profiles, cloud, onProfiles, onGo, onBack, onResetGames }: Props) {
+export default function AccountView({ active, tab, games, profiles, cloud, onProfiles, onGo, onResetGames }: Props) {
   const { t } = useI18n()
-  const [tab, setTab] = useState<Tab>('stats')
   const me = profiles.list.find(p => p.id === profiles.current) ?? profiles.list[0]
   const head = <section className="panel acc-head">
-    <button className="btn" onClick={onBack} data-testid="account-back">{t('app.acc.back')}</button>
     {cloud.status === 'in' || cloud.status === 'off' ? <><Avatar profile={me} size={64} />
       <div className="acc-who"><b data-testid="account-name">{me.name}</b><small data-testid="account-kind">{me.cloud ? t('app.acc.kind.cloud', { email: me.cloud.email }) : t('app.acc.kind.local')}</small></div></> : null}
   </section>
@@ -99,16 +97,16 @@ export default function AccountView({ active, games, profiles, cloud, onProfiles
     <section className="panel acc-form" data-testid="acc-setup">
       <div className="panel-head"><div><div className="eyebrow">{t('app.setup.eyebrow')}</div><h2>{t('app.setup.title')}</h2></div></div>
       <p className="tiny">{t('app.setup.text')}</p>
-      <ProfileEditor key={me.id} me={me} onProfiles={onProfiles} setup defaultName={cloud.user?.email.split('@')[0]} onReady={() => setTab('stats')} />
+      <ProfileEditor key={me.id} me={me} onProfiles={onProfiles} setup defaultName={cloud.user?.email.split('@')[0]} onReady={() => navigate('stats')} />
     </section>
   </div>
 
   // 3. аккаунт готов
-  const tabs: [Tab, string][] = [['stats', t('app.acc.tab.stats')], ['profile', t('app.acc.tab.profile')], ['settings', t('app.acc.tab.settings')], ['data', t('app.acc.tab.data')]]
+  const tabs: [Tab, string][] = [['stats', t('app.acc.tab.stats')], ['profile', t('app.acc.tab.profile')], ['account', t('app.acc.tab.account')]]
   return <div className="acc-page" data-testid="account-view">
     {head}
     <nav className="tabs acc-tabs" role="tablist" aria-label={t('app.acc.tabs.aria')}>
-      {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} data-testid={`acc-tab-${k}`}>{l}</button>)}
+      {tabs.map(([k, l]) => <a key={k} href={hrefFor(k)} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} data-testid={`acc-tab-${k}`}>{l}</a>)}
     </nav>
 
     <div hidden={tab !== 'stats'}><StatsView active={active && tab === 'stats'} games={games} onGo={onGo} /></div>
@@ -118,16 +116,8 @@ export default function AccountView({ active, games, profiles, cloud, onProfiles
       <ProfileEditor key={me.id} me={me} onProfiles={onProfiles} />
     </section>}
 
-    {tab === 'settings' && <>
-      <section className="panel acc-form" data-testid="acc-settings">
-        <div className="panel-head"><div><div className="eyebrow">{t('app.settings.eyebrow')}</div><h2>{t('app.settings.language')}</h2></div></div>
-        <LanguageSwitch />
-        <p className="tiny">{t('app.settings.languageNote')}</p>
-      </section>
+    {tab === 'account' && <>
       <CloudPanel cloud={cloud} view="manage" />
-    </>}
-
-    {tab === 'data' && <>
       <p className="tiny">{t('app.data.note')}</p>
       <BackupPanel hasGames={games.length > 0} onResetGames={onResetGames} />
     </>}

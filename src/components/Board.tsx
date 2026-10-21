@@ -85,7 +85,7 @@ function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientati
         <line x1={x1} y1={y1} x2={bx} y2={by} stroke={color} strokeWidth={w} strokeLinecap="round" />
         <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill={color} />
         {(style.numbering || a.label) && <g data-badge={a.label ?? a.rank + 1}>
-          <circle cx={cx} cy={cy} r={0.19} fill="#111318" stroke={color} strokeWidth={0.04} />
+          <circle cx={cx} cy={cy} r={0.19} fill="var(--n0)" stroke={color} strokeWidth={0.04} />
           <text x={cx} y={cy} fontSize={0.24} fill="#fff" textAnchor="middle" dominantBaseline="central"
             fontFamily="DM Mono, monospace" fontWeight={700}>{a.label ?? a.rank + 1}</text>
         </g>}
