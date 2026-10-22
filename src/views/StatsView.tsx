@@ -73,10 +73,10 @@ export default function StatsView({ active, games, onGo }: Props) {
 
       <div className="st-grid">
         <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.rating.eyebrow')}</div><h2>{t('stats.rating.title')}</h2></div></div>
-          <LineChart label={t('stats.rating.chart')} series={[{ name: t('stats.rating.series'), color: '#d3ff72', pts: shownRating.map(r => ({ y: r.rating, label: `${fmtDate(r.at)}, ${t('stats.chart.vsBot', { opp: r.opp })}, ${r.delta >= 0 ? '+' : ''}${r.delta.toFixed(1)}` })) }]} />
+          <LineChart label={t('stats.rating.chart')} series={[{ name: t('stats.rating.series'), color: 'var(--chart-1)', pts: shownRating.map(r => ({ y: r.rating, label: `${fmtDate(r.at)}, ${t('stats.chart.vsBot', { opp: r.opp })}, ${r.delta >= 0 ? '+' : ''}${r.delta.toFixed(1)}` })) }]} />
         </section>
         <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.acc.eyebrow')}</div><h2>{t('stats.acc.title')}</h2></div></div>
-          <LineChart label={t('stats.acc.title')} unit="%" yMin={0} yMax={100} series={[{ name: t('stats.acc.series'), color: '#6cb8ff', pts: accSeries }, { name: t('stats.acc.avg'), color: '#d3ff72', dashed: true, pts: ma.map(y => ({ y, label: '' })) }]} />
+          <LineChart label={t('stats.acc.title')} unit="%" yMin={0} yMax={100} series={[{ name: t('stats.acc.series'), color: 'var(--chart-2)', pts: accSeries }, { name: t('stats.acc.avg'), color: 'var(--chart-1)', dashed: true, pts: ma.map(y => ({ y, label: '' })) }]} />
           <p className="tiny">{t('stats.acc.only', { n: sum.reviewed, total: sum.decided || sum.total })}</p>
         </section>
         <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.wdl.eyebrow')}</div><h2>{t('stats.wdl.title')}</h2></div></div>

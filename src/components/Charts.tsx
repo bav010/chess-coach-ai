@@ -76,10 +76,10 @@ export function WdlBar({ w, d, l }: { w: number; d: number; l: number }) {
   if (n === 0) return <div className="st-empty">{t('stats.wdl.noGames')}</div>
   return <div>
     <div className="st-wdl" role="img" aria-label={t('stats.wdl.aria', { w, d, l })}>
-      <span style={{ width: `${(w / n) * 100}%`, background: '#d3ff72' }} title={`${t('stats.wdl.wins')}: ${w}`} />
+      <span style={{ width: `${(w / n) * 100}%`, background: 'var(--chart-1)' }} title={`${t('stats.wdl.wins')}: ${w}`} />
       <span style={{ width: `${(d / n) * 100}%`, background: 'var(--n10)' }} title={`${t('stats.wdl.draws')}: ${d}`} />
       <span style={{ width: `${(l / n) * 100}%`, background: '#ff7a7a' }} title={`${t('stats.wdl.losses')}: ${l}`} />
     </div>
-    <div className="st-legend"><span><i style={{ background: '#d3ff72' }} />{t('stats.wdl.wins')} {w}</span><span><i style={{ background: 'var(--n10)' }} />{t('stats.wdl.draws')} {d}</span><span><i style={{ background: '#ff7a7a' }} />{t('stats.wdl.losses')} {l}</span></div>
+    <div className="st-legend"><span><i style={{ background: 'var(--chart-1)' }} />{t('stats.wdl.wins')} {w}</span><span><i style={{ background: 'var(--n10)' }} />{t('stats.wdl.draws')} {d}</span><span><i style={{ background: '#ff7a7a' }} />{t('stats.wdl.losses')} {l}</span></div>
   </div>
 }

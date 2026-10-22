@@ -19,3 +19,4 @@
 .piece-sw-pv img{width:40px;height:40px}
 .set-range{display:flex;align-items:center;gap:14px;margin:14px 0 4px;color:var(--n12);font-size:13px}.set-range input{flex:1;max-width:280px;accent-color:var(--accent)}
 .set-check{display:flex!important;align-items:center;gap:8px;margin:10px 0}
+.seg+.set-sub{margin-top:18px}
