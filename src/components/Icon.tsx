@@ -33,11 +33,33 @@ const P = {
   palette: 'M12 3a9 9 0 100 18c1.2 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4c0-4.4-4-7.8-9-7.8zM7.5 11.5h.01M10 7.5h.01M14.5 7.5h.01',
   database: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
   refresh: 'M20 12a8 8 0 11-2.4-5.7M20 4v5h-5',
+  first: 'M6 5v14M18 6l-8 6 8 6',
+  last: 'M18 5v14M6 6l8 6-8 6',
+  undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',
+  flag: 'M6 21V4M6 4h11l-2 4 2 4H6',
+  dice: 'M5 5h14v14H5zM9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01',
+  search: 'M11 4a7 7 0 100 14 7 7 0 000-14zM16.2 16.2L21 21',
+  download: 'M12 4v11M7 10.5l5 5 5-5M5 20h14',
+  upload: 'M12 16V5M7 9.5l5-5 5 5M5 20h14',
+  camera: 'M4 8h3l1.5-2.5h7L17 8h3v11H4zM12 11a3.3 3.3 0 100 6.6 3.3 3.3 0 000-6.6z',
+  pencil: 'M4 20l1-4L16.5 4.5a2 2 0 013 3L8 19zM14.5 6.5l3 3',
+  discW: 'M12 4a8 8 0 100 16 8 8 0 000-16z',
+  discB: 'M12 4a8 8 0 100 16 8 8 0 000-16z',
+  plus: 'M12 5v14M5 12h14',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+  star: 'M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9L3.5 9.7l5.9-.8z',
+  arrowLeft: 'M19 12H5M11 6l-6 6 6 6',
+  handshake: 'M3 12l4-4 3 2 3-2 4 4M3 12l5 5 2-1.5M21 12l-6 6-2.5-2M8 17l2 2M12.5 15.5l2 2',
+  eye: 'M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12zM12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z',
+  list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01',
+  note: 'M5 4h14v12l-4 4H5zM15 20v-4h4M8.5 9h7M8.5 13h4',
+  external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
 } as const
+const FILLED = new Set<string>(['discB'])
 export type IconName = keyof typeof P
 
 export default function Icon({ name, size = 20, className }: { name: IconName; size?: number; className?: string }) {
-  return <svg className={`icon ${className ?? ''}`} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+  return <svg className={`icon ${className ?? ''}`} width={size} height={size} viewBox="0 0 24 24" fill={FILLED.has(name) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
     <path d={P[name]} />
   </svg>
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useBoardKeys } from '../hooks/useBoardKeys'
 import { useRoute } from '../lib/route'
 import { Chess, type Color, type Square } from 'chess.js'
@@ -15,8 +15,10 @@ import { ruName } from '../lib/openingNames'
 import { addLine, newRepertoire, posKey, removeLine, repMovesAt, setNote, updateLine, type Repertoire } from '../lib/repertoire'
 import { pvToSan, uciToSan } from '../lib/san'
 import type { OpeningsData } from '../lib/openingsStore'
+import Icon from './Icon'
 
 type Props = {
+  onTitle?: (title: string | null) => void
   catalog: Catalog | null
   data: OpeningsData
   update: (fn: (d: OpeningsData) => OpeningsData) => void
@@ -35,7 +37,7 @@ const START = new Chess().fen()
 
 
 /** Изучение дебютов: каталог, дерево вариантов, доска и редактор репертуара. */
-export default function OpeningsStudy({ catalog, data, update }: Props) {
+export default function OpeningsStudy({ catalog, data, update, onTitle }: Props) {
   const { t, tn, lang } = useI18n()
   const [path, setPath] = useState<string[]>([])
   const [cursor, setCursor] = useState(0)
@@ -73,6 +75,8 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
   useBoardKeys(openingsRoute, { prev: () => goto(cursor - 1), next: () => goto(cursor + 1), first: () => goto(0), last: () => goto(path.length), flip: () => setOrientation(o => (o === 'w' ? 'b' : 'w')) })
 
   const found = catalog ? openingAt(catalog.root, shown) : null
+  const foundName = found ? `${found.opening.eco} · ${oname(found.opening.name)}` : null
+  useEffect(() => { onTitle?.(foundName) }, [foundName, onTitle])
   const conts = useMemo(() => (catalog ? continuations(catalog.root, shown) : []), [catalog, shown])
   const rows = useMemo(() => sanRows(START, path), [path])
   const search = useMemo(() => (catalog ? searchOpenings(catalog.list, { query, eco, limit }) : { items: [] as Opening[], total: 0 }), [catalog, query, eco, limit])
@@ -175,19 +179,20 @@ export default function OpeningsStudy({ catalog, data, update }: Props) {
       </div>
 
       <div className="nav-row">
-        <button className="btn" onClick={() => goto(0)} disabled={cursor === 0} aria-label={t('openings.study.toStart')}>⏮</button>
-        <button className="btn" onClick={() => goto(cursor - 1)} disabled={cursor === 0} aria-label={t('openings.study.back')} data-testid="study-prev">◀</button>
-        <button className="btn" onClick={() => goto(cursor + 1)} disabled={cursor >= path.length} aria-label={t('openings.study.forward')} data-testid="study-next">▶</button>
-        <button className="btn" onClick={() => goto(path.length)} disabled={cursor >= path.length} aria-label={t('openings.study.toEnd')}>⏭</button>
-        <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="study-flip">{t('openings.study.flip')}</button>
-        <button className={`btn ${showAhead ? 'primary' : ''}`} onClick={() => setShowAhead(v => !v)} aria-pressed={showAhead} data-testid="ahead-toggle" title={t('openings.study.hintToggleTitle')}>{t('openings.hint')}{showAhead ? t('openings.study.on') : ''}</button>
-        <button className="btn" onClick={() => load([])} disabled={path.length === 0} data-testid="study-reset">{t('openings.study.reset')}</button>
+        <button className="btn icon-only" onClick={() => goto(0)} disabled={cursor === 0} aria-label={t('openings.study.toStart')}><Icon name="first" size={18} /></button>
+        <button className="btn icon-only" onClick={() => goto(cursor - 1)} disabled={cursor === 0} aria-label={t('openings.study.back')} data-testid="study-prev"><Icon name="back" size={18} /></button>
+        <button className="btn icon-only" onClick={() => goto(cursor + 1)} disabled={cursor >= path.length} aria-label={t('openings.study.forward')} data-testid="study-next"><Icon name="next" size={18} /></button>
+        <button className="btn icon-only" onClick={() => goto(path.length)} disabled={cursor >= path.length} aria-label={t('openings.study.toEnd')}><Icon name="last" size={18} /></button>
+        <span className="nav-sep" aria-hidden="true" />
+        <button className="btn quiet" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="study-flip"><Icon name="flip" size={16} /><span className="btn-label">{t('openings.study.flip')}</span></button>
+        <button className={`btn quiet ${showAhead ? 'active' : ''}`} onClick={() => setShowAhead(v => !v)} aria-pressed={showAhead} data-testid="ahead-toggle" title={t('openings.study.hintToggleTitle')}><Icon name="hint" size={16} /><span className="btn-label">{t('openings.hint')}{showAhead ? t('openings.study.on') : ''}</span></button>
+        <button className="btn quiet" onClick={() => load([])} disabled={path.length === 0} data-testid="study-reset"><Icon name="refresh" size={16} /><span className="btn-label">{t('openings.study.reset')}</span></button>
       </div>
       <div className="chip-group" style={{ marginTop: 10 }}><small>{t('openings.study.watching')}</small>
         {(['w', 'b'] as const).map(c => <button key={c} className={`chip ${orientation === c ? 'active' : ''}`} onClick={() => setOrientation(c)} data-testid={`side-${c}`}>{c === 'w' ? t('openings.study.sideW') : t('openings.study.sideB')}</button>)}
       </div>
       {rep && repMoves.length > 0 && <p className="rep-here" data-testid="rep-here">{t('openings.study.repHere', { name: repLabel(rep) })} <b>{repMoves.map(sanOf).join(', ')}</b></p>}
-      {note && <p className="rep-note" data-testid="pos-note-view">📝 {note}</p>}
+      {note && <p className="rep-note" data-testid="pos-note-view"><Icon name="note" size={14} /> {note}</p>}
       {info && <p className="tiny" data-testid="study-info">{t(info.key, info.p ? { ...info.p, ...(info.p.name !== undefined ? { name: repLabel({ name: String(info.p.name), side: rep?.side ?? 'w' }) } : {}) } : undefined)}</p>}
     </section>
 

@@ -105,8 +105,8 @@ export const en = {
   'puzzles.explain.good': 'Combination breakdown',
   'puzzles.explain.solution': 'Solution and idea',
   'puzzles.btn.next': 'Next puzzle',
-  'puzzles.btn.retry': '↻ Try again',
-  'puzzles.btn.hint': '💡 Hint ({level}/{max})',
+  'puzzles.btn.retry': 'Try again',
+  'puzzles.btn.hint': 'Hint ({level}/{max})',
   'puzzles.btn.solution': 'Show solution',
   'puzzles.note.base': 'Puzzles in the database: {total}. Each one is verified by Stockfish: mates by the engine’s evaluation, wins and defenses by the gap to the best alternative. Time on this puzzle: {time}.',
   'puzzles.pick.eyebrow': 'CHOOSE',
@@ -130,5 +130,7 @@ export const en = {
   'puzzles.weak.title': 'Worth practicing',
   'puzzles.weak.note': 'Puzzles are picked from the themes where you make mistakes: press one to get more.',
   'puzzles.stats.storage': 'Statistics are kept in this browser and survive restarts.',
+  'puzzles.btn.resetConfirm': 'Really reset?',
+  'puzzles.actionsAria': 'Puzzle actions',
   'puzzles.btn.reset': 'Reset statistics',
 } as const

@@ -16,6 +16,7 @@ import Icon, { type IconName } from './components/Icon'
 import Drawer from './components/Drawer'
 import ModeBar from './components/ModeBar'
 import HomeView from './views/HomeView'
+import CommandPalette from './components/CommandPalette'
 import SettingsView from './views/SettingsView'
 import HelpView from './views/HelpView'
 import { MODES, hrefFor, navigate, useRoute, type ModeName, type RouteName } from './lib/route'
@@ -44,6 +45,14 @@ export default function App() {
   const { t } = useI18n()
   const route = useRoute()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   const [profiles, setProfiles] = useState<ProfileStore>(() => loadProfiles())
   const me = profiles.list.find(p => p.id === profiles.current) ?? profiles.list[0]
@@ -142,6 +151,7 @@ export default function App() {
         <div className="brand-mark">♞</div>
         <div><div className="brand-name">CHESS COACH <span>AI</span></div><div className="brand-sub">{t('app.brandSub')}</div></div>
       </a>
+      <button className="icon-btn cmdk-btn" onClick={() => setPaletteOpen(true)} aria-label={t('palette.openTip')} title={t('palette.openTip')} data-testid="cmdk-btn"><Icon name="search" size={20} /></button>
       <div className="top-status" title={engineStatus} role="status" data-testid="top-status" data-state={cloudConfigured ? server : engineState}><i className={statusDot} />{statusText}</div>
       {signedOut || authPending
         ? <button className="signin-btn" disabled={authPending} onClick={accountGo}
@@ -151,6 +161,7 @@ export default function App() {
             <Avatar profile={me} size={34} /><span className="avatar-name">{shownName}</span>
           </button>}
     </header>
+    <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     <Drawer open={menuOpen} onClose={closeMenu} current={route.name} />
 
     {cloud.news && <div className="sync-banner" role="status" data-testid="sync-news"><span>{t('app.sync.newer')}</span>
@@ -184,6 +195,6 @@ export default function App() {
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.5.0-beta</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.5.1-beta</span></footer>
   </main>
 }

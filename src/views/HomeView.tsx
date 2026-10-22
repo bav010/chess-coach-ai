@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Chess } from 'chess.js'
 import Board from '../components/Board'
 import Icon, { type IconName } from '../components/Icon'
-import PUZZLES from '../data/puzzles.json'
+import { dailyPuzzle } from '../lib/dailyPuzzle'
+import { dayKey, loadActivity, streakOf } from '../lib/activity'
 import type { CloudApi } from '../hooks/useCloud'
 import type { GameStat } from '../lib/gameStats'
 import type { LastMode } from '../lib/lastMode'
 import type { Profile } from '../lib/profile'
-import { LEVEL_LABEL, mainTheme, type Puzzle } from '../lib/puzzles'
-import { loadPuzzleStats } from '../lib/puzzleStats'
+import { LEVEL_LABEL, mainTheme } from '../lib/puzzles'
 import { THEME_LABEL } from '../lib/puzzleThemes'
 import { hrefFor, type RouteName } from '../lib/route'
 import { ratingSeries, summarize } from '../lib/statsCalc'
@@ -21,7 +21,6 @@ export type HomeProps = {
   sessions?: SavedSession[]; onOpenSession?: (s: SavedSession) => void
 }
 
-const ALL = PUZZLES as unknown as Puzzle[]
 const OVERVIEW_KEY = 'chess-coach-ai:overview:v1'
 
 const CARDS: { route: RouteName; icon: IconName; title: Key; desc: Key }[] = [
@@ -32,26 +31,11 @@ const CARDS: { route: RouteName; icon: IconName; title: Key; desc: Key }[] = [
   { route: 'stats', icon: 'stats', title: 'nav.stats', desc: 'home.card.stats.desc' },
 ]
 
-const pad = (n: number) => String(n).padStart(2, '0')
-const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-
-/** Задача дня: одна и та же в течение местных суток, берётся из проверенной базы. */
-export function dailyPuzzle(date = new Date()): Puzzle | null {
-  if (!ALL.length) return null
-  let h = 5381
-  for (const ch of dayKey(date)) h = ((h << 5) + h + ch.charCodeAt(0)) | 0
-  return ALL[(h >>> 0) % ALL.length]
-}
-
-/** Серия дней подряд, в которые сыграна хотя бы одна партия (серия не рвётся, если сегодня ещё не играли, но играли вчера). */
-export function dayStreak(games: readonly GameStat[], now = new Date()): number {
-  const days = new Set<string>()
+/** Серия дней подряд с любой активностью: партии, задачи, уроки, дебюты, анализ (не рвётся, если сегодня ещё не занимались, но занимались вчера). */
+export function dayStreak(games: readonly GameStat[], extraDays: Iterable<string> = [], now = new Date()): number {
+  const days = new Set<string>(extraDays)
   for (const g of games) { const d = new Date(g.at); if (!Number.isNaN(d.getTime())) days.add(dayKey(d)) }
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1)
-  let n = 0
-  while (days.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1) }
-  return n
+  return streakOf(days, now)
 }
 
 function readSeen(): boolean { try { return localStorage.getItem(OVERVIEW_KEY) === 'seen' } catch { return false } }
@@ -66,10 +50,13 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
   const sum = useMemo(() => summarize(games), [games])
   const rating = useMemo(() => ratingSeries(games), [games])
   const curRating = rating.length ? Math.round(rating[rating.length - 1].rating) : null
-  const streak = useMemo(() => dayStreak(games), [games])
+  const activity = useMemo(() => loadActivity(), [])
+  const streak = useMemo(() => dayStreak(games, activity.days), [games, activity])
 
   const puzzle = useMemo(() => dailyPuzzle(), [])
-  const solved = useMemo(() => !!puzzle && loadPuzzleStats().solvedIds.includes(puzzle.id), [puzzle])
+  const today = activity.daily[dayKey()]
+  const solved = !!puzzle && !!today && today.id === puzzle.id && today.ok
+  const tried = !!puzzle && !!today && today.id === puzzle.id && !today.ok
   const chess = useMemo(() => (puzzle ? new Chess(puzzle.fen) : null), [puzzle])
   const side = chess?.turn() ?? 'w'
 
@@ -129,6 +116,7 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
             <div><dt>{t('home.daily.level')}</dt><dd>{LEVEL_LABEL[puzzle.level]}</dd></div>
           </dl>
           {solved && <p className="home-solved" data-testid="home-daily-solved"><Icon name="check" size={16} />{t('home.daily.solvedNote')}</p>}
+          {tried && <p className="tiny" data-testid="home-daily-tried">{t('home.daily.triedNote')}</p>}
           <a className={`btn ${solved ? '' : 'primary'}`} href={hrefFor('tactics', puzzle.id)} data-testid="home-daily-solve"><Icon name="tactics" size={16} />{solved ? t('home.daily.solved') : t('home.daily.solve')}</a>
         </div>
       </section>}

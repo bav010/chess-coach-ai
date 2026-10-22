@@ -3,6 +3,7 @@ import { QUALITY, type PositionEval, type ReviewReport as Report } from '../lib/
 import type { ReviewQuality } from '../lib/prefs'
 import ReviewReportView from './ReviewReport'
 import { useI18n } from '../i18n'
+import Icon from './Icon'
 
 type Props = {
   records: number
@@ -51,6 +52,6 @@ export default function ReviewSection(p: Props) {
         {(Object.keys(QUALITY) as ReviewQuality[]).map(q => <option key={q} value={q}>{t('analysis.review.qualityOption', { label: QUALITY[q].label, depth: QUALITY[q].depth, ms: QUALITY[q].movetime })}</option>)}
       </select>
     </label>
-    <button className="btn primary full" onClick={p.onStart} disabled={p.engineError} data-testid="start-review">{partial ? t('analysis.review.resume') : t('analysis.review.start')}</button>
+    <button className="btn primary full" onClick={p.onStart} disabled={p.engineError} data-testid="start-review"><Icon name="search" size={16} />{partial ? t('analysis.review.resume') : t('analysis.review.start')}</button>
   </section>
 }

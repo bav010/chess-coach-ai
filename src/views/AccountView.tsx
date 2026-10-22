@@ -12,6 +12,7 @@ import {
 import { navigate, hrefFor } from '../lib/route'
 import { useI18n } from '../i18n'
 import { errorText } from '../i18n/errors'
+import Icon from '../components/Icon'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
 type Tab = 'stats' | 'profile' | 'account'
@@ -57,7 +58,7 @@ function ProfileEditor({ me, onProfiles, setup, defaultName, onReady }: { me: Pr
         <div className="acc-emoji" role="group" aria-label={t('app.profile.emojiGroup')}>{AVATAR_EMOJI.map(e => <button key={e} className={`chip ${!me.avatar.image && me.avatar.emoji === e ? 'active' : ''}`} onClick={() => setAvatar({ emoji: e, color: me.avatar.color })} data-testid={`emoji-${e}`} aria-label={t('app.profile.emoji', { e })}>{e}</button>)}</div>
         <div className="acc-colors" role="group" aria-label={t('app.profile.colorGroup')}>{AVATAR_COLORS.map(c => <button key={c} className={`swatch ${me.avatar.color === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setAvatar({ emoji: me.avatar.emoji, color: c })} aria-label={t('app.profile.color', { c })} data-testid={`color-${c.slice(1)}`} />)}</div>
         <div className="board-actions" style={{ marginTop: 10 }}>
-          <button className="btn" onClick={() => fileRef.current?.click()} data-testid="avatar-upload">{t('app.profile.upload')}</button>
+          <button className="btn" onClick={() => fileRef.current?.click()} data-testid="avatar-upload"><Icon name="camera" size={16} />{t('app.profile.upload')}</button>
           {me.avatar.image && <button className="btn" onClick={() => setAvatar({ emoji: me.avatar.emoji, color: me.avatar.color })} data-testid="avatar-remove">{t('app.profile.removePhoto')}</button>}
           <input ref={fileRef} type="file" accept="image/*" hidden data-testid="avatar-file" onChange={e => void pickImage(e.target.files?.[0])} />
         </div>
@@ -102,11 +103,11 @@ export default function AccountView({ active, tab, games, profiles, cloud, onPro
   </div>
 
   // 3. аккаунт готов
-  const tabs: [Tab, string][] = [['stats', t('app.acc.tab.stats')], ['profile', t('app.acc.tab.profile')], ['account', t('app.acc.tab.account')]]
+  const tabs: [Tab, string, 'stats' | 'user' | 'settings'][] = [['stats', t('app.acc.tab.stats'), 'stats'], ['profile', t('app.acc.tab.profile'), 'user'], ['account', t('app.acc.tab.account'), 'settings']]
   return <div className="acc-page" data-testid="account-view">
     {head}
     <nav className="tabs acc-tabs" role="tablist" aria-label={t('app.acc.tabs.aria')}>
-      {tabs.map(([k, l]) => <a key={k} href={hrefFor(k)} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} data-testid={`acc-tab-${k}`}>{l}</a>)}
+      {tabs.map(([k, l, ic]) => <a key={k} href={hrefFor(k)} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} data-testid={`acc-tab-${k}`}><Icon name={ic} size={16} /><span>{l}</span></a>)}
     </nav>
 
     <div hidden={tab !== 'stats'}><StatsView active={active && tab === 'stats'} games={games} onGo={onGo} /></div>

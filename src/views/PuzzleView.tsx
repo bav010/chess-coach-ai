@@ -14,7 +14,10 @@ import {
   type PuzzleStats,
 } from '../lib/puzzleStats'
 import { splitUci } from '../lib/game'
+import { markActive, markDaily } from '../lib/activity'
+import { dailyPuzzle } from '../lib/dailyPuzzle'
 import { t, tn, useI18n } from '../i18n'
+import Icon from '../components/Icon'
 
 const ALL = PUZZLES as unknown as Puzzle[]
 
@@ -55,6 +58,7 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
   const [legal, setLegal] = useState<Square[]>([])
   const [promo, setPromo] = useState<{ from: Square; to: Square } | null>(null)
   const [engineErr, setEngineErr] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [, setTick] = useState(0)
 
   const flags = useRef({ recorded: false, failed: false, hints: 0, elapsed: 0 })
@@ -82,6 +86,8 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
     const f = flags.current
     if (f.recorded) return
     f.recorded = true
+    markActive()
+    if (dailyPuzzle()?.id === p.id) markDaily(p.id, result === 'solved')
     setStats(s => recordOutcome(s, { puzzleId: p.id, themes: p.themes, result, hintsUsed: f.hints, timeMs: f.elapsed }))
   }, [])
 
@@ -217,7 +223,7 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
   }
 
   function resetAll() {
-    if (window.confirm(t('puzzles.confirm.reset'))) setStats(resetPuzzleStats())
+    setStats(resetPuzzleStats())
   }
 
   // подсказка пересчитывается при смене языка, не сбрасывая уровень подсказок
@@ -246,7 +252,8 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
           </div>
           {promo && <PromoPicker color={solver} onPick={p => void tryMove(`${promo.from}${promo.to}${p}`)} onCancel={() => { setPromo(null); setSelected(null); setLegal([]) }} />}
         </>
-        : <div className="empty-state"><span>♞</span><p>{t('puzzles.empty.title')}</p><small>{available === 0 ? t('puzzles.empty.noMatches') : t('puzzles.empty.pressNext')}</small></div>}
+        : <div className="empty-state"><span>♞</span><p>{t('puzzles.empty.title')}</p><small>{available === 0 ? t('puzzles.empty.noMatches') : t('puzzles.empty.pressNext')}</small>
+          <button className="btn primary big" onClick={() => next()} disabled={available === 0} data-testid="empty-next"><Icon name="arrowRight" size={18} />{t('puzzles.btn.next')}</button></div>}
 
       <div className={`puzzle-msg ${msg.kind}`} data-testid="puzzle-message" role="status"><span className="pulse" /> {msg.text()}</div>
       {engineErr && <p className="error-text">{t('puzzles.engineErr')}</p>}
@@ -258,11 +265,13 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
         {puzzleWhy(puzzle).map((w, i) => <p key={i}>{w}</p>)}
       </div>}
 
-      <div className="board-actions">
-        <button className="btn primary" onClick={() => next()} data-testid="next-btn">{t('puzzles.btn.next')}</button>
-        <button className="btn" onClick={retry} disabled={!puzzle || status === 'checking'} data-testid="retry-btn">{t('puzzles.btn.retry')}</button>
-        <button className="btn" onClick={() => void showHint()} disabled={!puzzle || status !== 'solving' || hintLevel >= MAX_HINT} data-testid="hint-btn">{t('puzzles.btn.hint', { level: hintLevel, max: MAX_HINT })}</button>
-        <button className="btn" onClick={showSolution} disabled={!puzzle || status === 'checking' || status === 'shown'} data-testid="solution-btn">{t('puzzles.btn.solution')}</button>
+      <div className="action-bar puzzle-actions">
+        <button className="btn primary" onClick={() => next()} data-testid="next-btn"><Icon name="arrowRight" size={16} />{t('puzzles.btn.next')}</button>
+        <div className="action-group cols3" role="group" aria-label={t('puzzles.actionsAria')}>
+          <button className="btn quiet" onClick={retry} disabled={!puzzle || status === 'checking'} data-testid="retry-btn"><Icon name="refresh" size={16} /><span className="btn-label">{t('puzzles.btn.retry')}</span></button>
+          <button className="btn quiet" onClick={() => void showHint()} disabled={!puzzle || status !== 'solving' || hintLevel >= MAX_HINT} data-testid="hint-btn"><Icon name="hint" size={16} /><span className="btn-label">{t('puzzles.btn.hint', { level: hintLevel, max: MAX_HINT })}</span></button>
+          <button className="btn quiet" onClick={showSolution} disabled={!puzzle || status === 'checking' || status === 'shown'} data-testid="solution-btn"><Icon name="eye" size={16} /><span className="btn-label">{t('puzzles.btn.solution')}</span></button>
+        </div>
       </div>
       <p className="tiny">{t('puzzles.note.base', { total, time: formatDuration(flags.current.elapsed) })}</p>
     </section>
@@ -270,19 +279,21 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
     <aside className="right-column">
       <section className="panel">
         <div className="panel-head"><div><div className="eyebrow">{t('puzzles.pick.eyebrow')}</div><h2>{t('puzzles.pick.title')}</h2></div><span className="pill" data-testid="available-count">{tn('puzzles.pick.count', available)}</span></div>
-        <div className="chip-group"><small>{t('puzzles.pick.theme')}</small></div>
+        <div className="filter-block"><div className="sub-head">{t('puzzles.pick.theme')}</div>
         <div className="chips" data-testid="theme-chips">
           <button className={`chip ${filter.theme === 'any' ? 'active' : ''}`} onClick={() => changeFilter({ theme: 'any' })} data-testid="theme-any">{t('puzzles.pick.anyTheme')}</button>
           {THEME_ORDER.map(t => <button key={t} className={`chip ${filter.theme === t ? 'active' : ''}`} onClick={() => changeFilter({ theme: t })} data-testid={`theme-${t}`}>{THEME_LABEL[t]}</button>)}
         </div>
-        <div className="chip-group" style={{ marginTop: 14 }}><small>{t('puzzles.pick.level')}</small></div>
+        </div>
+        <div className="filter-block"><div className="sub-head">{t('puzzles.pick.level')}</div>
         <div className="chips" data-testid="level-chips">
           {([0, 1, 2, 3] as const).map(l => <button key={l} className={`chip ${filter.level === l ? 'active' : ''}`} onClick={() => changeFilter({ level: l as Level | 0 })} data-testid={`level-${l}`}>{l === 0 ? t('puzzles.level.any') : LEVEL_LABEL[l]}</button>)}
         </div>
-        <div className="chip-group" style={{ marginTop: 14 }}><small>{t('puzzles.pick.type')}</small></div>
+        </div>
+        <div className="filter-block"><div className="sub-head">{t('puzzles.pick.type')}</div>
         <div className="chips" data-testid="mate-chips">
           {(Object.keys(MATE_FILTER_LABEL) as MateFilter[]).map(m => <button key={m} className={`chip ${filter.mate === m ? 'active' : ''}`} onClick={() => changeFilter({ mate: m })} data-testid={`mate-${m}`}>{MATE_FILTER_LABEL[m]}</button>)}
-        </div>
+        </div></div>
       </section>
 
       <section className="panel">
@@ -302,7 +313,7 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
           <p className="tiny">{t('puzzles.weak.note')}</p>
         </div>}
         <p className="progress-note">{t('puzzles.stats.storage')}</p>
-        <button className="btn" onClick={resetAll} disabled={stats.attempted === 0} data-testid="reset-puzzle-stats">{t('puzzles.btn.reset')}</button>
+        <button className={`btn danger-quiet ${confirmReset ? 'danger' : ''}`} onClick={() => { if (confirmReset) { setConfirmReset(false); resetAll() } else setConfirmReset(true) }} onBlur={() => setConfirmReset(false)} disabled={stats.attempted === 0} data-testid="reset-puzzle-stats"><Icon name={confirmReset ? 'check' : 'trash'} size={16} />{confirmReset ? t('puzzles.btn.resetConfirm') : t('puzzles.btn.reset')}</button>
       </section>
     </aside>
   </div>

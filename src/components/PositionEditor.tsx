@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import type { Color } from 'chess.js'
+import type { Color, PieceSymbol } from 'chess.js'
 import { useI18n } from '../i18n'
-import { glyph } from '../lib/glyphs'
+import Piece from './Piece'
+import Icon from './Icon'
 import {
   START_SETUP, emptySetup, feasibleCastling, indexSquare, setupFromFen, setupToFen, validateSetup, type Castling, type Setup,
 } from '../lib/position'
@@ -64,9 +65,9 @@ export default function PositionEditor({ initialFen, onApply, onCancel }: Props)
     <div className="pos-palette" role="toolbar" aria-label={t('play.editor.pieces')}>
       {(['w', 'b'] as const).map(c => <div key={c} className="pos-palette-row">
         {PIECES.map(p => <button key={p} className={`pos-tool ${tool === c + p ? 'active' : ''}`} onClick={() => setTool(c + p)}
-          data-testid={`tool-${c}${p}`} aria-label={t(c === 'w' ? 'play.editor.whitePiece' : 'play.editor.blackPiece', { p })} aria-pressed={tool === c + p}>{glyph[c + p]}</button>)}
+          data-testid={`tool-${c}${p}`} aria-label={t(c === 'w' ? 'play.editor.whitePiece' : 'play.editor.blackPiece', { p })} aria-pressed={tool === c + p}><Piece color={c as Color} type={p as PieceSymbol} small /></button>)}
       </div>)}
-      <button className={`pos-tool erase ${tool === 'erase' ? 'active' : ''}`} onClick={() => setTool('erase')} data-testid="tool-erase" aria-pressed={tool === 'erase'}>{t('play.editor.eraser')}</button>
+      <button className={`pos-tool erase ${tool === 'erase' ? 'active' : ''}`} onClick={() => setTool('erase')} data-testid="tool-erase" aria-pressed={tool === 'erase'}><Icon name="close" size={16} />{t('play.editor.eraser')}</button>
     </div>
 
     <div className="board pos-board" role="grid" aria-label={t('play.editor.board')} data-testid="editor-board">
@@ -77,7 +78,7 @@ export default function PositionEditor({ initialFen, onApply, onCancel }: Props)
         return <button key={sq} className={`square ${light ? 'light' : 'dark'}`} data-square={sq}
           onClick={() => clickCell(i)} onContextMenu={e => { e.preventDefault(); put(i, null) }}
           aria-label={`${sq}${code ? ` ${code}` : ''}`}>
-          {code && <span className={`piece ${code[0] === 'w' ? 'white-piece' : 'black-piece'}`}>{glyph[code]}</span>}
+          {code && <Piece color={code[0] as Color} type={code[1] as PieceSymbol} />}
         </button>
       })}
     </div>
@@ -99,7 +100,7 @@ export default function PositionEditor({ initialFen, onApply, onCancel }: Props)
       <button className="btn" onClick={() => setSetup(START_SETUP())} data-testid="pos-start">{t('play.editor.startPos')}</button>
       <button className="btn" onClick={() => setSetup(emptySetup())} data-testid="pos-clear">{t('play.editor.clear')}</button>
       <button className="btn" onClick={() => { try { setSetup(setupFromFen(initialFen)) } catch { /* оставляем как есть */ } }} data-testid="pos-current">{t('play.editor.current')}</button>
-      <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))}>{t('play.editor.flip')}</button>
+      <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))}><Icon name="flip" size={16} />{t('play.editor.flip')}</button>
     </div>
 
     <div className="pos-fen">

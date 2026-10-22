@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { markActive } from '../lib/activity'
 import { Chess, type Color, type Square } from 'chess.js'
 import { analysisEngine } from '../engine'
 import AnalysisPanel from '../components/AnalysisPanel'
@@ -56,7 +57,7 @@ type Props = {
   active: boolean
 }
 
-type Tab = 'analysis' | 'review'
+type Tab = 'analysis' | 'review' | 'position' | 'saved'
 
 type ReviewState = { evals: PositionEval[]; running: boolean; done: number; total: number }
 
@@ -77,7 +78,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
   const [promo, setPromo] = useState<{ from: Square; to: Square } | null>(null)
   const [msg, setMessage] = useState<Msg>(m1(seed ? 'analysis.view.msgLoaded' : 'analysis.view.msgSelectWhite'))
   const message = msg.map(x => ('err' in x ? errorText(x.err, x.fb) : t(x.k, x.p))).join(' ')
-  const [showImport, setShowImport] = useState(false)
+  const [confirmNew, setConfirmNew] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [tab, setTab] = useState<Tab>('analysis')
   const [trainerOn, setTrainerOn] = useState(false)
@@ -233,6 +234,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       const next = new Chess(fen)
       next.move({ from, to, promotion })
       const uci = `${from}${to}${promotion ?? ''}`
+      markActive()
       const truncated = viewPly < ucis.length
       const list = [...ucis.slice(0, viewPly), uci]
       setUcis(list); setViewPly(list.length)
@@ -276,7 +278,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
 
   function loadPgn(p: ParsedPgn) {
     setStartFen(p.startFen); setUcis(p.ucis); setViewPly(p.ucis.length); setUserColor(null); setOrientation('w')
-    clearSelection(); setShowImport(false); setTab('analysis')
+    clearSelection(); setTab('analysis')
     setMessage(p.white || p.black ? m1('analysis.view.msgLoadedPlayers', { white: p.white ?? '?', black: p.black ?? '?' }) : m1('analysis.view.msgLoaded'))
   }
 
@@ -348,29 +350,31 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       {promo && <PromoPicker color={chess.turn()} onPick={p => applyMove(promo.from, promo.to, p)} onCancel={() => { clearSelection() }} />}
       <div className="board-message"><span className="pulse"/> {message}</div>
 
-      <div className="nav-row">
-        <button className="btn" onClick={() => goto(0)} disabled={viewPly === 0} aria-label={t('analysis.view.toStart')}>⏮</button>
-        <button className="btn" onClick={() => goto(viewPly - 1)} disabled={viewPly === 0} aria-label={t('analysis.view.back')} data-testid="nav-prev">◀</button>
-        <button className="btn" onClick={() => goto(viewPly + 1)} disabled={viewPly >= ucis.length} aria-label={t('analysis.view.forward')} data-testid="nav-next">▶</button>
-        <button className="btn" onClick={() => goto(ucis.length)} disabled={viewPly >= ucis.length} aria-label={t('analysis.view.toEnd')}>⏭</button>
-        <button className="btn" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="flip">{t('analysis.view.flip')}</button>
+      <div className="nav-row" role="group" aria-label={t('analysis.view.navAria')}>
+        <button className="btn icon-only" onClick={() => goto(0)} disabled={viewPly === 0} aria-label={t('analysis.view.toStart')} title={t('analysis.view.toStart')}><Icon name="first" size={18} /></button>
+        <button className="btn icon-only" onClick={() => goto(viewPly - 1)} disabled={viewPly === 0} aria-label={t('analysis.view.back')} title={t('analysis.view.back')} data-testid="nav-prev"><Icon name="back" size={18} /></button>
+        <button className="btn icon-only" onClick={() => goto(viewPly + 1)} disabled={viewPly >= ucis.length} aria-label={t('analysis.view.forward')} title={t('analysis.view.forward')} data-testid="nav-next"><Icon name="next" size={18} /></button>
+        <button className="btn icon-only" onClick={() => goto(ucis.length)} disabled={viewPly >= ucis.length} aria-label={t('analysis.view.toEnd')} title={t('analysis.view.toEnd')}><Icon name="last" size={18} /></button>
+        <span className="nav-sep" aria-hidden="true" />
+        <button className="btn quiet" onClick={() => setOrientation(o => (o === 'w' ? 'b' : 'w'))} data-testid="flip"><Icon name="flip" size={16} /><span className="btn-label">{t('analysis.view.flip')}</span></button>
       </div>
 
-      <div className="board-actions">
-        <button className="btn primary" onClick={newGame}>{t('analysis.view.newGame')}</button>
-        <button className="btn" onClick={undo} disabled={ucis.length === 0}>{t('analysis.view.undo')}</button>
-        <button className="btn" onClick={saveSession} disabled={ucis.length === 0}>{t('analysis.view.saveSession')}</button>
-        <button className="btn" onClick={() => setShowImport(s => !s)} data-testid="import-btn">{t('analysis.view.loadPgn')}</button>
-        <button className={`btn ${showEditor ? 'active' : ''}`} onClick={() => setShowEditor(s => !s)} data-testid="editor-btn">{t('analysis.view.editor')}</button>
+      <div className="action-bar">
+        <button className="btn primary" onClick={() => void startReview()} disabled={records.length === 0 || engineState === 'error'} data-testid="review-now"><Icon name="search" size={16} />{t('analysis.view.reviewGame')}</button>
+        <div className="action-group" role="group" aria-label={t('analysis.view.moreActions')}>
+          <button className="btn quiet" onClick={undo} disabled={ucis.length === 0}><Icon name="undo" size={16} /><span className="btn-label">{t('analysis.view.undo')}</span></button>
+          <button className="btn quiet" onClick={saveSession} disabled={ucis.length === 0}><Icon name="save" size={16} /><span className="btn-label">{t('analysis.view.saveSession')}</span></button>
+          <button className={`btn quiet ${tab === 'position' && !showEditor ? 'active' : ''}`} onClick={() => { setShowEditor(false); setTab('position') }} data-testid="import-btn"><Icon name="upload" size={16} /><span className="btn-label">{t('analysis.view.loadPgn')}</span></button>
+          <button className={`btn quiet ${showEditor ? 'active' : ''}`} onClick={() => { setShowEditor(true); setTab('position') }} data-testid="editor-btn"><Icon name="board" size={16} /><span className="btn-label">{t('analysis.view.editor')}</span></button>
+        </div>
+        <button className={`btn danger-quiet ${confirmNew ? 'danger' : ''}`} onClick={() => { if (ucis.length === 0 || confirmNew) { setConfirmNew(false); newGame() } else setConfirmNew(true) }} onBlur={() => setConfirmNew(false)} data-testid="new-game" title={t('analysis.view.newGame')}><Icon name={confirmNew ? 'check' : 'plus'} size={16} /><span className="btn-label">{confirmNew ? t('analysis.view.newGameConfirm') : t('analysis.view.newGame')}</span></button>
       </div>
-      {showImport && <PgnImport onLoad={loadPgn} />}
-      {showEditor && <PositionEditor initialFen={chess.fen()} onApply={loadPosition} onCancel={() => setShowEditor(false)} />}
     </section>
 
     <aside className="right-column">
-      <div className="tabs" role="tablist">
-        <button role="tab" className={`tab ${tab === 'analysis' ? 'active' : ''}`} aria-selected={tab === 'analysis'} onClick={() => setTab('analysis')}>{t('analysis.view.tabAnalysis')}</button>
-        <button role="tab" className={`tab ${tab === 'review' ? 'active' : ''}`} aria-selected={tab === 'review'} onClick={() => setTab('review')} data-testid="tab-review">{t('analysis.view.tabReview')}</button>
+      <div className="tabs" role="tablist" aria-label={t('analysis.view.tabsAria')}>
+        {([['analysis', 'analysis', 'analysis.view.tabAnalysis', 'tab-analysis'], ['review', 'search', 'analysis.view.tabReview', 'tab-review'], ['position', 'board', 'analysis.view.tabPosition', 'tab-position'], ['saved', 'save', 'analysis.view.tabSaved', 'tab-saved']] as const).map(([id, ic, label, tid]) =>
+          <button key={id} role="tab" className={`tab ${tab === id ? 'active' : ''}`} aria-selected={tab === id} onClick={() => setTab(id)} data-testid={tid}><Icon name={ic} size={16} /><span>{t(label)}</span></button>)}
       </div>
       {tab === 'analysis' && !prefs.showPanel && <section className="panel"><p className="muted">{t('analysis.view.panelHidden')}</p></section>}
       {tab === 'analysis' && prefs.showPanel && <AnalysisPanel fen={fen} turn={chess.turn()} entry={entry} score={score} busy={an.busy} error={an.error}
@@ -381,11 +385,18 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
         onTrain={s => { setTrainerSide(s); setTrainerOn(true) }} trainerSummary={trainerSummary}
         quality={prefs.reviewQuality} onQuality={q => onPrefs({ reviewQuality: q })} engineError={engineState === 'error'} />}
 
+      {tab === 'position' && <section className="panel pos-tab" data-testid="position-tab">
+        <PgnImport onLoad={loadPgn} />
+        {showEditor
+          ? <PositionEditor initialFen={chess.fen()} onApply={loadPosition} onCancel={() => setShowEditor(false)} />
+          : <button className="btn full" onClick={() => setShowEditor(true)}><Icon name="board" size={16} />{t('analysis.view.editor')}</button>}
+      </section>}
+      {tab === 'saved' && <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />}
+
       <section className="panel moves-panel">
         <div className="panel-head"><div><div className="eyebrow">{t('analysis.view.movesEyebrow')}</div><h2>{t('analysis.view.notation')}</h2></div><span className="move-count">{tn('analysis.view.plies', ucis.length)}</span></div>
         <MoveList records={records} viewPly={viewPly} onSelect={goto} marks={marks} />
       </section>
-      <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />
     </aside>
   </div>
 }

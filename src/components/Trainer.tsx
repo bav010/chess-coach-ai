@@ -13,6 +13,7 @@ import type { ArrowStyle } from './Board'
 import Board from './Board'
 import PromoPicker from './PromoPicker'
 import { t as tg, useI18n, type Key, type Params } from '../i18n'
+import Icon from './Icon'
 
 /** Сообщение хранится как ключ + параметры и переводится при показе — смена языка обновляет его на месте. */
 type Msg = { k: Key; p?: Params } | null
@@ -235,8 +236,8 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
           <ul>{explainMove(item).map((l, k) => <li key={k}>{l}</li>)}</ul>
         </div>}
         <div className="board-actions">
-          <button className="btn" onClick={() => go(-1)} disabled={i === 0}>{t('analysis.trainer.prev')}</button>
-          <button className="btn primary" onClick={() => go(1)} disabled={i >= list.length - 1}>{t('analysis.trainer.next')}</button>
+          <button className="btn" onClick={() => go(-1)} disabled={i === 0}><Icon name="arrowLeft" size={16} />{t('analysis.trainer.prev')}</button>
+          <button className="btn primary" onClick={() => go(1)} disabled={i >= list.length - 1}>{t('analysis.trainer.next')}<Icon name="arrowRight" size={16} /></button>
         </div>
         <div className="trainer-stats" data-testid="trainer-stats">
           <div><strong>{stats.solved}/{list.length}</strong><small>{t('analysis.trainer.solved')}</small></div>
@@ -248,7 +249,7 @@ export default function Trainer({ report, userColor, thresholds, progress, initi
           <button className={`btn ${side === userColor ? 'active' : ''}`} onClick={() => { setSide(userColor); setIdx(0) }}>{t('analysis.report.myMistakes')}</button>
           <button className={`btn ${side === 'both' ? 'active' : ''}`} onClick={() => { setSide('both'); setIdx(0) }}>{t('analysis.report.allMistakes')}</button>
         </div>}
-        <button className="btn full" onClick={onExit}>{t('analysis.trainer.back')}</button>
+        <button className="btn full" onClick={onExit}><Icon name="back" size={16} />{t('analysis.trainer.back')}</button>
       </div>
     </div>
   </section>

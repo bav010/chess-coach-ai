@@ -96,3 +96,11 @@ By default accounts are local (no password, data stays in the browser). To enabl
 5. Locally, create `.env.local` from `.env.example`. On GitHub Pages add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under *Settings → Secrets and variables → Actions → Variables* (the `pages.yml` workflow passes them to the build) and redeploy.
 
 The app then requires sign-in for statistics: sign-up/sign-in by email, password reset and change, account deletion. Sync is fully automatic: on sign-in the device's data is merged with the cloud data without loss, changes are pushed in the background (and when the tab is hidden), and if another device saved newer progress a banner offers to update. Merging only adds data (games, opening cards, finished lessons, solved puzzles); resetting game statistics syncs, deleting repertoires on another device does not yet. Signing out hides the account's data on this device. Without Supabase the app runs in local mode.
+
+## Piece sets
+
+Settings → Pieces offers Classic (cburnett), Merida, Chessnut, Flat and a font-glyph set, plus size, shadow, highlight styles, move animation, sounds and figurine notation. Artwork comes from the Lichess piece collection under GPL-2.0-or-later / Apache-2.0; see `src/assets/pieces/CREDITS.md`.
+
+## Quick jump
+
+Press Ctrl+K (⌘K on Mac) or the search button in the header to jump to any section or run a quick action (theme, language, puzzle of the day).

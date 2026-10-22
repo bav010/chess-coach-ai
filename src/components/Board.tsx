@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useI18n } from '../i18n'
 import type { Chess, Color, Square } from 'chess.js'
-import { glyph } from '../lib/glyphs'
+import Piece from './Piece'
+import { getAppearance } from '../lib/appearance'
+import { playSound } from '../lib/sound'
 import type { MoveClass } from '../lib/classify'
 import MoveMark from './MoveMark'
 
@@ -48,7 +50,7 @@ function center(sq: Square, orientation: Color): [number, number] {
 }
 
 /** Позиции кружков с номерами: у острия стрелки, а при наложении на чужой кружок — в других углах клетки или вдоль древка. */
-export function badgePositions(pts: { x1: number; y1: number; x2: number; y2: number }[], minDist = 0.46): [number, number][] {
+export function badgePositions(pts: { x1: number; y1: number; x2: number; y2: number }[], minDist = 0.56): [number, number][] {
   const placed: [number, number][] = []
   return pts.map(({ x1, y1, x2, y2 }) => {
     const candidates: [number, number][] = [[x2 + 0.3, y2 - 0.3], [x2 - 0.3, y2 - 0.3], [x2 + 0.3, y2 + 0.3], [x2 - 0.3, y2 + 0.3]]
@@ -85,8 +87,8 @@ function Arrows({ arrows, orientation, style }: { arrows: ArrowSpec[]; orientati
         <line x1={x1} y1={y1} x2={bx} y2={by} stroke={color} strokeWidth={w} strokeLinecap="round" />
         <polygon points={`${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`} fill={color} />
         {(style.numbering || a.label) && <g data-badge={a.label ?? a.rank + 1}>
-          <circle cx={cx} cy={cy} r={0.19} fill="var(--n0)" stroke={color} strokeWidth={0.04} />
-          <text x={cx} y={cy} fontSize={0.24} fill="#fff" textAnchor="middle" dominantBaseline="central"
+          <circle cx={cx} cy={cy} r={0.25} fill="var(--badge-bg)" stroke={color} strokeWidth={0.05} />
+          <text x={cx} y={cy} fontSize={0.3} fill="var(--badge-ink)" textAnchor="middle" dominantBaseline="central"
             fontFamily="DM Mono, monospace" fontWeight={700}>{a.label ?? a.rank + 1}</text>
         </g>}
       </g>
@@ -107,7 +109,26 @@ export default function Board({ chess, orientation, selected, legal, lastMove, h
     }
   }
 
-  return <div className="board" role="grid" aria-label={t('play.board')} data-orientation={orientation}>
+  // анимация хода: фигура «скользит» с исходной клетки; не при первом показе доски
+  const mounted = useRef(false)
+  const prevCount = useRef(chess.board().flat().filter(Boolean).length)
+  const boardRef = useRef<HTMLDivElement>(null)
+  const count = chess.board().flat().filter(Boolean).length
+  const moveKey = lastMove ? `${lastMove.from}${lastMove.to}` : ''
+  const slide = (sq: Square): React.CSSProperties | undefined => {
+    if (!mounted.current || !lastMove || lastMove.to !== sq || getAppearance().animate === false) return undefined
+    const col = (s2: Square) => (orientation === 'w' ? s2.charCodeAt(0) - 97 : 7 - (s2.charCodeAt(0) - 97))
+    const row = (s2: Square) => (orientation === 'w' ? 8 - Number(s2[1]) : Number(s2[1]) - 1)
+    return { ['--dx' as string]: col(lastMove.from) - col(sq), ['--dy' as string]: row(lastMove.from) - row(sq) } as React.CSSProperties
+  }
+  const status = chess.isCheckmate() || chess.isDraw() ? 'end' : chess.inCheck() ? 'check' : count < prevCount.current ? 'capture' : 'move'
+  useEffect(() => {
+    if (mounted.current && moveKey && getAppearance().sound && boardRef.current && boardRef.current.offsetParent !== null) playSound(status, getAppearance().volume)
+    prevCount.current = count
+    mounted.current = true
+  }, [moveKey, count]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return <div className="board" ref={boardRef} role="grid" aria-label={t('play.board')} data-orientation={orientation}>
     {rows.flatMap(row => row.map(sq => {
       const piece = chess.get(sq)
       const dark = ((sq.charCodeAt(0) - 97) + Number(sq[1])) % 2 === 1
@@ -121,7 +142,7 @@ export default function Board({ chess, orientation, selected, legal, lastMove, h
       return <button key={sq} className={cls} disabled={readOnly} data-square={sq}
         onClick={() => onSquareClick(sq)}
         aria-label={piece ? t(piece.color === 'w' ? 'play.sqWhite' : 'play.sqBlack', { sq }) : sq}>
-        {piece && <span className={`piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`}>{glyph[piece.color + piece.type]}</span>}
+        {piece && <Piece key={lastMove?.to === sq ? `${sq}-${moveKey}` : sq} color={piece.color} type={piece.type} className={slide(sq) ? 'slide' : ''} style={slide(sq)} />}
         {mark && mark.square === sq && <MoveMark cls={mark.cls} className="sq-mark" />}
         {canMove && !piece && <span className="move-dot" />}
         {sq[0] === leftFile && <small className="rank-label">{sq[1]}</small>}

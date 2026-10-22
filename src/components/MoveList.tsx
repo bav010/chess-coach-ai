@@ -1,6 +1,7 @@
 import type { MoveRecord } from '../lib/game'
 import { CLASS_LABEL, hasIcon, type MoveClass } from '../lib/classify'
 import MoveMark from './MoveMark'
+import San from './San'
 import { useI18n } from '../i18n'
 
 type Props = {
@@ -23,7 +24,7 @@ export default function MoveList({ records, viewPly, onSelect, marks }: Props) {
     return <b>
       <button className={`move-btn ${viewPly === ply ? 'current' : ''} ${mark ? `cls-${mark}` : ''}`} onClick={() => onSelect(ply)}
         title={mark ? CLASS_LABEL[mark] : undefined} data-ply={ply}>
-        {showMark ? <MoveMark cls={mark} className="tiny-mark" /> : null}{r.san}
+        {showMark ? <MoveMark cls={mark} className="tiny-mark" /> : null}<San san={r.san} color={ply % 2 === 1 ? 'w' : 'b'} />
       </button>
     </b>
   }

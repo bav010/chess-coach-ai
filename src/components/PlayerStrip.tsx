@@ -1,5 +1,5 @@
 import type { Color, PieceSymbol } from 'chess.js'
-import { capturedGlyph } from '../lib/glyphs'
+import Piece from './Piece'
 import { useI18n } from '../i18n'
 
 type Props = {
@@ -22,7 +22,7 @@ export default function PlayerStrip({ color, name, captured, advantage, clock, a
     <span className={`player-dot ${color === 'w' ? 'white' : 'black'}`} />
     <b className="player-name">{name}</b>
     <span className="captured" aria-label={t('play.captured')} data-count={captured.length}>
-      {captured.map((pc, i) => <span key={i} className={`cap ${takenColor}`}>{capturedGlyph(pc)}</span>)}
+      {captured.map((pc, i) => <span key={i} className={`cap ${takenColor}`}><Piece color={takenColor === 'white' ? 'w' : 'b'} type={pc} small /></span>)}
       {advantage > 0 && <em className="cap-adv">+{advantage}</em>}
     </span>
     {clock}

@@ -8,6 +8,7 @@ import type { OpeningsData } from '../lib/openingsStore'
 import { LEVEL_LABEL, type Level, type Puzzle } from '../lib/puzzles'
 import { formatDuration, successPercent, type PuzzleStats } from '../lib/puzzleStats'
 import { THEME_LABEL, THEME_ORDER } from '../lib/puzzleThemes'
+import Icon from './Icon'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
 const ALL = PUZZLES as unknown as Puzzle[]
@@ -41,7 +42,7 @@ export default function LearningStats({ puzzles, openings, onGo }: { puzzles: Pu
 
   return <div className="st-grid" data-testid="learning-stats">
     <section className="panel" data-testid="puzzle-stats">
-      <div className="panel-head"><div><div className="eyebrow">{t('stats.learn.puzzles.eyebrow')}</div><h2>{t('stats.learn.puzzles.title')}</h2></div><button className="btn" onClick={() => onGo('tactics')}>{t('stats.learn.toPuzzles')}</button></div>
+      <div className="panel-head"><div><div className="eyebrow">{t('stats.learn.puzzles.eyebrow')}</div><h2>{t('stats.learn.puzzles.title')}</h2></div><button className="btn" onClick={() => onGo('tactics')}>{t('stats.learn.toPuzzles')}<Icon name="arrowRight" size={16} /></button></div>
       {puzzles.attempted === 0 ? <p className="tiny">{t('stats.learn.puzzles.none')}</p> : <>
         <p className="st-big" data-testid="puzzle-percent">{t('stats.learn.puzzles.successMain', { pct: successPercent(puzzles) })} <small>{t('stats.learn.puzzles.successSmall', { solved: puzzles.solved, attempted: puzzles.attempted })}</small></p>
         <div className="stats">
@@ -58,7 +59,7 @@ export default function LearningStats({ puzzles, openings, onGo }: { puzzles: Pu
     </section>
 
     <section className="panel" data-testid="opening-stats">
-      <div className="panel-head"><div><div className="eyebrow">{t('stats.learn.openings.eyebrow')}</div><h2>{t('stats.learn.openings.title')}</h2></div><button className="btn" onClick={() => onGo('openings')}>{t('stats.learn.toOpenings')}</button></div>
+      <div className="panel-head"><div><div className="eyebrow">{t('stats.learn.openings.eyebrow')}</div><h2>{t('stats.learn.openings.title')}</h2></div><button className="btn" onClick={() => onGo('openings')}>{t('stats.learn.toOpenings')}<Icon name="arrowRight" size={16} /></button></div>
       <div className="stats">
         <div><strong data-testid="op-lessons">{op.doneLessons.length}/{LESSONS.length}</strong><small>{t('stats.learn.lessonsDone')}</small></div>
         <div><strong data-testid="op-learned">{op.learnedLines.length}</strong><small>{t('stats.learn.linesLearned', { n: op.lines })}</small></div>

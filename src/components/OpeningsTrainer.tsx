@@ -11,6 +11,7 @@ import { lineLabel, repLabel } from '../lib/lessonSync'
 import { uciToSan } from '../lib/san'
 import { isDue, newCard, schedule, type Grade } from '../lib/srs'
 import type { OpeningsData } from '../lib/openingsStore'
+import Icon from './Icon'
 
 type Props = {
   data: OpeningsData
@@ -189,7 +190,7 @@ export default function OpeningsTrainer({ data, update, active }: Props) {
         {input.promo && <PromoPicker color={rep.side} onPick={input.pickPromo} onCancel={input.cancelPromo} />}
         <div className={`puzzle-msg ${msg.kind}`} data-testid="trainer-message" role="status"><span className="pulse" /> {myTurn ? msgText : msgText || t('openings.trainer.opponent')}</div>
         <div className="board-actions">
-          <button className="btn" onClick={showHint} disabled={!myTurn || drill.phase !== 'user'} data-testid="trainer-hint">{t('openings.hint')}</button>
+          <button className="btn" onClick={showHint} disabled={!myTurn || drill.phase !== 'user'} data-testid="trainer-hint"><Icon name="hint" size={16} />{t('openings.hint')}</button>
           <button className="btn" onClick={stop} data-testid="trainer-stop">{t('openings.trainer.stop')}</button>
         </div>
       </>}
@@ -207,7 +208,7 @@ export default function OpeningsTrainer({ data, update, active }: Props) {
           <button className={`chip ${mode === 'all' ? 'active' : ''}`} onClick={() => setMode('all')} data-testid="mode-all">{t('openings.trainer.modeAll')}</button>
         </div>
         <div className="board-actions" style={{ marginTop: 14 }}>
-          <button className="btn primary" onClick={begin} disabled={!plan || plan.lines.length === 0} data-testid="trainer-begin">{t('openings.trainer.begin')}{plan ? ` (${t('openings.trainer.linesShort', { n: plan.lines.length })})` : ''}</button>
+          <button className="btn primary" onClick={begin} disabled={!plan || plan.lines.length === 0} data-testid="trainer-begin"><Icon name="play2" size={16} />{t('openings.trainer.begin')}{plan ? ` (${t('openings.trainer.linesShort', { n: plan.lines.length })})` : ''}</button>
         </div>
         {plan && plan.lines.length === 0 && <p className="tiny" data-testid="trainer-empty">{rep.lines.length === 0 ? t('openings.trainer.emptyNoLines') : mode === 'learned' ? t('openings.trainer.emptyLearned') : `${t('openings.trainer.allDone')}${Number.isFinite(nextDueMs) ? ` ${t('openings.trainer.nextDue', { when: fmtDue(nextDueMs - now) })}` : ''} ${t('openings.trainer.tryAll')}`}</p>}
       </div>}

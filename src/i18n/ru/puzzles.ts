@@ -103,8 +103,8 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   'puzzles.explain.good': 'Разбор комбинации',
   'puzzles.explain.solution': 'Решение и идея',
   'puzzles.btn.next': 'Следующая задача',
-  'puzzles.btn.retry': '↻ Попробовать снова',
-  'puzzles.btn.hint': '💡 Подсказка ({level}/{max})',
+  'puzzles.btn.retry': 'Попробовать снова',
+  'puzzles.btn.hint': 'Подсказка ({level}/{max})',
   'puzzles.btn.solution': 'Показать решение',
   'puzzles.note.base': 'Задач в базе: {total}. Каждая проверена Stockfish: мат — по оценке движка, выигрыш и защита — по разрыву с лучшей альтернативой. Время на задачу: {time}.',
   'puzzles.pick.eyebrow': 'ВЫБОР',
@@ -132,5 +132,7 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   'puzzles.weak.title': 'Стоит потренировать',
   'puzzles.weak.note': 'По ошибкам в этих темах подобраны задачи: нажмите, чтобы получить ещё.',
   'puzzles.stats.storage': 'Статистика хранится в этом браузере и сохраняется после перезапуска.',
+  'puzzles.btn.resetConfirm': 'Точно сбросить?',
+  'puzzles.actionsAria': 'Действия с задачей',
   'puzzles.btn.reset': 'Сбросить статистику',
 }

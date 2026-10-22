@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { errorText } from '../i18n/errors'
 import { applyBackup, makeBackup, parseBackup } from '../lib/backup'
+import Icon from './Icon'
 
 /** Резервная копия прогресса текущего аккаунта: скачать, восстановить, сбросить статистику партий. */
 export default function BackupPanel({ hasGames, onResetGames }: { hasGames: boolean; onResetGames: () => void }) {
@@ -35,8 +36,8 @@ export default function BackupPanel({ hasGames, onResetGames }: { hasGames: bool
     <div className="panel-head"><div><div className="eyebrow">{t('stats.backup.eyebrow')}</div><h2>{t('stats.backup.title')}</h2></div></div>
     <p className="tiny">{t('stats.backup.text')}</p>
     <div className="board-actions" style={{ marginTop: 10 }}>
-      <button className="btn primary" onClick={download} data-testid="backup-download">{t('stats.backup.download')}</button>
-      <button className="btn" onClick={() => fileRef.current?.click()} data-testid="backup-restore">{t('stats.backup.restore')}</button>
+      <button className="btn primary" onClick={download} data-testid="backup-download"><Icon name="download" size={16} />{t('stats.backup.download')}</button>
+      <button className="btn" onClick={() => fileRef.current?.click()} data-testid="backup-restore"><Icon name="upload" size={16} />{t('stats.backup.restore')}</button>
       <input ref={fileRef} type="file" accept="application/json,.json" hidden data-testid="backup-file" onChange={e => void restore(e.target.files?.[0])} />
       {hasGames && <button className="btn" onClick={() => { if (window.confirm(t('stats.backup.confirmReset'))) onResetGames() }} data-testid="stats-reset">{t('stats.backup.reset')}</button>}
     </div>

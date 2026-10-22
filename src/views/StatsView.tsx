@@ -6,6 +6,7 @@ import { loadPuzzleStats } from '../lib/puzzleStats'
 import LearningStats from '../components/LearningStats'
 import { loadOpenings } from '../lib/openingsStore'
 import { DEFAULT_FILTERS, MIN_REVIEWED, applyFilters, movingAverage, ratingSeries, recommend, summarize, type Filters } from '../lib/statsCalc'
+import Icon from '../components/Icon'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
 type Props = { active: boolean; games: GameStat[]; onGo: (m: Go) => void }
@@ -18,6 +19,7 @@ export default function StatsView({ active, games, onGo }: Props) {
   const { t, tn, lang } = useI18n()
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS)
   const [tick, setTick] = useState(0)
+  const [sec, setSec] = useState<'overview' | 'mistakes' | 'learning' | 'advice'>('overview')
   // задачи и дебюты живут в своих хранилищах — перечитываем при открытии вкладки
   const puzzles = useMemo(() => loadPuzzleStats(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
   const openings = useMemo(() => loadOpenings(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -48,13 +50,18 @@ export default function StatsView({ active, games, onGo }: Props) {
           <option value="all">{t('stats.filters.any')}</option><option value="win">{t('stats.filters.win')}</option><option value="draw">{t('stats.filters.draw')}</option><option value="loss">{t('stats.filters.loss')}</option></select></label>
         <label>{t('stats.filters.mode')}<select value={f.mode} onChange={e => set('mode', e.target.value as Filters['mode'])} data-testid="f-mode">
           {(['all', 'bot', 'botClock', 'botNoClock', 'analysis'] as const).map(v => <option key={v} value={v}>{t(`stats.filters.mode.${v}`)}</option>)}</select></label>
-        <button className="btn" onClick={() => setF(DEFAULT_FILTERS)} data-testid="f-reset">{t('stats.filters.reset')}</button>
+        <button className="btn quiet" onClick={() => setF(DEFAULT_FILTERS)} data-testid="f-reset"><Icon name="refresh" size={16} />{t('stats.filters.reset')}</button>
       </div>
       {none && <div className="empty-state"><span>♟</span><p>{t('stats.empty.title')}</p><small>{t('stats.empty.text')}</small></div>}
       {!none && filtered.length === 0 && <p className="tiny" data-testid="stats-nomatch">{t('stats.nomatch')}</p>}
     </section>
 
-    {!none && <>
+    <div className="tabs st-tabs" role="tablist" aria-label={t('stats.sec.aria')}>
+      {([['overview', 'stats', 'stats.sec.overview'], ['mistakes', 'analysis', 'stats.sec.mistakes'], ['learning', 'tactics', 'stats.sec.learning'], ['advice', 'hint', 'stats.sec.advice']] as const).map(([id, ic, label]) =>
+        <button key={id} role="tab" className={`tab ${sec === id ? 'active' : ''}`} aria-selected={sec === id} onClick={() => setSec(id)} data-testid={`stab-${id}`}><Icon name={ic} size={16} /><span>{t(label)}</span></button>)}
+    </div>
+
+    {!none && <div hidden={sec !== 'overview'} className="st-sec">
       <section className="st-kpis" data-testid="stats-kpis">
         <div className="st-kpi"><small>{t('stats.kpi.games')}</small><strong data-testid="kpi-games">{sum.total}</strong><em>{t('stats.kpi.finished', { n: sum.finished })}</em></div>
         <div className="st-kpi"><small>{t('stats.kpi.wdl')}</small><strong data-testid="kpi-wdl">{sum.wdl.w} / {sum.wdl.d} / {sum.wdl.l}</strong><em>{t('stats.kpi.score', { pct: pct(sum.scorePct) })}</em></div>
@@ -76,6 +83,11 @@ export default function StatsView({ active, games, onGo }: Props) {
           <WdlBar {...sum.wdl} />
           {f.mode === 'analysis' && <p className="tiny">{t('stats.wdl.analysisNote')}</p>}
         </section>
+      </div>
+    </div>}
+
+    {!none && <div hidden={sec !== 'mistakes'} className="st-sec">
+      <div className="st-grid">
         <section className="panel"><div className="panel-head"><div><div className="eyebrow">{t('stats.errors.eyebrow')}</div><h2>{t('stats.errors.title')}</h2></div></div>
           <StackedBars label={t('stats.errors.chart')} bars={reviewedGames.map(g => ({ label: `${fmtDate(g.at)}`, parts: [
             { name: t('stats.errors.inaccuracies'), color: '#e0a44f', v: g.review!.counts.inaccuracy ?? 0 }, { name: t('stats.errors.mistakes'), color: '#ff9a52', v: (g.review!.counts.mistake ?? 0) + (g.review!.counts.miss ?? 0) }, { name: t('stats.errors.blunders'), color: '#ff5c5c', v: g.review!.counts.blunder ?? 0 }] }))} />
@@ -97,18 +109,18 @@ export default function StatsView({ active, games, onGo }: Props) {
         </section>
       </div>
 
-    </>}
+    </div>}
 
-    <LearningStats puzzles={puzzles} openings={openings} onGo={onGo} />
+    <div hidden={sec !== 'learning'} className="st-sec"><LearningStats puzzles={puzzles} openings={openings} onGo={onGo} /></div>
 
-    <section className="panel" data-testid="recs">
+    <section className="panel" data-testid="recs" hidden={sec !== 'advice'}>
         <div className="panel-head"><div><div className="eyebrow">{t('stats.recs.eyebrow')}</div><h2>{t('stats.recs.title')}</h2></div></div>
         {rec.needMore > 0 && <p className="st-info" data-testid="recs-more">{t('stats.recs.needMore', { reviewed: rec.reviewed, min: MIN_REVIEWED, more: tn('stats.recs.more', rec.needMore) })}</p>}
         {rec.recs.length === 0 && rec.needMore === 0 && <p className="st-info" data-testid="recs-none">{t('stats.recs.none', { reviewed: rec.reviewed })}</p>}
         <div className="st-recs">{rec.recs.map(r => <article key={r.id} className="st-rec" data-testid={`rec-${r.id}`}>
           <b>{r.title}</b><p>{r.text}</p>
           <small className="st-basis">{t('stats.recs.basis', { basis: r.basis })}</small>
-          <button className="btn" onClick={() => onGo(r.action.go)}>{r.action.label} →</button>
+          <button className="btn" onClick={() => onGo(r.action.go)}>{r.action.label}<Icon name="arrowRight" size={16} /></button>
         </article>)}</div>
       </section>
 

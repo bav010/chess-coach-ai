@@ -8,8 +8,9 @@ import { LESSONS, compileLesson, type Lesson } from '../lib/lessons'
 import { lessonRepName } from '../lib/lessonSync'
 import { splitUci } from '../lib/game'
 import type { OpeningsData } from '../lib/openingsStore'
+import Icon from './Icon'
 
-type Props = { data: OpeningsData; update: (fn: (d: OpeningsData) => OpeningsData) => void; active: boolean }
+type Props = { data: OpeningsData; update: (fn: (d: OpeningsData) => OpeningsData) => void; active: boolean; onLesson?: (title: string | null) => void; leaveKey?: number }
 
 /** Сообщение хранится структурой (а не текстом), чтобы при смене языка пересобираться на новом языке. */
 type Msg = { kind: 'info' | 'ok' | 'bad'; ref: { k: 'none' } | { k: 'intro' } | { k: 'outro' } | { k: 'step'; i: number; ok: boolean } | { k: 'wrong'; i: number } }
@@ -18,7 +19,7 @@ const WHITE_ARROW = '#d3ff72'
 const BLACK_ARROW = '#ffb066'
 
 /** Уроки дебютов: ходите за свою сторону, соперник отвечает, а после каждого хода — объяснение «почему так». */
-export default function OpeningsLessons({ data, update, active }: Props) {
+export default function OpeningsLessons({ data, update, active, onLesson, leaveKey = 0 }: Props) {
   const { t, tn, lang } = useI18n()
   const [lessonId, setLessonId] = useState<string | null>(null)
   const lesson = LESSONS.find(l => l.id === lessonId) ?? null
@@ -54,6 +55,8 @@ export default function OpeningsLessons({ data, update, active }: Props) {
   }
 
   function close() { setLessonId(null); setIdx(0); input.clear() }
+  useEffect(() => { onLesson?.(lesson?.title ?? null) }, [lesson, onLesson])
+  useEffect(() => { if (leaveKey > 0) close() }, [leaveKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ответ соперника
   useEffect(() => {
@@ -106,11 +109,12 @@ export default function OpeningsLessons({ data, update, active }: Props) {
       <section className="panel">
         <div className="panel-head"><div><div className="eyebrow">{t('openings.lessons.eyebrow')}</div><h2>{t('openings.lessons.pick')}</h2></div><span className="pill" data-testid="lessons-progress">{t('openings.lessons.progress', { done, total: LESSONS.length })}</span></div>
         <p className="muted">{t('openings.lessons.intro')}</p>
-        <div className="chip-group"><small>{t('openings.lessons.style')}</small>
+        <div className="filter-row"><div className="filter-block"><div className="sub-head">{t('openings.lessons.style')}</div><div className="chips">
           {(['all', 'attack', 'defense'] as const).map(k => <button key={k} className={`chip ${styleF === k ? 'active' : ''}`} onClick={() => setStyleF(k)} data-testid={`style-${k}`}>{t(`openings.lessons.style.${k}`)}</button>)}
-          <small style={{ marginLeft: 12 }}>{t('openings.lessons.sideLabel')}</small>
+          </div></div>
+          <div className="filter-block"><div className="sub-head">{t('openings.lessons.sideLabel')}</div><div className="chips">
           {(['all', 'w', 'b'] as const).map(k => <button key={k} className={`chip ${sideF === k ? 'active' : ''}`} onClick={() => setSideF(k)} data-testid={`side-filter-${k}`}>{t(`openings.lessons.side.${k}`)}</button>)}
-        </div>
+          </div></div></div>
         {visible.length === 0 && <p className="muted" style={{ marginTop: 14 }}>{t('openings.lessons.none')}</p>}
         {groups.filter(g => g.items.length > 0).map(g => <div key={g.key} className="lesson-group" data-testid={`group-${g.key}`}>
           <h3>{g.title} <span className="pill">{g.items.length}</span></h3>
@@ -122,7 +126,7 @@ export default function OpeningsLessons({ data, update, active }: Props) {
                 <button className="lesson-open" onClick={() => open(l)} data-testid={`lesson-${l.id}`}>
                   <span className="eco">{l.eco}</span>
                   <b>{l.title}</b>
-                  <span className="lesson-meta">{l.side === 'w' ? t('openings.lessons.forWhite') : t('openings.lessons.forBlack')} · {t(`openings.lessons.level.${l.level}`)} · {tn('openings.lessons.moves', Math.ceil(l.steps.length / 2))}</span>
+                  <span className="lesson-meta"><Icon name={l.side === 'w' ? 'discW' : 'discB'} size={12} className="side-dot" />{l.side === 'w' ? t('openings.lessons.forWhite') : t('openings.lessons.forBlack')} · {t(`openings.lessons.level.${l.level}`)} · {tn('openings.lessons.moves', Math.ceil(l.steps.length / 2))}</span>
                   <span className="lesson-intro">{l.intro}</span>
                 </button>
                 {pr?.done && <div className="lesson-done"><em>{t('openings.lessons.doneRuns', { n: pr.runs })}</em>
@@ -152,12 +156,10 @@ export default function OpeningsLessons({ data, update, active }: Props) {
       {input.promo && <PromoPicker color={lesson.side} onPick={input.pickPromo} onCancel={input.cancelPromo} />}
       <div className={`puzzle-msg lesson-msg ${msg.kind}`} data-testid="lesson-message" role="status"><span className="pulse" /> {msgText}</div>
       {finished && <p className="tiny" data-testid="lesson-info">{t('openings.lessons.counted', { name: lessonRepName(lesson.side) })}</p>}
-      <div className="board-actions">
-        <label className="chip"><input type="checkbox" checked={showHint} onChange={e => setShowHint(e.target.checked)} data-testid="lesson-hint-toggle" /> {t('openings.lessons.hintToggle')}</label>
-        {finished && <>
-          <button className="btn primary" onClick={() => open(lesson)} data-testid="lesson-again">{t('openings.lessons.again')}</button>
-        </>}
-        <button className="btn" onClick={close} data-testid="lesson-close">{t('openings.lessons.back')}</button>
+      <div className="action-bar">
+        {finished && <button className="btn primary" onClick={() => open(lesson)} data-testid="lesson-again"><Icon name="refresh" size={16} />{t('openings.lessons.again')}</button>}
+        <label className="switch-chip"><input type="checkbox" checked={showHint} onChange={e => setShowHint(e.target.checked)} data-testid="lesson-hint-toggle" /><Icon name="hint" size={16} /><span>{t('openings.lessons.hintToggle')}</span></label>
+        <button className="btn quiet" onClick={close} data-testid="lesson-close"><Icon name="arrowLeft" size={16} />{t('openings.lessons.back')}</button>
       </div>
     </section>
 

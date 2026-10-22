@@ -58,7 +58,7 @@ export const en = {
   "app.profile.emoji": "Emoji {e}",
   "app.profile.colorGroup": "Color",
   "app.profile.color": "Color {c}",
-  "app.profile.upload": "📷 Upload a photo",
+  "app.profile.upload": "Upload a photo",
   "app.profile.removePhoto": "Remove photo",
   "app.profile.photoNote": "The photo is shrunk to a small square and stored with your account progress.",
   "app.avatar.notImage": "Choose an image file.",

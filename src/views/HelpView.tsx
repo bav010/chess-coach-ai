@@ -22,6 +22,7 @@ const KEYS: { keys: string[]; text: Key }[] = [
   { keys: ['←', '→'], text: 'help.keys.prevNext' },
   { keys: ['Home', 'End'], text: 'help.keys.firstLast' },
   { keys: ['F'], text: 'help.keys.flip' },
+  { keys: ['Ctrl', 'K'], text: 'help.keys.palette' },
   { keys: ['Esc'], text: 'help.keys.esc' },
 ]
 

@@ -6,7 +6,9 @@ import { buildCatalog, type Catalog } from '../lib/openings'
 import { syncLessons } from '../lib/lessonSync'
 import { useI18n } from '../i18n'
 import { errorText } from '../i18n/errors'
+import { markActive } from '../lib/activity'
 import { exportOpenings, importOpenings, loadOpenings, saveOpenings, type OpeningsData } from '../lib/openingsStore'
+import Icon from '../components/Icon'
 
 type Sub = 'lessons' | 'study' | 'train'
 
@@ -14,6 +16,9 @@ export default function OpeningsView({ active }: { active: boolean }) {
   const { t } = useI18n()
   const [data, setData] = useState<OpeningsData>(() => loadOpenings())
   const [sub, setSub] = useState<Sub>('lessons')
+  const [lessonTitle, setLessonTitle] = useState<string | null>(null)
+  const [studyTitle, setStudyTitle] = useState<string | null>(null)
+  const [leave, setLeave] = useState(0)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [error, setError] = useState<{ key: 'openings.view.loadError' } | { err: unknown } | null>(null)
   const loading = useRef(false)
@@ -29,7 +34,7 @@ export default function OpeningsView({ active }: { active: boolean }) {
   // пройденные уроки автоматически попадают в репертуар и считаются выученными
   useEffect(() => { const s = syncLessons(data); if (s !== data) setData(s) }, [data])
 
-  const update = useCallback((fn: (d: OpeningsData) => OpeningsData) => setData(d => fn(d)), [])
+  const update = useCallback((fn: (d: OpeningsData) => OpeningsData) => { markActive(); setData(d => fn(d)) }, [])
 
   function download() {
     const url = URL.createObjectURL(new Blob([exportOpenings(data)], { type: 'application/json' }))
@@ -41,19 +46,31 @@ export default function OpeningsView({ active }: { active: boolean }) {
   }
 
   return <div data-testid="openings-view">
-    <div className="chips sub-tabs">
-      <button className={`chip ${sub === 'lessons' ? 'active' : ''}`} onClick={() => setSub('lessons')} data-testid="sub-lessons">{t('openings.view.sub.lessons')}</button>
-      <button className={`chip ${sub === 'study' ? 'active' : ''}`} onClick={() => setSub('study')} data-testid="sub-study">{t('openings.view.sub.study')}</button>
-      <button className={`chip ${sub === 'train' ? 'active' : ''}`} onClick={() => setSub('train')} data-testid="sub-train">{t('openings.view.sub.train')}</button>
+    <div className="sub-tabs-bar">
+      <div className="tabs" role="tablist" aria-label={t('openings.view.tabsAria')}>
+        {([['lessons', 'openings'], ['study', 'search'], ['train', 'refresh']] as const).map(([id, ic]) =>
+          <button key={id} role="tab" className={`tab ${sub === id ? 'active' : ''}`} aria-selected={sub === id} onClick={() => setSub(id)} data-testid={`sub-${id}`}><Icon name={ic} size={16} /><span>{t(`openings.view.sub.${id}` as 'openings.view.sub.lessons')}</span></button>)}
+      </div>
       <span className="grow" />
-      <button className="btn" onClick={download} data-testid="rep-export">{t('openings.view.export')}</button>
-      <label className="btn file-btn">{t('openings.view.import')}
+      <button className="btn quiet" onClick={download} data-testid="rep-export" title={t('openings.view.export')}><Icon name="download" size={16} /><span className="btn-label">{t('openings.view.export')}</span></button>
+      <label className="btn quiet file-btn" title={t('openings.view.import')}><Icon name="upload" size={16} /><span className="btn-label">{t('openings.view.import')}</span>
         <input type="file" accept=".json,application/json" hidden onChange={e => { void upload(e.target.files?.[0]); e.target.value = '' }} />
       </label>
     </div>
+    <nav className="crumbs" aria-label={t('openings.crumb.aria')} data-testid="crumbs">
+      <Icon name="openings" size={15} /><span>{t('app.mode.openings')}</span>
+      <Icon name="next" size={13} className="crumb-sep" />
+      {sub === 'lessons' && (lessonTitle
+        ? <><button type="button" className="crumb-link" onClick={() => setLeave(n => n + 1)} data-testid="crumb-lessons">{t('openings.view.sub.lessons')}</button><Icon name="next" size={13} className="crumb-sep" /><b aria-current="page" data-testid="crumb-leaf">{lessonTitle}</b></>
+        : <b aria-current="page">{t('openings.view.sub.lessons')}</b>)}
+      {sub === 'study' && (studyTitle
+        ? <><span>{t('openings.view.sub.study')}</span><Icon name="next" size={13} className="crumb-sep" /><b aria-current="page" data-testid="crumb-leaf">{studyTitle}</b></>
+        : <b aria-current="page">{t('openings.view.sub.study')}</b>)}
+      {sub === 'train' && <b aria-current="page">{t('openings.view.sub.train')}</b>}
+    </nav>
     {error && <p className="error-text" role="alert">{'key' in error ? t(error.key) : errorText(error.err, 'openings.view.readError')}</p>}
-    <div hidden={sub !== 'lessons'}><OpeningsLessons data={data} update={update} active={active && sub === 'lessons'} /></div>
-    <div hidden={sub !== 'study'}><OpeningsStudy catalog={catalog} data={data} update={update} /></div>
+    <div hidden={sub !== 'lessons'}><OpeningsLessons data={data} update={update} active={active && sub === 'lessons'} onLesson={setLessonTitle} leaveKey={leave} /></div>
+    <div hidden={sub !== 'study'}><OpeningsStudy catalog={catalog} data={data} update={update} onTitle={setStudyTitle} /></div>
     <div hidden={sub !== 'train'}><OpeningsTrainer data={data} update={update} active={active && sub === 'train'} /></div>
   </div>
 }

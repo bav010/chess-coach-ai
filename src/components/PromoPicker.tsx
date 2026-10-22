@@ -1,5 +1,5 @@
 import type { Color } from 'chess.js'
-import { glyph } from '../lib/glyphs'
+import Piece from './Piece'
 import { useI18n } from '../i18n'
 
 type Props = { color: Color; onPick: (p: 'q' | 'r' | 'b' | 'n') => void; onCancel: () => void }
@@ -10,7 +10,7 @@ export default function PromoPicker({ color, onPick, onCancel }: Props) {
   const NAMES = { q: t('play.promo.q'), r: t('play.promo.r'), b: t('play.promo.b'), n: t('play.promo.n') } as const
   return <div className="promo-picker" role="dialog" aria-label={t('play.promo.title')}>
     {(['q', 'r', 'b', 'n'] as const).map(p =>
-      <button key={p} className="btn" onClick={() => onPick(p)}>{glyph[color + p]} {NAMES[p]}</button>)}
+      <button key={p} className="btn" onClick={() => onPick(p)}><Piece color={color} type={p} small /> {NAMES[p]}</button>)}
     <button className="btn" onClick={onCancel}>{t('play.cancel')}</button>
   </div>
 }

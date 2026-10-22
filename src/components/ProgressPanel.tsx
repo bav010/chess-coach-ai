@@ -1,4 +1,5 @@
 import { summarize, type SavedSession } from '../storage'
+import Icon from './Icon'
 import { fmtDate, useI18n } from '../i18n'
 
 type Props = {
@@ -14,7 +15,7 @@ export default function ProgressPanel({ sessions, onDownload, onOpen, onReset }:
   const { t } = useI18n()
   const stats = summarize(sessions)
   return <section className="panel progress-panel">
-    <div className="panel-head"><div><div className="eyebrow">{t('analysis.progress.eyebrow')}</div><h2>{t('analysis.progress.title')}</h2></div><span className="progress-icon">↗</span></div>
+    <div className="panel-head"><div><div className="eyebrow">{t('analysis.progress.eyebrow')}</div><h2>{t('analysis.progress.title')}</h2></div><span className="progress-icon"><Icon name="stats" size={18} /></span></div>
     <div className="stats">
       <div><strong>{stats.sessions}</strong><small>{t('analysis.progress.sessions')}</small></div>
       <div><strong>{stats.plies}</strong><small>{t('analysis.progress.plies')}</small></div>

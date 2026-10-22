@@ -59,7 +59,7 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "app.profile.emoji": "Эмодзи {e}",
   "app.profile.colorGroup": "Цвет",
   "app.profile.color": "Цвет {c}",
-  "app.profile.upload": "📷 Загрузить фото",
+  "app.profile.upload": "Загрузить фото",
   "app.profile.removePhoto": "Убрать фото",
   "app.profile.photoNote": "Фото сжимается до маленького квадрата и сохраняется вместе с прогрессом аккаунта.",
   "app.avatar.notImage": "Выберите файл изображения.",

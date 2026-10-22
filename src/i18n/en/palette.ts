@@ -1,0 +1,21 @@
+// English strings: area "palette" (quick jump, Ctrl+K).
+export const en = {
+  "palette.open": "Quick jump",
+  "palette.openTip": "Quick jump (Ctrl+K)",
+  "palette.placeholder": "Type a section or action…",
+  "palette.aria": "Quick jump",
+  "palette.results": "Results",
+  "palette.none": "Nothing found",
+  "palette.group.go": "Go to",
+  "palette.group.actions": "Actions",
+  "palette.daily": "Puzzle of the day",
+  "palette.theme.dark": "Theme: dark",
+  "palette.theme.light": "Theme: light",
+  "palette.theme.system": "Theme: follow the system",
+  "palette.lang.en": "Language: English",
+  "palette.lang.ru": "Language: Russian",
+  "palette.hint.nav": "↑ ↓ to choose",
+  "palette.hint.enter": "Enter to open",
+  "palette.hint.esc": "Esc to close",
+  "help.keys.palette": "Quick jump to any section or action",
+} as const

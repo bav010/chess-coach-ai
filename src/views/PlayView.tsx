@@ -1,4 +1,5 @@
 import { useBoardKeys } from '../hooks/useBoardKeys'
+import { markActive } from '../lib/activity'
 import { useRoute } from '../lib/route'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chess, type Color, type Square } from 'chess.js'
@@ -21,6 +22,7 @@ import { toPgn } from '../lib/pgn'
 import type { SavedSession } from '../storage'
 import type { GameSeed } from './AnalysisView'
 import { t as tg, useI18n, type Key } from '../i18n'
+import Icon from '../components/Icon'
 
 type Props = {
   prefs: Prefs
@@ -157,6 +159,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   function applyUserMove(uci: string) {
     if (!cfg || over || turn !== user) return
     if (!commit(uci, user)) return
+    markActive()
     const c = new Chess(rep.chess.fen())
     try { c.move(splitUci(uci)) } catch { return }
     setSelected(null); setLegal([]); setPromo(null); setConfirmResign(false)
@@ -363,20 +366,23 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       {over && <div className="result-box" data-testid="game-result">
         <b>{resultText(end.result, user)}</b> · {end.result} · {reasonText(end.reason)}
       </div>}
-      {viewing && <div className="board-actions"><button className="btn" onClick={() => setViewPly(null)}>{t('play.toCurrent')}</button></div>}
+      {viewing && <div className="board-actions"><button className="btn" onClick={() => setViewPly(null)}>{t('play.toCurrent')}<Icon name="last" size={16} /></button></div>}
 
-      <div className="board-actions">
-        <button className="btn primary" onClick={toSetup} data-testid="new-game">{t('play.newGame')}</button>
-        <button className="btn" onClick={() => startGame(cfg)} data-testid="restart">{t('play.restart')}</button>
-        <button className="btn" onClick={undo} disabled={!canUndo} data-testid="undo">{t('play.undo')}</button>
-        <button className="btn" onClick={() => void offerDraw()} disabled={over || turn !== user || ucis.length < 2} data-testid="offer-draw">{t('play.offerDraw')}</button>
-        <button className={`btn ${confirmResign ? 'danger' : ''}`} onClick={resign} disabled={over} data-testid="resign">{confirmResign ? t('play.resignConfirm') : t('play.resign')}</button>
-        {confirmResign && <button className="btn" onClick={() => setConfirmResign(false)}>{t('play.no')}</button>}
+      <div className="play-actions">
+        <div className="action-group cols3" role="group" aria-label={t('play.actionsAria')}>
+          <button className="btn quiet" onClick={undo} disabled={!canUndo} data-testid="undo"><Icon name="undo" size={16} /><span className="btn-label">{t('play.undo')}</span></button>
+          <button className="btn quiet" onClick={() => void offerDraw()} disabled={over || turn !== user || ucis.length < 2} data-testid="offer-draw"><Icon name="handshake" size={16} /><span className="btn-label">{t('play.offerDraw')}</span></button>
+          <button className="btn quiet" onClick={() => startGame(cfg)} data-testid="restart"><Icon name="refresh" size={16} /><span className="btn-label">{t('play.restart')}</span></button>
+        </div>
+        <div className="play-end-row">
+          {reviewable && <button className="btn primary" data-testid="review-btn"
+            onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}><Icon name="search" size={16} />{t('play.review')}</button>}
+          <button className={`btn ${over && !reviewable ? 'primary' : 'quiet'}`} onClick={toSetup} data-testid="new-game"><Icon name="plus" size={16} />{t('play.newGame')}</button>
+          <span className="spacer" />
+          {confirmResign && <button className="btn quiet" onClick={() => setConfirmResign(false)}>{t('play.no')}</button>}
+          <button className={`btn danger-quiet ${confirmResign ? 'danger' : ''}`} onClick={resign} disabled={over} data-testid="resign"><Icon name={confirmResign ? 'check' : 'flag'} size={16} />{confirmResign ? t('play.resignConfirm') : t('play.resign')}</button>
+        </div>
       </div>
-      {reviewable && <div className="board-actions">
-        <button className="btn primary" data-testid="review-btn"
-          onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}>{t('play.review')}</button>
-      </div>}
     </section>
 
     <aside className="right-column">
@@ -384,10 +390,10 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
         <div className="panel-head"><div><div className="eyebrow">{t('play.movesEyebrow')}</div><h2>{t('play.notation')}</h2></div><span className="move-count">{tn('play.plies', ucis.length)}</span></div>
         <MoveList records={rep.records} viewPly={shownPly} onSelect={p => setViewPly(p === ucis.length ? null : p)} />
         <div className="nav-row">
-          <button className="btn" onClick={() => setViewPly(0)} disabled={ucis.length === 0 || shownPly === 0} aria-label={t('play.navStart')}>⏮</button>
-          <button className="btn" onClick={() => setViewPly(Math.max(0, shownPly - 1))} disabled={shownPly === 0} aria-label={t('play.navBack')}>◀</button>
-          <button className="btn" onClick={() => setViewPly(shownPly + 1 >= ucis.length ? null : shownPly + 1)} disabled={!viewing} aria-label={t('play.navForward')}>▶</button>
-          <button className="btn" onClick={() => setViewPly(null)} disabled={!viewing} aria-label={t('play.navEnd')}>⏭</button>
+          <button className="btn" onClick={() => setViewPly(0)} disabled={ucis.length === 0 || shownPly === 0} aria-label={t('play.navStart')}><Icon name="first" size={18} /></button>
+          <button className="btn" onClick={() => setViewPly(Math.max(0, shownPly - 1))} disabled={shownPly === 0} aria-label={t('play.navBack')}><Icon name="back" size={18} /></button>
+          <button className="btn" onClick={() => setViewPly(shownPly + 1 >= ucis.length ? null : shownPly + 1)} disabled={!viewing} aria-label={t('play.navForward')}><Icon name="next" size={18} /></button>
+          <button className="btn" onClick={() => setViewPly(null)} disabled={!viewing} aria-label={t('play.navEnd')}><Icon name="last" size={18} /></button>
         </div>
         <p className="tiny">{t('play.historyNote')}</p>
       </section>
