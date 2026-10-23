@@ -5,12 +5,25 @@ import { dailyPuzzle } from '../lib/dailyPuzzle'
 import { navigate, type RouteName } from '../lib/route'
 import { dictionaries, setLang, useI18n, type Key } from '../i18n'
 
-type Cmd = { id: string; icon: IconName; label: Key; group: 'go' | 'actions'; run: () => void }
+type Cmd = { id: string; icon: IconName; label: Key; group: 'go' | 'actions'; run: () => void; kw?: Key }
 
 const GO: [RouteName, IconName, Key][] = [
   ['home', 'home', 'nav.home'], ['analysis', 'analysis', 'app.mode.analysis'], ['play', 'play', 'app.mode.play'],
   ['tactics', 'tactics', 'app.mode.tactics'], ['openings', 'openings', 'app.mode.openings'], ['stats', 'stats', 'nav.stats'],
   ['profile', 'user', 'nav.profile'], ['account', 'cloud', 'nav.account'], ['settings', 'settings', 'nav.settings'], ['help', 'help', 'nav.help'],
+]
+
+/** Действия-переходы к функциям: поиск идёт и по названию, и по ключевым словам (palette.kw.<id>) на обоих языках. */
+const FEATURES: [string, IconName, RouteName, string | null][] = [
+  ['plan', 'flame', 'home', null],
+  ['mine', 'flag', 'tactics', "mine"],
+  ['myop', 'stats', 'openings', "mine"],
+  ['trainop', 'refresh', 'openings', "train"],
+  ['review', 'analysis', 'analysis', null],
+  ['bot', 'play', 'play', null],
+  ['advice', 'stats', 'stats', null],
+  ['style', 'settings', 'settings', null],
+  ['backup', 'download', 'account', null],
 ]
 
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е')
@@ -25,6 +38,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
 
   const cmds = useMemo<Cmd[]>(() => {
     const list: Cmd[] = GO.map(([r, icon, label]) => ({ id: `go-${r}`, icon, label, group: 'go' as const, run: () => navigate(r) }))
+    for (const [id, icon, route, arg] of FEATURES) list.push({ id, icon, label: `palette.cmd.${id}` as Key, kw: `palette.kw.${id}` as Key, group: 'actions', run: () => navigate(route, arg) })
     const daily = dailyPuzzle()
     if (daily) list.push({ id: 'daily', icon: 'tactics', label: 'palette.daily', group: 'actions', run: () => navigate('tactics', daily.id) })
     list.push(
@@ -42,7 +56,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     if (words.length === 0) return cmds
     return cmds
       .map(c => {
-        const hay = norm(`${dictionaries.en[c.label] ?? ''} ${dictionaries.ru[c.label] ?? ''}`)
+        const hay = norm(`${dictionaries.en[c.label] ?? ''} ${dictionaries.ru[c.label] ?? ''} ${c.kw ? `${dictionaries.en[c.kw] ?? ''} ${dictionaries.ru[c.kw] ?? ''}` : ''}`)
         if (!words.every(w => hay.includes(w))) return null
         const first = norm(t(c.label))
         return { c, score: words.every(w => first.startsWith(w)) ? 0 : 1 }

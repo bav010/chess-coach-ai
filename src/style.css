@@ -292,3 +292,11 @@ html[data-anim=off] .piece.slide{animation:none}
 .st-chart svg{max-width:720px;margin:0 auto}
 .panel>p.muted{font-size:13px;line-height:1.55;color:var(--n11)}
 .puzzle-tabs-wrap>.tabs{margin-bottom:14px}
+.op-mine{display:grid;gap:14px}.op-mine-list{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.op-mine-card{display:grid;gap:12px;align-content:start}.op-mine-card header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.op-mine-card header div{display:grid;gap:3px;min-width:0}.op-mine-card header b{font-size:16px;color:var(--n15)}.op-mine-card header small{color:var(--n11);font-size:12px}
+.op-mine-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0}.op-mine-meta div{display:grid;gap:2px}.op-mine-meta dt{font:10px 'DM Mono',monospace;color:var(--n10);letter-spacing:1px;text-transform:uppercase}.op-mine-meta dd{margin:0;font-weight:700;color:var(--n14);font-size:14px}
+.op-mine-exits code{font-family:'DM Mono',monospace}.op-mine-flag{color:var(--warn);margin:0}
+@media(max-width:560px){.sub-tabs-bar .tabs{flex-wrap:wrap;overflow:visible}.sub-tabs-bar .tab{padding-inline:10px}}
+.backup-preview{display:grid;gap:8px;margin-top:12px;padding:14px;border:1px solid var(--n6);border-radius:12px;background:var(--n3)}
+.backup-preview ul{margin:0;padding-left:18px;color:var(--n12);font-size:13px;display:grid;gap:3px}

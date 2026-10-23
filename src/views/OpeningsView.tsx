@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import OpeningsLessons from '../components/OpeningsLessons'
 import OpeningsStudy from '../components/OpeningsStudy'
 import OpeningsTrainer from '../components/OpeningsTrainer'
+import OpeningsMine from '../components/OpeningsMine'
+import type { SavedSession } from '../storage'
 import { buildCatalog, type Catalog } from '../lib/openings'
 import { syncLessons } from '../lib/lessonSync'
 import { useI18n } from '../i18n'
@@ -10,12 +12,15 @@ import { markActive } from '../lib/activity'
 import { exportOpenings, importOpenings, loadOpenings, saveOpenings, type OpeningsData } from '../lib/openingsStore'
 import Icon from '../components/Icon'
 
-type Sub = 'lessons' | 'study' | 'train'
+type Sub = 'lessons' | 'study' | 'train' | 'mine'
+const SUBS: readonly Sub[] = ['lessons', 'study', 'train', 'mine']
 
-export default function OpeningsView({ active }: { active: boolean }) {
+export default function OpeningsView({ active, arg = null, sessions = [] }: { active: boolean; arg?: string | null; sessions?: readonly SavedSession[] }) {
   const { t } = useI18n()
   const [data, setData] = useState<OpeningsData>(() => loadOpenings())
   const [sub, setSub] = useState<Sub>('lessons')
+  // #/openings/mine, #/openings/train… открывают нужную вкладку
+  useEffect(() => { if (arg && (SUBS as readonly string[]).includes(arg)) setSub(arg as Sub) }, [arg])
   const [lessonTitle, setLessonTitle] = useState<string | null>(null)
   const [studyTitle, setStudyTitle] = useState<string | null>(null)
   const [leave, setLeave] = useState(0)
@@ -48,7 +53,7 @@ export default function OpeningsView({ active }: { active: boolean }) {
   return <div data-testid="openings-view">
     <div className="sub-tabs-bar">
       <div className="tabs" role="tablist" aria-label={t('openings.view.tabsAria')}>
-        {([['lessons', 'openings'], ['study', 'search'], ['train', 'refresh']] as const).map(([id, ic]) =>
+        {([['lessons', 'openings'], ['study', 'search'], ['train', 'refresh'], ['mine', 'stats']] as const).map(([id, ic]) =>
           <button key={id} role="tab" className={`tab ${sub === id ? 'active' : ''}`} aria-selected={sub === id} onClick={() => setSub(id)} data-testid={`sub-${id}`}><Icon name={ic} size={16} /><span>{t(`openings.view.sub.${id}` as 'openings.view.sub.lessons')}</span></button>)}
       </div>
       <span className="grow" />
@@ -67,10 +72,12 @@ export default function OpeningsView({ active }: { active: boolean }) {
         ? <><span>{t('openings.view.sub.study')}</span><Icon name="next" size={13} className="crumb-sep" /><b aria-current="page" data-testid="crumb-leaf">{studyTitle}</b></>
         : <b aria-current="page">{t('openings.view.sub.study')}</b>)}
       {sub === 'train' && <b aria-current="page">{t('openings.view.sub.train')}</b>}
+      {sub === 'mine' && <b aria-current="page">{t('openings.view.sub.mine')}</b>}
     </nav>
     {error && <p className="error-text" role="alert">{'key' in error ? t(error.key) : errorText(error.err, 'openings.view.readError')}</p>}
     <div hidden={sub !== 'lessons'}><OpeningsLessons data={data} update={update} active={active && sub === 'lessons'} onLesson={setLessonTitle} leaveKey={leave} /></div>
     <div hidden={sub !== 'study'}><OpeningsStudy catalog={catalog} data={data} update={update} onTitle={setStudyTitle} /></div>
+    <div hidden={sub !== 'mine'}><OpeningsMine catalog={catalog} sessions={sessions} /></div>
     <div hidden={sub !== 'train'}><OpeningsTrainer data={data} update={update} active={active && sub === 'train'} /></div>
   </div>
 }

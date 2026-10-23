@@ -112,3 +112,13 @@ The home screen shows up to three steps built from your own data (`src/lib/daily
 ## My mistakes
 
 Puzzles → "My mistakes" turns the mistakes, misses and blunders from your reviewed games into personal puzzles (`src/lib/mistakes.ts`). Find the engine's best move from the position before your mistake; missed ones return after 10 minutes, solved ones with growing intervals. Positions are taken from stored reviews, are kept locally and are included in cloud sync. The answer is the engine's first choice, so an equally good alternative may count as "not first choice".
+
+## My openings
+
+Openings → "My games" (`src/lib/myOpenings.ts`) groups your saved games against the bot by opening family and colour: results, how long the game stayed in the lichess opening catalog, and the first move outside it (yours or the bot's). Weak openings are flagged only with at least 3 games and a score under 40%. Leaving the catalog is not a mistake; the catalog only names openings.
+
+The quick jump (Ctrl+K) also finds these features by keywords in both languages, for example "fix mistakes" / "исправить ошибки".
+
+## Backup (one file)
+
+Account → Backup downloads a single JSON file with games, saved sessions, stored reviews, puzzle progress, openings, your mistakes, activity and settings (`src/lib/backup.ts`). Restoring shows what is in the file first, then **merges** it with the current data: nothing is overwritten, games are not duplicated. Settings are restored only if you tick the box. Files from the earlier format (v1) still work.

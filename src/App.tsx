@@ -186,7 +186,7 @@ export default function App() {
       <PuzzleView active={route.name === 'tactics'} puzzleId={route.name === 'tactics' ? route.arg : null} />
     </div>
     <div hidden={route.name !== 'openings'}>
-      <OpeningsView active={route.name === 'openings'} />
+      <OpeningsView active={route.name === 'openings'} arg={route.name === 'openings' ? route.arg : null} sessions={sessions} />
     </div>
     <div hidden={!onAccountRoute}>
       <AccountView active={onAccountRoute} tab={accountTab} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
@@ -195,6 +195,6 @@ export default function App() {
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.5.3-beta</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.5.4-beta</span></footer>
   </main>
 }
