@@ -18,6 +18,7 @@ import { markActive, markDaily } from '../lib/activity'
 import { dailyPuzzle } from '../lib/dailyPuzzle'
 import { t, tn, useI18n } from '../i18n'
 import Icon from '../components/Icon'
+import MyMistakes from '../components/MyMistakes'
 
 const ALL = PUZZLES as unknown as Puzzle[]
 
@@ -44,7 +45,24 @@ function replayFen(fen: string, ucis: readonly string[]): Chess {
   return c
 }
 
+/** Задачи: библиотека и личные задачи из ваших ошибок (обе части остаются смонтированными, чтобы не терять состояние). */
 export default function PuzzleView({ active, puzzleId = null }: { active: boolean; puzzleId?: string | null }) {
+  const { t } = useI18n()
+  const [tab, setTab] = useState<'library' | 'mine'>('library')
+  // #/tactics/mine открывает личные задачи, #/tactics/<id> — конкретную задачу из библиотеки
+  const mineLink = puzzleId === 'mine'
+  useEffect(() => { if (puzzleId) setTab(mineLink ? 'mine' : 'library') }, [puzzleId, mineLink])
+  return <div className="puzzle-tabs-wrap">
+    <nav className="tabs" role="tablist" aria-label={t('puzzles.tab.aria')}>
+      <button type="button" role="tab" aria-selected={tab === 'library'} className={`tab ${tab === 'library' ? 'active' : ''}`} onClick={() => setTab('library')} data-testid="ptab-library"><Icon name="tactics" size={16} /><span>{t('puzzles.tab.library')}</span></button>
+      <button type="button" role="tab" aria-selected={tab === 'mine'} className={`tab ${tab === 'mine' ? 'active' : ''}`} onClick={() => setTab('mine')} data-testid="ptab-mine"><Icon name="flag" size={16} /><span>{t('puzzles.tab.mine')}</span></button>
+    </nav>
+    <div hidden={tab !== 'library'}><PuzzleLibrary active={active && tab === 'library'} puzzleId={mineLink ? null : puzzleId} /></div>
+    <div hidden={tab !== 'mine'}><MyMistakes active={active && tab === 'mine'} /></div>
+  </div>
+}
+
+function PuzzleLibrary({ active, puzzleId = null }: { active: boolean; puzzleId?: string | null }) {
   const { lang } = useI18n()
   const [stats, setStats] = useState<PuzzleStats>(() => loadPuzzleStats())
   const [filter, setFilter] = useState<PuzzleFilter>(ANY_FILTER)

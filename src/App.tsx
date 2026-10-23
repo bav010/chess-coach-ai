@@ -195,6 +195,6 @@ export default function App() {
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> MVP 0.1.3</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.5.3-beta</span></footer>
   </main>
 }

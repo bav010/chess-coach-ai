@@ -112,6 +112,9 @@ function readReviews(): StoredReview[] {
   }
 }
 
+/** Все сохранённые в браузере разборы (последние 8). */
+export function listReviews(): StoredReview[] { return readReviews() }
+
 export function loadReview(key: string): StoredReview | null {
   return readReviews().find(r => r.key === key) ?? null
 }

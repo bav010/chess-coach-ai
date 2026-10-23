@@ -3,6 +3,10 @@ import { Chess } from 'chess.js'
 import Board from '../components/Board'
 import Icon, { type IconName } from '../components/Icon'
 import { dailyPuzzle } from '../lib/dailyPuzzle'
+import { buildPlan, type PlanStep } from '../lib/dailyPlan'
+import { countMistakes, loadMistakes } from '../lib/mistakes'
+import { loadOpenings } from '../lib/openingsStore'
+import { loadPuzzleStats } from '../lib/puzzleStats'
 import { dayKey, loadActivity, streakOf } from '../lib/activity'
 import type { CloudApi } from '../hooks/useCloud'
 import type { GameStat } from '../lib/gameStats'
@@ -41,6 +45,27 @@ export function dayStreak(games: readonly GameStat[], extraDays: Iterable<string
 function readSeen(): boolean { try { return localStorage.getItem(OVERVIEW_KEY) === 'seen' } catch { return false } }
 function writeSeen() { try { localStorage.setItem(OVERVIEW_KEY, 'seen') } catch { /* хранилище недоступно */ } }
 
+function PlanRow({ step, n, onReview }: { step: PlanStep; n: number; onReview?: () => void }) {
+  const { t } = useI18n()
+  let icon: IconName = 'play', title = '', text = '', href: string | null = null, done = false
+  switch (step.id) {
+    case 'daily': icon = 'tactics'; done = step.done; title = t(done ? 'home.plan.daily.done' : 'home.plan.daily.title'); text = t(done ? 'home.plan.daily.doneText' : 'home.plan.daily.text'); href = hrefFor('tactics', step.puzzleId); break
+    case 'openings': icon = 'openings'; title = t('home.plan.openings.title'); text = tn('home.plan.openings.text', step.due); href = hrefFor('openings'); break
+    case 'mine': icon = 'flag'; title = t('home.plan.mine.title'); text = tn('home.plan.mine.text', step.due); href = hrefFor('tactics', 'mine'); break
+    case 'weak': icon = 'tactics'; title = t('home.plan.weak.title', { theme: THEME_LABEL[step.theme].toLowerCase() }); text = t('home.plan.weak.text', { pct: step.percent, n: step.tried }); href = hrefFor('tactics'); break
+    case 'review': icon = 'analysis'; title = t('home.plan.review.title'); text = t('home.plan.review.text'); break
+    case 'play': icon = 'play'; title = t('home.plan.play.title'); text = t('home.plan.play.text'); href = hrefFor('play'); break
+  }
+  const go = <><Icon name="arrowRight" size={16} /><span className="btn-label">{t('home.plan.go')}</span></>
+  return <li className={`home-plan-row ${done ? 'done' : ''}`} data-testid={`plan-${step.id}`} data-done={done}>
+    <span className="home-plan-ic"><Icon name={done ? 'check' : icon} size={20} /></span>
+    <div className="home-plan-body"><b>{title}</b><small>{text}</small></div>
+    {done ? null
+      : href ? <a className="btn primary" href={href} data-testid={`plan-go-${step.id}`} aria-label={`${title}. ${t('home.plan.step', { n })}`}>{go}</a>
+      : <button type="button" className="btn primary" onClick={onReview} data-testid={`plan-go-${step.id}`}>{go}</button>}
+  </li>
+}
+
 /** Главная: приветствие, «Продолжить», краткая статистика, карточки режимов, задача дня, обзор и быстрые ссылки. */
 export default function HomeView({ games, cloud, me, last, sessions = [], onOpenSession }: HomeProps) {
   const { t, lang } = useI18n()
@@ -59,6 +84,11 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
   const tried = !!puzzle && !!today && today.id === puzzle.id && !today.ok
   const chess = useMemo(() => (puzzle ? new Chess(puzzle.fen) : null), [puzzle])
   const side = chess?.turn() ?? 'w'
+
+  const plan = useMemo(() => buildPlan({
+    dailyId: puzzle?.id ?? null, dailySolved: solved, puzzles: loadPuzzleStats(), games, openings: loadOpenings(), hasSavedGame: !!sessions[0] && !!onOpenSession, now: Date.now(),
+    mistakesDue: (c => c.due + c.fresh)(countMistakes(loadMistakes(), Date.now())),
+  }), [puzzle, solved, games, sessions, onOpenSession])
 
   const statsShown = cloud.status === 'off' || (cloud.status === 'in' && me.ready)
   const dash = '—'
@@ -91,6 +121,13 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
       </>}
       {cloud.status === 'out' && <a className="home-note" href={hrefFor('stats')} data-testid="home-invite"><Icon name="user" size={16} /><span>{t('home.invite')}</span><b>{t('app.signin')}</b></a>}
       {cloud.status === 'in' && !me.ready && <a className="home-note" href={hrefFor('stats')} data-testid="home-setup"><Icon name="user" size={16} /><span>{t('home.setup')}</span><b>{t('home.setup.link')}</b></a>}
+    </section>}
+
+    {plan.length > 0 && <section className="home-plan panel" aria-labelledby="home-plan-h" data-testid="home-plan">
+      <div className="home-plan-head"><h2 id="home-plan-h">{t('home.plan.title')}</h2><small>{t('home.plan.sub')}</small></div>
+      <ol className="home-plan-list">
+        {plan.map((s, i) => <PlanRow key={s.id} step={s} n={i + 1} onReview={last0 && onOpenSession ? () => onOpenSession(last0) : undefined} />)}
+      </ol>
     </section>}
 
     <nav className="home-cards" aria-label={t('home.modes.aria')}>

@@ -8,6 +8,7 @@ import { loadProfiles, updateProfile, pk, type Avatar } from './profile'
 import { loadPuzzleStats, savePuzzleStats, type PuzzleStats } from './puzzleStats'
 import { loadOpenings, saveOpenings, type OpeningsData } from './openingsStore'
 import type { Repertoire } from './repertoire'
+import { loadMistakes, mergeMistakes, saveMistakes, EMPTY_MISTAKES, type MistakeStore } from './mistakes'
 import { loadActivity, mergeActivity, saveActivity, EMPTY_ACTIVITY, type Activity } from './activity'
 
 export type Snapshot = {
@@ -21,6 +22,8 @@ export type Snapshot = {
   openings: OpeningsData
   /** Дни активности и итог задачи дня (старые снимки без этого поля допустимы). */
   activity?: Activity
+  /** Личные задачи из ошибок (старые снимки без этого поля допустимы). */
+  mistakes?: MistakeStore
   /** Когда статистика партий последний раз сбрасывалась: партии не позднее этого момента отбрасываются при слиянии. */
   gamesResetAt: string | null
 }
@@ -47,7 +50,7 @@ export function collectSnapshot(): Snapshot {
   const me = st.list.find(p => p.id === st.current) ?? st.list[0]
   return {
     v: 1, updatedAt: new Date().toISOString(), profile: { name: me.name, avatar: me.avatar, ready: !!me.ready }, prefs: loadPrefs(),
-    games: loadGames(), sessions: loadSessions(), puzzles: loadPuzzleStats(), openings: loadOpenings(), activity: loadActivity(), gamesResetAt: loadMeta().resetAt,
+    games: loadGames(), sessions: loadSessions(), puzzles: loadPuzzleStats(), openings: loadOpenings(), activity: loadActivity(), mistakes: loadMistakes(), gamesResetAt: loadMeta().resetAt,
   }
 }
 
@@ -129,7 +132,7 @@ export function mergeSnapshots(local: Snapshot, remote: Snapshot, preferRemoteSe
   const profile = pref.profile.ready || !remote.profile?.ready ? pref.profile : remote.profile
   return {
     v: 1, updatedAt: new Date().toISOString(), profile: { ...profile, ready: !!(profile.ready || local.profile.ready || remote.profile?.ready) }, prefs: pref.prefs,
-    games, sessions, puzzles: mergePuzzles(local.puzzles, remote.puzzles), openings: mergeOpenings(local.openings, remote.openings), activity: mergeActivity(local.activity ?? EMPTY_ACTIVITY, remote.activity ?? EMPTY_ACTIVITY), gamesResetAt: resetAt,
+    games, sessions, puzzles: mergePuzzles(local.puzzles, remote.puzzles), openings: mergeOpenings(local.openings, remote.openings), activity: mergeActivity(local.activity ?? EMPTY_ACTIVITY, remote.activity ?? EMPTY_ACTIVITY), mistakes: mergeMistakes(local.mistakes ?? EMPTY_MISTAKES, remote.mistakes ?? EMPTY_MISTAKES), gamesResetAt: resetAt,
   }
 }
 
@@ -140,6 +143,7 @@ export function applySnapshot(s: Snapshot) {
   savePuzzleStats(s.puzzles)
   saveOpenings(s.openings)
   if (s.activity) saveActivity(s.activity)
+  if (s.mistakes) saveMistakes(s.mistakes)
   savePrefs(s.prefs)
   saveMeta({ resetAt: s.gamesResetAt })
   const st = loadProfiles()

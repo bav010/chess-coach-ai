@@ -291,3 +291,4 @@ html[data-anim=off] .piece.slide{animation:none}
 :root[data-theme=light] .dot.online{background:#4d9a12;box-shadow:0 0 10px #4d9a1255}
 .st-chart svg{max-width:720px;margin:0 auto}
 .panel>p.muted{font-size:13px;line-height:1.55;color:var(--n11)}
+.puzzle-tabs-wrap>.tabs{margin-bottom:14px}

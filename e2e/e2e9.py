@@ -6,7 +6,7 @@ with sync_playwright() as p:
     ctx=b.new_context(viewport={'width':1360,'height':1900}); pg=ctx.new_page()
     errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
     pg.goto(URL); pg.wait_for_selector('[data-testid=top-status][data-state=online],[data-testid=top-status][data-state=ready]',timeout=30000)
-    (pg.evaluate("location.hash='#/openings'"), pg.wait_for_timeout(600))
+    (pg.evaluate("location.hash='#/openings'"), pg.wait_for_timeout(600)); pg.locator('[data-testid=sub-study]').click(); pg.wait_for_timeout(300)
     pg.wait_for_function("()=>document.querySelector('[data-testid=catalog-panel]:not([hidden])')&&document.querySelectorAll('[data-testid=opening-list] li').length>0",timeout=20000)
     print('catalog pill', pg.locator('[data-testid=catalog-panel] .pill').inner_text())
     S='[data-testid=study-board]'

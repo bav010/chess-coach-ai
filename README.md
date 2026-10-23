@@ -104,3 +104,11 @@ Settings → Pieces offers Classic (cburnett), Merida, Chessnut, Flat and a font
 ## Quick jump
 
 Press Ctrl+K (⌘K on Mac) or the search button in the header to jump to any section or run a quick action (theme, language, puzzle of the day).
+
+## Today's plan
+
+The home screen shows up to three steps built from your own data (`src/lib/dailyPlan.ts`): the daily puzzle, due opening positions, your weakest puzzle theme (only after 5 attempts), review of your last game, or a practice game. A step appears only when there is data behind it.
+
+## My mistakes
+
+Puzzles → "My mistakes" turns the mistakes, misses and blunders from your reviewed games into personal puzzles (`src/lib/mistakes.ts`). Find the engine's best move from the position before your mistake; missed ones return after 10 minutes, solved ones with growing intervals. Positions are taken from stored reviews, are kept locally and are included in cloud sync. The answer is the engine's first choice, so an equally good alternative may count as "not first choice".

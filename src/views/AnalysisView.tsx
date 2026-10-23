@@ -26,6 +26,7 @@ import {
   type PositionEval, type ReviewMove,
 } from '../lib/review'
 import { summarizeReview, type GameReview } from '../lib/gameStats'
+import { addMistakes, extractMistakes, loadMistakes, saveMistakes } from '../lib/mistakes'
 import { useBoardKeys } from '../hooks/useBoardKeys'
 import { useI18n, type Key, type Params } from '../i18n'
 import { errorText } from '../i18n/errors'
@@ -167,6 +168,8 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
           key: gKey, created_at: new Date().toISOString(), startFen, ucis, userColor, evals,
           trainer: loadReview(gKey)?.trainer ?? {},
         })
+        const found = extractMistakes(startFen, ucis, evals, userColor, gKey, new Date().toISOString())
+        if (found.length) saveMistakes(addMistakes(loadMistakes(), found))
         const sum = summarizeReview(startFen, ucis, evals, userColor)
         if (sum) onReviewDone?.(gKey, sum)
       }
