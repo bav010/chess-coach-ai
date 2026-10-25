@@ -9,6 +9,7 @@ import { loadActivity, mergeActivity, saveActivity, type Activity } from './acti
 import { loadMistakes, mergeMistakes, saveMistakes, type MistakeStore } from './mistakes'
 import { loadPrefs, savePrefs, type Prefs } from './prefs'
 import { getAppearance, setAppearance, type Appearance } from './appearance'
+import { loadSprint, mergeSprint, saveSprint, type SprintStore } from './sprint'
 import { mergeOpenings, mergePuzzles } from './sync'
 
 export type Backup = {
@@ -23,6 +24,7 @@ export type Backup = {
   /** С версии 2. */
   activity?: Activity
   mistakes?: MistakeStore
+  sprint?: SprintStore
   reviews?: StoredReview[]
   prefs?: Prefs
   appearance?: Appearance
@@ -32,7 +34,7 @@ export function makeBackup(): Backup {
   return {
     app: 'chess-coach-ai', kind: 'backup', v: 2, exportedAt: new Date().toISOString(),
     games: loadGames(), sessions: loadSessions(), puzzles: loadPuzzleStats(), openings: loadOpenings(),
-    activity: loadActivity(), mistakes: loadMistakes(), reviews: listReviews(), prefs: loadPrefs(), appearance: getAppearance(),
+    activity: loadActivity(), mistakes: loadMistakes(), sprint: loadSprint(), reviews: listReviews(), prefs: loadPrefs(), appearance: getAppearance(),
   }
 }
 
@@ -74,6 +76,7 @@ export function applyBackup(b: Backup, o: ApplyOptions = {}): { games: number; s
   if (b.openings && b.openings.v === 1 && Array.isArray(b.openings.repertoires)) saveOpenings(mergeOpenings(loadOpenings(), b.openings))
   if (b.activity && b.activity.v === 1) saveActivity(mergeActivity(loadActivity(), b.activity))
   if (b.mistakes && b.mistakes.v === 1 && b.mistakes.items && b.mistakes.cards) saveMistakes(mergeMistakes(loadMistakes(), b.mistakes))
+  if (b.sprint && b.sprint.v === 1 && Array.isArray(b.sprint.history)) saveSprint(mergeSprint(loadSprint(), b.sprint))
   if (Array.isArray(b.reviews)) {
     const have = new Set(listReviews().map(r => r.key))
     for (const r of b.reviews) if (r && typeof r.key === 'string' && Array.isArray(r.evals) && !have.has(r.key)) saveReview(r)

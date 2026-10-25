@@ -300,3 +300,7 @@ html[data-anim=off] .piece.slide{animation:none}
 @media(max-width:560px){.sub-tabs-bar .tabs{flex-wrap:wrap;overflow:visible}.sub-tabs-bar .tab{padding-inline:10px}}
 .backup-preview{display:grid;gap:8px;margin-top:12px;padding:14px;border:1px solid var(--n6);border-radius:12px;background:var(--n3)}
 .backup-preview ul{margin:0;padding-left:18px;color:var(--n12);font-size:13px;display:grid;gap:3px}
+.sprint-hud{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.sprint-hud div{display:grid;gap:2px;padding:10px 12px;border:1px solid var(--n6);border-radius:12px;background:var(--n3)}
+.sprint-hud small{font:10px 'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--n10)}.sprint-hud strong{font-size:24px;color:var(--n15);letter-spacing:-.5px;font-variant-numeric:tabular-nums}.sprint-hud strong.warn{color:var(--warn)}
+select{max-width:100%;text-overflow:ellipsis}.settings-grid select,.review-settings select{width:100%}
+.settings-grid label:has(>select){grid-column:span 2}@media(max-width:560px){.settings-grid label:has(>select){grid-column:auto}}

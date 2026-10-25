@@ -36,4 +36,6 @@ export const en = {
   "palette.kw.style": "piece set board theme colours animation volume highlights",
   "palette.cmd.backup": "Backup: export or import all data",
   "palette.kw.backup": "export import download save restore backup transfer move data device file json",
+  "palette.cmd.sprint": "Puzzles against the clock",
+  "palette.kw.sprint": "timed sprint rush speed blitz puzzles record 3 minutes",
 } as const

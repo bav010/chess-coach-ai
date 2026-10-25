@@ -122,3 +122,7 @@ The quick jump (Ctrl+K) also finds these features by keywords in both languages,
 ## Backup (one file)
 
 Account → Backup downloads a single JSON file with games, saved sessions, stored reviews, puzzle progress, openings, your mistakes, activity and settings (`src/lib/backup.ts`). Restoring shows what is in the file first, then **merges** it with the current data: nothing is overwritten, games are not duplicated. Settings are restored only if you tick the box. Files from the earlier format (v1) still work.
+
+## Timed puzzles
+
+Puzzles → "Timed" (`src/lib/sprint.ts`): 3 minutes, solve puzzles one after another; a wrong move is a mistake and the puzzle changes, 3 mistakes end the run. Best score and the last 20 runs are kept on the device, included in backup and sync, and do not change the regular puzzle statistics. Leaving the tab during a run cancels it.

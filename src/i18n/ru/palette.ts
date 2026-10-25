@@ -37,4 +37,6 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "palette.kw.style": "набор фигур доска тема цвета анимация громкость подсветка",
   "palette.cmd.backup": "Резервная копия: экспорт и импорт данных",
   "palette.kw.backup": "экспорт импорт скачать сохранить восстановить резервная копия бэкап перенос данные устройство файл json",
+  "palette.cmd.sprint": "Задачи на время",
+  "palette.kw.sprint": "спринт на время быстрые задачи блиц рекорд 3 минуты",
 }
