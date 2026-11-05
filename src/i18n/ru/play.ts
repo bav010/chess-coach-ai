@@ -142,4 +142,9 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   'play.pos.checkB': 'Король чёрных под шахом, хотя ход не его: так не бывает. Смените очередь хода или переставьте фигуры.',
   'play.pos.fenRead': 'Не удалось прочитать FEN',
   'play.cancelShort': 'Отмена',
+  "play.seed.title": "Игра с вашей позиции",
+  "play.seed.text": "Партия начнётся с позиции, открытой в анализе (уже сыграно ходов: {n}, ходят: {side}). Выберите свою сторону и силу бота ниже.",
+  "play.seed.reset": "Начать со стандартной позиции",
+  "play.editor.sideWhite": "Белые — внизу доски, ходят вверх",
+  "play.editor.sideBlack": "Чёрные — вверху доски, ходят вниз",
 }

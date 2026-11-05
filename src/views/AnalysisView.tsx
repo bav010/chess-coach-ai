@@ -56,6 +56,8 @@ type Props = {
   engineLabel: string
   /** Вкладка «Анализ» сейчас видна (иначе анализ и клавиши отключены). */
   active: boolean
+  /** Сыграть с ботом из показанной на доске позиции. */
+  onPlayFrom: (startFen: string, ucis: string[]) => void
 }
 
 type Tab = 'analysis' | 'review' | 'position' | 'saved'
@@ -67,7 +69,7 @@ type MsgPart = { k: Key; p?: Params } | { err: unknown; fb: Key }
 type Msg = MsgPart[]
 const m1 = (k: Key, p?: Params): Msg => [{ k, p }]
 
-export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onReviewDone, onDownload, onOpenSession, onResetProgress, engineState, engineLabel, active }: Props) {
+export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSession, onReviewDone, onDownload, onOpenSession, onResetProgress, engineState, engineLabel, active, onPlayFrom }: Props) {
   const { t, tn } = useI18n()
   const [startFen, setStartFen] = useState(seed?.startFen ?? START_FEN)
   const [ucis, setUcis] = useState<string[]>(seed?.ucis ?? [])
@@ -363,6 +365,7 @@ export default function AnalysisView({ seed, prefs, onPrefs, sessions, onSaveSes
       </div>
 
       <div className="action-bar">
+        <button className="btn" onClick={() => onPlayFrom(startFen, ucis.slice(0, viewPly))} disabled={status.over} title={t('analysis.view.playFromTip')} data-testid="play-from"><Icon name="play2" size={16} />{t('analysis.view.playFrom')}</button>
         <button className="btn primary" onClick={() => void startReview()} disabled={records.length === 0 || engineState === 'error'} data-testid="review-now"><Icon name="search" size={16} />{t('analysis.view.reviewGame')}</button>
         <div className="action-group" role="group" aria-label={t('analysis.view.moreActions')}>
           <button className="btn quiet" onClick={undo} disabled={ucis.length === 0}><Icon name="undo" size={16} /><span className="btn-label">{t('analysis.view.undo')}</span></button>

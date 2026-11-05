@@ -57,6 +57,12 @@ python3 e2e14.py    # etc.
 | e2e14 | other modes and saving |
 | e2e16–e2e21 | sign-in, cloud sync, server status, language |
 | e2e22–e2e24 | additional UI scenarios |
+| e2e25_mistakes | personal puzzles from mistakes: bank, answers, repeat, plan step |
+| e2e26_myopenings | the "My games" openings tab and Ctrl+K search for the new features |
+| e2e27_backup | backup: file, preview, merge, invalid file |
+| e2e28_sprint | timed puzzles: start, solving, time up, record, cancel |
+| e2e29_online | friend game online (two browsers, mocked Supabase server): invite, moves, draw, mate, resignation, rematch, third player |
+| e2e30_playfrom | "Play from here": PGN and edited position → game against the bot; side labels in the position editor |
 | contrast.py | text contrast in light and dark themes: `python3 contrast.py light dark` |
 
 `legacy/` holds old scenarios for removed features (local multi-accounts); there is no need to run them.

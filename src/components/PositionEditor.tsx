@@ -70,18 +70,22 @@ export default function PositionEditor({ initialFen, onApply, onCancel }: Props)
       <button className={`pos-tool erase ${tool === 'erase' ? 'active' : ''}`} onClick={() => setTool('erase')} data-testid="tool-erase" aria-pressed={tool === 'erase'}><Icon name="close" size={16} />{t('play.editor.eraser')}</button>
     </div>
 
+    <div className="pos-side top" data-testid="pos-side-top" data-color={orientation === 'w' ? 'b' : 'w'}><i className={`player-dot ${orientation === 'w' ? 'black' : 'white'}`} />{t(orientation === 'w' ? 'play.editor.sideBlack' : 'play.editor.sideWhite')}</div>
     <div className="board pos-board" role="grid" aria-label={t('play.editor.board')} data-testid="editor-board">
-      {order.map(i => {
+      {order.map((i, n) => {
         const sq = indexSquare(i)
         const light = ((i % 8) + Math.floor(i / 8)) % 2 === 0
         const code = setup.cells[i]
         return <button key={sq} className={`square ${light ? 'light' : 'dark'}`} data-square={sq}
           onClick={() => clickCell(i)} onContextMenu={e => { e.preventDefault(); put(i, null) }}
           aria-label={`${sq}${code ? ` ${code}` : ''}`}>
+          {n % 8 === 0 && <span className="rank-label">{8 - Math.floor(i / 8)}</span>}
+          {n >= 56 && <span className="file-label">{'abcdefgh'[i % 8]}</span>}
           {code && <Piece color={code[0] as Color} type={code[1] as PieceSymbol} />}
         </button>
       })}
     </div>
+    <div className="pos-side bottom" data-testid="pos-side-bottom" data-color={orientation}><i className={`player-dot ${orientation === 'w' ? 'white' : 'black'}`} />{t(orientation === 'w' ? 'play.editor.sideWhite' : 'play.editor.sideBlack')}</div>
     <p className="tiny">{t('play.editor.help')}</p>
 
     <div className="pos-options">

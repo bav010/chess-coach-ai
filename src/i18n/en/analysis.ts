@@ -219,4 +219,6 @@ export const en = {
   "analysis.trainer.repeat": "to repeat",
   "analysis.trainer.back": "Back to the original game",
   "analysis.trainer.of": "{i} of {n}",
+  "analysis.view.playFrom": "Play from here",
+  "analysis.view.playFromTip": "Play against the bot from the position shown on the board",
 } as const

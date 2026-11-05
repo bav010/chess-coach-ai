@@ -34,7 +34,11 @@ type Props = {
   onResetProgress: () => void
   onReview: (seed: Omit<GameSeed, 'nonce'>) => void
   engineError: boolean
+  /** Позиция из анализа (PGN, расстановка), с которой нужно сыграть против бота. */
+  seed?: PlaySeed | null
 }
+
+export type PlaySeed = { startFen: string; ucis: string[]; nonce: number }
 
 type ManualEnd = { result: '1-0' | '0-1' | '1/2-1/2'; reason: EndReason }
 
@@ -55,9 +59,12 @@ export function formatBalance(b: number): string {
   return b > 0 ? `+${b}` : b < 0 ? `−${-b}` : '0'
 }
 
-export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDownload, onOpenSession, onResetProgress, onReview, engineError }: Props) {
+export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDownload, onOpenSession, onResetProgress, onReview, engineError, seed }: Props) {
   const { t, tn } = useI18n()
   const [cfg, setCfg] = useState<GameConfig | null>(null)
+  /** Начальная позиция партии: обычная или перенесённая из анализа (с уже сыгранными ходами). */
+  const [base, setBase] = useState<{ startFen: string; ucis: string[] }>({ startFen: START_FEN, ucis: [] })
+  const startFen = base.startFen
   const [gameId, setGameId] = useState(0)
   const [ucis, setUcisState] = useState<string[]>([])
   const ucisRef = useRef<string[]>([])
@@ -82,7 +89,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   // Движок бота грузится заранее, пока пользователь выбирает настройки.
   useEffect(() => { botEngine.start().catch(() => undefined) }, [])
 
-  const rep = useMemo(() => replay(START_FEN, ucis), [ucis])
+  const rep = useMemo(() => replay(startFen, ucis), [startFen, ucis])
   const repRef = useRef(rep)
   repRef.current = rep
   const rulesStatus: GameStatus = useMemo(() => statusOf(rep.chess), [rep])
@@ -104,10 +111,23 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   })
   const shownChess = useMemo(() => {
     if (!viewing) return rep.chess
-    return new Chess(shownPly === 0 ? START_FEN : rep.records[shownPly - 1].fenAfter)
-  }, [viewing, shownPly, rep])
+    return new Chess(shownPly === 0 ? startFen : rep.records[shownPly - 1].fenAfter)
+  }, [viewing, shownPly, rep, startFen])
   const caps = useMemo(() => captures(rep.records, shownPly), [rep, shownPly])
   const lastRec = shownPly > 0 ? rep.records[shownPly - 1] : null
+
+  // Позиция из анализа: незаконченная партия сохраняется в историю, затем открывается экран настроек с новой позицией
+  const seedDone = useRef<number | null>(null)
+  useEffect(() => {
+    if (!seed || seedDone.current === seed.nonce) return
+    seedDone.current = seed.nonce
+    if (cfg && !end.over && ucisRef.current.length > 0) {
+      onSaveSession({ result: 'in_progress', plies: ucisRef.current.length, pgn: toPgn(startFen, ucisRef.current, {}) })
+    }
+    if (cfg) toSetup()
+    setBase({ startFen: seed.startFen, ucis: seed.ucis.slice() })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed])
 
   // ----- старт, рестарт -----
   function startGame(c: GameConfig) {
@@ -116,12 +136,12 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     let clock: ChessClock | null = null
     if (c.tc.whiteMs !== null && c.tc.blackMs !== null) {
       clock = new ChessClock(c.tc as TimeControl & { whiteMs: number; blackMs: number })
-      clock.start('w', nowMs())
+      clock.start(replay(base.startFen, base.ucis).chess.turn(), nowMs())
     }
     clockRef.current = clock
-    snapsRef.current = clock ? [clock.snapshot(nowMs())] : []
+    snapsRef.current = clock ? Array.from({ length: base.ucis.length + 1 }, () => clock.snapshot(nowMs())) : []
     savedRef.current = false
-    setUcis([]); setViewPly(null); setManualEnd(null); setBotError(null)
+    setUcis(base.ucis.slice()); setViewPly(null); setManualEnd(null); setBotError(null)
     setSelected(null); setLegal([]); setPromo(null); setConfirmResign(false); setThinking(false)
     setMessage(c.userColor === 'w' ? 'play.msg.startWhite' : 'play.msg.startBlack')
     setCfg(c)
@@ -200,7 +220,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
         paceMs(baseMs, cfg.tc.incrementMs) * 1.2,
         history.length < 12 ? 500 : Infinity,
       ))
-      const a = await botEngine.search(START_FEN, history, {
+      const a = await botEngine.search(startFen, history, {
         depth: settings.depth ?? 40,
         movetime,
         multipv: settings.multipv,
@@ -259,7 +279,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     setConfirmResign(false); setSelected(null); setLegal([]); setPromo(null)
     setMessage('end')
     if (ucisRef.current.length > 0) {
-      const pgn = toPgn(START_FEN, ucisRef.current, {
+      const pgn = toPgn(startFen, ucisRef.current, {
         Event: 'Chess Coach AI', White: cfg.userColor === 'w' ? 'You' : `Bot (~${cfg.elo})`,
         Black: cfg.userColor === 'b' ? 'You' : `Bot (~${cfg.elo})`, Result: end.result,
         TimeControl: cfg.tc.whiteMs === null ? '-' : `${Math.round(cfg.tc.whiteMs / 1000)}+${Math.round(cfg.tc.incrementMs / 1000)}`,
@@ -267,7 +287,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       onSaveSession({ result: end.result, plies: ucisRef.current.length, pgn })
     }
     if (prefs.autoReview && ucisRef.current.length > 0) {
-      onReview({ startFen: START_FEN, ucis: ucisRef.current.slice(), userColor: cfg.userColor, autoReview: true })
+      onReview({ startFen, ucis: ucisRef.current.slice(), userColor: cfg.userColor, autoReview: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [end.over])
@@ -302,7 +322,9 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   // Игрок обязан остаться «на ходу»: пока бот думает — снимаем один полуход (ход игрока),
   // иначе — последний полный ход (ход бота и ход игрока). Если игрок чёрными, первый ход бота не отменяется.
   const undoDrop = turn === bot ? 1 : 2
-  const minLen = user === 'b' ? 1 : 0
+  // первый ход бота (если он ходит первым в исходной позиции) не отменяется
+  const baseTurn = useMemo(() => replay(base.startFen, base.ucis).chess.turn(), [base])
+  const minLen = base.ucis.length + (baseTurn === user ? 0 : 1)
   const canUndo = !!cfg && !over && ucis.length - undoDrop >= minLen
 
   function undo() {
@@ -315,7 +337,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     const clock = clockRef.current
     if (clock) {
       const snap = snapsRef.current[next.length]
-      if (snap) clock.restore(snap, next.length % 2 === 0 ? 'w' : 'b', nowMs())
+      if (snap) clock.restore(snap, replay(startFen, next).chess.turn(), nowMs())
       snapsRef.current = snapsRef.current.slice(0, next.length + 1)
     }
     setSelected(null); setLegal([]); setPromo(null); setConfirmResign(false)
@@ -326,8 +348,16 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   const balanceText = formatBalance(caps.balance)
 
   if (!cfg) {
+    const custom = base.startFen !== START_FEN || base.ucis.length > 0
     return <div className="main-grid">
-      <PlaySetup prefs={prefs} onPrefs={onPrefs} onStart={startGame} engineError={engineError} />
+      <div className="play-setup-col">
+        {custom && <div className="panel play-seed" data-testid="play-seed">
+          <b>{t('play.seed.title')}</b>
+          <p className="muted">{t('play.seed.text', { n: base.ucis.length, side: t(baseTurn === 'w' ? 'play.side.white' : 'play.side.black') })}</p>
+          <button className="btn quiet" onClick={() => setBase({ startFen: START_FEN, ucis: [] })} data-testid="play-seed-reset">{t('play.seed.reset')}</button>
+        </div>}
+        <PlaySetup prefs={prefs} onPrefs={onPrefs} onStart={startGame} engineError={engineError} />
+      </div>
       <aside className="right-column">
         <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />
       </aside>
@@ -376,7 +406,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
         </div>
         <div className="play-end-row">
           {reviewable && <button className="btn primary" data-testid="review-btn"
-            onClick={() => onReview({ startFen: START_FEN, ucis: ucis.slice(), userColor: user, autoReview: true })}><Icon name="search" size={16} />{t('play.review')}</button>}
+            onClick={() => onReview({ startFen, ucis: ucis.slice(), userColor: user, autoReview: true })}><Icon name="search" size={16} />{t('play.review')}</button>}
           <button className={`btn ${over && !reviewable ? 'primary' : 'quiet'}`} onClick={toSetup} data-testid="new-game"><Icon name="plus" size={16} />{t('play.newGame')}</button>
           <span className="spacer" />
           {confirmResign && <button className="btn quiet" onClick={() => setConfirmResign(false)}>{t('play.no')}</button>}

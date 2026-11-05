@@ -224,4 +224,6 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "analysis.trainer.repeat": "повторить",
   "analysis.trainer.back": "Вернуться к исходной партии",
   "analysis.trainer.of": "{i} из {n}",
+  "analysis.view.playFrom": "Играть отсюда",
+  "analysis.view.playFromTip": "Играть с ботом из позиции, показанной на доске",
 }

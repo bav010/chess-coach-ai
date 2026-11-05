@@ -25,6 +25,7 @@ const FEATURES: [string, IconName, RouteName, string | null][] = [
   ['style', 'settings', 'settings', null],
   ['backup', 'download', 'account', null],
   ['sprint', 'clock', 'tactics', 'sprint'],
+  ['online', 'handshake', 'online', null],
 ]
 
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е')

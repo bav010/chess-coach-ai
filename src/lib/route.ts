@@ -2,7 +2,7 @@
 // Хэш подходит для статического хостинга (GitHub Pages) без настройки сервера.
 import { useSyncExternalStore } from 'react'
 
-export const ROUTES = ['home', 'analysis', 'play', 'tactics', 'openings', 'stats', 'profile', 'account', 'settings', 'help'] as const
+export const ROUTES = ['home', 'analysis', 'play', 'tactics', 'openings', 'online', 'stats', 'profile', 'account', 'settings', 'help'] as const
 export type RouteName = (typeof ROUTES)[number]
 export type Route = { name: RouteName; arg: string | null }
 /** Режимы, у которых состояние (партия, часы, позиция) сохраняется при уходе со страницы. */

@@ -139,4 +139,9 @@ export const en = {
   'play.pos.checkB': 'The black king is in check although it is not Black\'s move: that is impossible. Change the side to move or rearrange the pieces.',
   'play.pos.fenRead': 'Could not read the FEN',
   'play.cancelShort': 'Cancel',
+  "play.seed.title": "Starting from your position",
+  "play.seed.text": "The game starts from the position you opened in Analysis ({n} moves already played, {side} to move). Choose your side and the bot's strength below.",
+  "play.seed.reset": "Start from the standard position",
+  "play.editor.sideWhite": "White — bottom of the board, moves up",
+  "play.editor.sideBlack": "Black — top of the board, moves down",
 } as const

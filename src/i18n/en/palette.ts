@@ -38,4 +38,6 @@ export const en = {
   "palette.kw.backup": "export import download save restore backup transfer move data device file json",
   "palette.cmd.sprint": "Puzzles against the clock",
   "palette.kw.sprint": "timed sprint rush speed blitz puzzles record 3 minutes",
+  "palette.cmd.online": "Play online with a friend",
+  "palette.kw.online": "online friend invite link multiplayer play together",
 } as const

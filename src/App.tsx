@@ -4,10 +4,11 @@ import { usePrefs } from './hooks/usePrefs'
 import { addSession, clearSessions, loadSessions, type SavedSession } from './storage'
 import { parsePgn } from './lib/pgn'
 import AnalysisView, { type GameSeed } from './views/AnalysisView'
-import PlayView from './views/PlayView'
+import PlayView, { type PlaySeed } from './views/PlayView'
 import PuzzleView from './views/PuzzleView'
 import OpeningsView from './views/OpeningsView'
 import AccountView from './views/AccountView'
+import OnlineView from './views/OnlineView'
 import Avatar from './components/Avatar'
 import LanguageSwitch from './components/LanguageSwitch'
 import { cloudConfigured } from './lib/cloud'
@@ -57,6 +58,7 @@ export default function App() {
   const [profiles, setProfiles] = useState<ProfileStore>(() => loadProfiles())
   const me = profiles.list.find(p => p.id === profiles.current) ?? profiles.list[0]
   const [seed, setSeed] = useState<GameSeed | null>(null)
+  const [playSeed, setPlaySeed] = useState<PlaySeed | null>(null)
   const [engineState, setEngineState] = useState<EngineState>('loading')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadSessions())
   const [prefs, updatePrefs] = usePrefs()
@@ -137,6 +139,7 @@ export default function App() {
   const TITLES: Partial<Record<RouteName, { icon: IconName; title: string }>> = {
     analysis: { icon: 'analysis', title: t('app.mode.analysis') }, play: { icon: 'play', title: t('app.mode.play') },
     tactics: { icon: 'tactics', title: t('app.mode.tactics') }, openings: { icon: 'openings', title: t('app.mode.openings') },
+    online: { icon: 'handshake', title: t('online.title') },
     stats: { icon: 'stats', title: t('nav.stats') }, profile: { icon: 'user', title: t('nav.profile') }, account: { icon: 'cloud', title: t('nav.account') },
     settings: { icon: 'settings', title: t('nav.settings') }, help: { icon: 'help', title: t('nav.help') },
   }
@@ -176,11 +179,12 @@ export default function App() {
     <div hidden={route.name !== 'analysis'}>
       <AnalysisView key={seed?.nonce ?? 0} seed={seed} prefs={prefs} onPrefs={updatePrefs} sessions={sessions}
         onSaveSession={saveSession} onReviewDone={reviewDone} onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress}
-        engineState={engineState} engineLabel={engineLabel} active={route.name === 'analysis'} />
+        engineState={engineState} engineLabel={engineLabel} active={route.name === 'analysis'}
+        onPlayFrom={(startFen, ucis) => { setPlaySeed({ startFen, ucis, nonce: Date.now() }); navigate('play') }} />
     </div>
     <div hidden={route.name !== 'play'}>
       <PlayView prefs={prefs} onPrefs={updatePrefs} sessions={sessions} onSaveSession={saveSession}
-        onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} />
+        onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} seed={playSeed} />
     </div>
     <div hidden={route.name !== 'tactics'}>
       <PuzzleView active={route.name === 'tactics'} puzzleId={route.name === 'tactics' ? route.arg : null} />
@@ -192,9 +196,10 @@ export default function App() {
       <AccountView active={onAccountRoute} tab={accountTab} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
         onGo={m => navigate(m)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
     </div>
+    {route.name === 'online' && <OnlineView cloud={cloud} shownName={shownName} arg={route.arg} />}
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.5.5-beta</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.6.0-beta</span></footer>
   </main>
 }

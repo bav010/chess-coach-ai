@@ -304,3 +304,32 @@ html[data-anim=off] .piece.slide{animation:none}
 .sprint-hud small{font:10px 'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--n10)}.sprint-hud strong{font-size:24px;color:var(--n15);letter-spacing:-.5px;font-variant-numeric:tabular-nums}.sprint-hud strong.warn{color:var(--warn)}
 select{max-width:100%;text-overflow:ellipsis}.settings-grid select,.review-settings select{width:100%}
 .settings-grid label:has(>select){grid-column:span 2}@media(max-width:560px){.settings-grid label:has(>select){grid-column:auto}}
+
+/* Онлайн-партия с другом */
+.online-note{max-width:560px;margin:0 auto;display:grid;gap:12px;justify-items:start}
+.online-note h2{margin:0}
+.online-lobby .field-label{font-size:11px;font-weight:700;color:var(--n11);margin:14px 0 6px}
+.online-join{display:flex;gap:8px;flex-wrap:wrap}
+.online-join input,.online-side input{flex:1;min-width:0;width:100%;background:var(--n3);border:1px solid var(--n7);color:var(--n14);border-radius:8px;padding:10px 12px;font:12px 'DM Mono',monospace}
+.online-join input{width:auto}
+.online-sub{font-size:13px;margin:20px 0 8px}
+.online-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.online-list a{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--n6);border-radius:8px;background:var(--n4);color:var(--n14);text-decoration:none;font-size:12px}
+.online-list a:hover{border-color:var(--n9)}
+.online-side{display:grid;gap:12px;align-content:start}
+.online-side h3{margin:0}
+.online-code{font-size:12px;color:var(--n11)}.online-code b{font:700 15px 'DM Mono',monospace;color:var(--n14);letter-spacing:2px}
+.online-actions{flex-wrap:wrap}
+.online-draw,.inline-confirm{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
+.online-fine{font-size:11px}
+.player-strip .clock{margin-left:auto}
+
+/* Подписи сторон в редакторе позиции и перенос позиции в игру с ботом */
+.pos-side{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--n13)}
+.pos-side .player-dot{display:inline-block}
+.pos-board .rank-label,.pos-board .file-label{opacity:.9}
+.play-setup-col{display:grid;gap:14px;align-content:start}
+.play-seed{display:grid;gap:8px;justify-items:start}
+.play-seed p{margin:0}
+.pos-side i{width:14px;height:14px;border-radius:50%;border:2px solid var(--n10);display:inline-block}
+.pos-side i.white{background:var(--n15)}.pos-side i.black{background:var(--n0)}

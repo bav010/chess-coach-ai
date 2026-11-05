@@ -126,3 +126,9 @@ Account → Backup downloads a single JSON file with games, saved sessions, stor
 ## Timed puzzles
 
 Puzzles → "Timed" (`src/lib/sprint.ts`): 3 minutes, solve puzzles one after another; a wrong move is a mistake and the puzzle changes, 3 mistakes end the run. Best score and the last 20 runs are kept on the device, included in backup and sync, and do not change the regular puzzle statistics. Leaving the tab during a run cancels it.
+
+## Online game with a friend
+Open **Online game**, pick colour and time control, send the invite link. The friend opens it, signs in and the game starts; clocks, draw offers, resignation and rematch are supported. It needs the cloud server: run the online part of `docs/supabase.sql` in the Supabase SQL Editor first. Games are friendly (not rated, not in statistics); move legality is checked by the apps, not by the server.
+
+## Play from a position
+In **Analysis**, load a PGN or set up a position by hand, then press **Play from here** to continue against the bot from the position on the board. The editor shows which side is White (bottom) and Black (top) and has rank/file labels.

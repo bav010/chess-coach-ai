@@ -13,6 +13,7 @@ const GROUPS: { title: Key; items: Item[] }[] = [
     { route: 'play', icon: 'play', label: 'app.mode.play' },
     { route: 'tactics', icon: 'tactics', label: 'app.mode.tactics' },
     { route: 'openings', icon: 'openings', label: 'app.mode.openings' },
+    { route: 'online', icon: 'handshake', label: 'online.title' },
   ] },
   { title: 'nav.section.you', items: [
     { route: 'stats', icon: 'stats', label: 'nav.stats' },
