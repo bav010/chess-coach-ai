@@ -61,7 +61,7 @@ python3 e2e14.py    # etc.
 | e2e26_myopenings | the "My games" openings tab and Ctrl+K search for the new features |
 | e2e27_backup | backup: file, preview, merge, invalid file |
 | e2e28_sprint | timed puzzles: start, solving, time up, record, cancel |
-| e2e29_online | friend game online (two browsers, mocked Supabase server): invite, moves, draw, mate, resignation, rematch, third player |
+| e2e29_online | online games (several browsers, mocked Supabase server): invite, moves, draw, mate, resignation, rematch, third player, quick pairing, open challenges, cancel search, Online tab in statistics |
 | e2e30_playfrom | "Play from here": PGN and edited position → game against the bot; side labels in the position editor |
 | contrast.py | text contrast in light and dark themes: `python3 contrast.py light dark` |
 

@@ -60,11 +60,15 @@ create table if not exists public.online_games (
   result       text check (result in ('1-0', '0-1', '1/2-1/2')),
   reason       text,
   draw_offer   text check (draw_offer in ('w', 'b')),
+  is_open      boolean not null default false,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
 create index if not exists online_games_white_idx on public.online_games (white);
 create index if not exists online_games_black_idx on public.online_games (black);
+-- для таблицы, созданной более ранней версией этого файла
+alter table public.online_games add column if not exists is_open boolean not null default false;
+create index if not exists online_games_open_idx on public.online_games (created_at) where is_open and status = 'waiting';
 
 alter table public.online_games enable row level security;
 drop policy if exists "players select" on public.online_games;
@@ -124,7 +128,7 @@ begin
   if g.status <> 'waiting' then raise exception 'full'; end if;
   if g.white is null then update public.online_games set white = uid, white_name = nm where id = g.id;
   else update public.online_games set black = uid, black_name = nm where id = g.id; end if;
-  update public.online_games set status = 'active', turn_started = clock_timestamp(), updated_at = now() where id = g.id returning * into g;
+  update public.online_games set status = 'active', is_open = false, turn_started = clock_timestamp(), updated_at = now() where id = g.id returning * into g;
   return public.online_view(g);
 end $$;
 
@@ -134,6 +138,10 @@ declare g public.online_games;
 begin
   select * into g from public.online_games where id = p_id and auth.uid() in (white, black, creator);
   if not found then raise exception 'not_found'; end if;
+  -- пока создатель ждёт соперника, каждый опрос продлевает жизнь вызова (устаревшие вызовы из списка пропадают)
+  if g.status = 'waiting' and g.creator = auth.uid() then
+    update public.online_games set updated_at = now() where id = g.id returning * into g;
+  end if;
   return public.online_view(g);
 end $$;
 
@@ -251,10 +259,73 @@ begin
   select * into g from public.online_games where id = p_id for update;
   if not found or (uid is distinct from g.creator and uid is distinct from g.white and uid is distinct from g.black) then raise exception 'not_found'; end if;
   if g.status = 'waiting' or (g.status = 'active' and coalesce(array_length(g.moves, 1), 0) < 2) then
-    update public.online_games set status = 'finished', result = null, reason = 'aborted', draw_offer = null, updated_at = now() where id = g.id returning * into g;
+    update public.online_games set status = 'finished', result = null, reason = 'aborted', draw_offer = null, is_open = false, updated_at = now() where id = g.id returning * into g;
   end if;
   return public.online_view(g);
 end $$;
+
+-- ЛОББИ: быстрый поиск и список открытых вызовов (вызов живёт, пока создатель его «пингует» через online_get; 45 секунд без пинга — вызов считается устаревшим)
+
+-- Быстрая игра: берёт самый старый свежий открытый вызов с тем же контролем времени (не свой), иначе создаёт открытый вызов со случайным цветом
+create or replace function public.online_seek(p_name text, p_base_s int, p_inc_s int) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid(); g public.online_games; nm text := left(coalesce(nullif(trim(p_name), ''), 'Player'), 24); c text;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if p_base_s < 0 or p_base_s > 10800 or p_inc_s < 0 or p_inc_s > 60 then raise exception 'bad_time'; end if;
+  -- свои старые ожидающие вызовы закрываем, чтобы не копились
+  update public.online_games set status = 'finished', reason = 'aborted', is_open = false, updated_at = now()
+    where creator = uid and status = 'waiting' and is_open;
+  select * into g from public.online_games
+    where is_open and status = 'waiting' and creator <> uid and base_ms = p_base_s * 1000 and inc_ms = p_inc_s * 1000
+      and updated_at > now() - interval '45 seconds'
+    order by created_at limit 1 for update skip locked;
+  if found then
+    if g.white is null then update public.online_games set white = uid, white_name = nm where id = g.id;
+    else update public.online_games set black = uid, black_name = nm where id = g.id; end if;
+    update public.online_games set status = 'active', is_open = false, turn_started = clock_timestamp(), updated_at = now() where id = g.id returning * into g;
+    return public.online_view(g);
+  end if;
+  loop
+    c := substr(md5(random()::text || clock_timestamp()::text), 1, 8);
+    exit when not exists (select 1 from public.online_games where code = c);
+  end loop;
+  if random() < 0.5 then
+    insert into public.online_games (code, creator, white, white_name, base_ms, inc_ms, white_ms, black_ms, is_open)
+    values (c, uid, uid, nm, p_base_s * 1000, p_inc_s * 1000, p_base_s * 1000, p_base_s * 1000, true) returning * into g;
+  else
+    insert into public.online_games (code, creator, black, black_name, base_ms, inc_ms, white_ms, black_ms, is_open)
+    values (c, uid, uid, nm, p_base_s * 1000, p_inc_s * 1000, p_base_s * 1000, p_base_s * 1000, true) returning * into g;
+  end if;
+  return public.online_view(g);
+end $$;
+
+-- Показать свою ожидающую партию в списке открытых вызовов (или убрать из него)
+create or replace function public.online_publish(p_id uuid, p_open boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare g public.online_games;
+begin
+  update public.online_games set is_open = (p_open and status = 'waiting'), updated_at = now()
+    where id = p_id and creator = auth.uid() returning * into g;
+  if not found then raise exception 'not_found'; end if;
+  return public.online_view(g);
+end $$;
+
+-- Открытые вызовы других игроков (без id и кода участников: для входа нужен только код вызова)
+create or replace function public.online_open_list() returns jsonb
+language sql security definer set search_path = public volatile as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'code', code, 'name', case when white is not null then white_name else black_name end,
+      'side', case when white is not null then 'w' else 'b' end, 'base_ms', base_ms, 'inc_ms', inc_ms, 'created_at', created_at)
+    order by created_at), '[]'::jsonb)
+  from (select * from public.online_games
+        where is_open and status = 'waiting' and creator <> auth.uid() and updated_at > now() - interval '45 seconds'
+        order by created_at limit 30) o
+$$;
+
+revoke all on function public.online_seek(text, int, int), public.online_publish(uuid, boolean), public.online_open_list() from public, anon;
+grant execute on function public.online_seek(text, int, int), public.online_publish(uuid, boolean), public.online_open_list() to authenticated;
 
 revoke all on function public.online_create(text, text, int, int), public.online_join(text, text), public.online_get(uuid), public.online_move(uuid, text),
   public.online_finish(uuid, text, text), public.online_resign(uuid), public.online_offer_draw(uuid), public.online_decline_draw(uuid),

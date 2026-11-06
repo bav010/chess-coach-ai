@@ -25,6 +25,8 @@ export type OnlineGame = {
   result: OnlineResult | null
   reason: string | null
   draw_offer: Side | null
+  /** Показана в списке открытых вызовов (быстрый поиск). */
+  is_open?: boolean
   updated_at?: string
   /** Время сервера в момент ответа (есть только у ответов функций, не у событий Realtime). */
   server_now?: string

@@ -32,6 +32,7 @@ const CARDS: { route: RouteName; icon: IconName; title: Key; desc: Key }[] = [
   { route: 'play', icon: 'play', title: 'app.mode.play', desc: 'home.card.play.desc' },
   { route: 'tactics', icon: 'tactics', title: 'app.mode.tactics', desc: 'home.card.tactics.desc' },
   { route: 'openings', icon: 'openings', title: 'app.mode.openings', desc: 'home.card.openings.desc' },
+  { route: 'online', icon: 'handshake', title: 'online.title', desc: 'home.card.online.desc' },
   { route: 'stats', icon: 'stats', title: 'nav.stats', desc: 'home.card.stats.desc' },
 ]
 

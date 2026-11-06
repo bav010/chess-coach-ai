@@ -99,6 +99,37 @@ begin
   -- 10. список своих партий виден участнику и только ему
   perform pg_temp.as_user(C); select count(*) into n from public.online_games; assert n = 0, 'C ничего не видит';
   perform pg_temp.as_user(A); select count(*) into n from public.online_games; assert n >= 5, 'A видит свои';
+  -- 11. лобби: быстрый поиск, открытые вызовы, устаревание
+  perform pg_temp.as_user(A); g := public.online_seek('Ann',300,3);
+  assert g->>'status' = 'waiting' and (g->>'is_open')::boolean, 'поиск создаёт открытый вызов';
+  gid := (g->>'id')::uuid;
+  g := public.online_seek('Ann',300,3); assert g->>'status' = 'waiting' and (g->>'id')::uuid <> gid, 'сам с собой не играет, старый вызов закрыт';
+  gid := (g->>'id')::uuid;
+  perform pg_temp.as_user(B); g := public.online_open_list();
+  assert jsonb_array_length(g) = 1 and g->0->>'name' = 'Ann' and (g->0->>'base_ms')::int = 300000 and g->0->>'code' is not null and not (g->0 ? 'id'), 'список открытых вызовов';
+  g := public.online_seek('Bob',300,0); assert g->>'status' = 'waiting', 'другой контроль времени не совпадает';
+  g := public.online_seek('Bob',300,3);
+  assert g->>'status' = 'active' and not (g->>'is_open')::boolean and g->>'white' is not null and g->>'black' is not null, 'совпадение найдено';
+  assert (g->>'id')::uuid = gid, 'вошёл в вызов Ann';
+  perform pg_temp.as_user(C); assert jsonb_array_length(public.online_open_list()) = 0, 'занятые и закрытые вызовы не в списке';
+  -- устаревший вызов не подбирается
+  perform pg_temp.as_user(A); g := public.online_seek('Ann',60,0); gid := (g->>'id')::uuid;
+  perform pg_temp.as_root(); update public.online_games set updated_at = now() - interval '60 seconds' where id = gid;
+  perform pg_temp.as_user(C); assert jsonb_array_length(public.online_open_list()) = 0, 'устаревший вызов скрыт';
+  g := public.online_seek('Cat',60,0); assert g->>'status' = 'waiting' and (g->>'id')::uuid <> gid, 'устаревший не подобран';
+  -- пинг продлевает вызов
+  perform pg_temp.as_root(); update public.online_games set updated_at = now() - interval '60 seconds' where id = gid;
+  perform pg_temp.as_user(A); perform public.online_get(gid);
+  perform pg_temp.as_user(B); assert jsonb_array_length(public.online_open_list()) >= 1, 'пинг продлил вызов';
+  -- публикация обычной партии и вход по коду закрывает вызов
+  perform pg_temp.as_user(A); g := public.online_create('Ann','b',600,0); gid := (g->>'id')::uuid; code := g->>'code';
+  perform pg_temp.as_user(B); assert (select count(*) from jsonb_array_elements(public.online_open_list()) e where e->>'code' = code) = 0, 'приватная партия не видна';
+  perform pg_temp.as_user(A); g := public.online_publish(gid, true); assert (g->>'is_open')::boolean, 'опубликована';
+  perform pg_temp.as_user(B); assert (select count(*) from jsonb_array_elements(public.online_open_list()) e where e->>'code' = code and e->>'side' = 'b') = 1, 'виден, создатель чёрными';
+  perform pg_temp.must_fail(format('select public.online_publish(%L,true)', gid), 'not_found');
+  g := public.online_join(code,'Bob'); assert g->>'status' = 'active' and not (g->>'is_open')::boolean, 'вход закрыл вызов';
+  perform pg_temp.as_user(A); g := public.online_seek('Ann',999,0); gid := (g->>'id')::uuid; g := public.online_abort(gid);
+  assert not (g->>'is_open')::boolean, 'отмена закрывает вызов';
   perform pg_temp.as_root();
   raise notice 'ВСЕ ПРОВЕРКИ SQL ПРОЙДЕНЫ';
 end $t$;

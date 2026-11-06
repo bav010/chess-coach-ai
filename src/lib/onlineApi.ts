@@ -21,6 +21,27 @@ export const declineDraw = (id: string) => rpc('online_decline_draw', { p_id: id
 export const claimFlag = (id: string) => rpc('online_flag', { p_id: id })
 export const abortGame = (id: string) => rpc('online_abort', { p_id: id })
 
+/** Быстрая игра: подбор открытого вызова с тем же контролем времени или создание своего открытого вызова. */
+export const seekGame = (name: string, baseS: number, incS: number) => rpc('online_seek', { p_name: name, p_base_s: baseS, p_inc_s: incS })
+export const publishGame = (id: string, open: boolean) => rpc('online_publish', { p_id: id, p_open: open })
+
+export type OpenChallenge = { code: string; name: string; side: Side; base_ms: number; inc_ms: number; created_at: string }
+/** Открытые вызовы других игроков. */
+export async function listOpen(): Promise<OpenChallenge[]> {
+  const c = await getClient()
+  const { data, error } = await c.rpc('online_open_list')
+  if (error) throw error
+  return (data ?? []) as OpenChallenge[]
+}
+
+/** Все завершённые партии аккаунта для статистики (до 500 последних). */
+export async function listFinished(uid: string): Promise<OnlineGame[]> {
+  const c = await getClient()
+  const { data, error } = await c.from('online_games').select('*').eq('status', 'finished').or(`white.eq.${uid},black.eq.${uid}`).order('updated_at', { ascending: false }).limit(500)
+  if (error) throw error
+  return (data ?? []) as OnlineGame[]
+}
+
 /** Мои партии: активные и последние завершённые. */
 export async function listMine(uid: string): Promise<OnlineGame[]> {
   const c = await getClient()

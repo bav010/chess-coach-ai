@@ -7,19 +7,21 @@ import LearningStats from '../components/LearningStats'
 import { loadOpenings } from '../lib/openingsStore'
 import { DEFAULT_FILTERS, MIN_REVIEWED, applyFilters, movingAverage, ratingSeries, recommend, summarize, type Filters } from '../lib/statsCalc'
 import Icon from '../components/Icon'
+import OnlineStats from '../components/OnlineStats'
+import type { CloudApi } from '../hooks/useCloud'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
-type Props = { active: boolean; games: GameStat[]; onGo: (m: Go) => void }
+type Props = { active: boolean; games: GameStat[]; onGo: (m: Go) => void; cloud: CloudApi }
 
 const fmtDate = (iso: string) => fmtD(Date.parse(iso), { day: '2-digit', month: '2-digit' })
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
 
 /** Личная панель прогресса: партии, внутренний рейтинг, точность, ошибки, задачи, дебюты, эндшпили, рекомендации, резервная копия. */
-export default function StatsView({ active, games, onGo }: Props) {
+export default function StatsView({ active, games, onGo, cloud }: Props) {
   const { t, tn, lang } = useI18n()
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS)
   const [tick, setTick] = useState(0)
-  const [sec, setSec] = useState<'overview' | 'mistakes' | 'learning' | 'advice'>('overview')
+  const [sec, setSec] = useState<'overview' | 'mistakes' | 'learning' | 'online' | 'advice'>('overview')
   // задачи и дебюты живут в своих хранилищах — перечитываем при открытии вкладки
   const puzzles = useMemo(() => loadPuzzleStats(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
   const openings = useMemo(() => loadOpenings(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -57,7 +59,7 @@ export default function StatsView({ active, games, onGo }: Props) {
     </section>
 
     <div className="tabs st-tabs" role="tablist" aria-label={t('stats.sec.aria')}>
-      {([['overview', 'stats', 'stats.sec.overview'], ['mistakes', 'analysis', 'stats.sec.mistakes'], ['learning', 'tactics', 'stats.sec.learning'], ['advice', 'hint', 'stats.sec.advice']] as const).map(([id, ic, label]) =>
+      {([['overview', 'stats', 'stats.sec.overview'], ['mistakes', 'analysis', 'stats.sec.mistakes'], ['learning', 'tactics', 'stats.sec.learning'], ['online', 'handshake', 'stats.sec.online'], ['advice', 'hint', 'stats.sec.advice']] as const).map(([id, ic, label]) =>
         <button key={id} role="tab" className={`tab ${sec === id ? 'active' : ''}`} aria-selected={sec === id} onClick={() => setSec(id)} data-testid={`stab-${id}`}><Icon name={ic} size={16} /><span>{t(label)}</span></button>)}
     </div>
 
@@ -112,6 +114,8 @@ export default function StatsView({ active, games, onGo }: Props) {
     </div>}
 
     <div hidden={sec !== 'learning'} className="st-sec"><LearningStats puzzles={puzzles} openings={openings} onGo={onGo} /></div>
+
+    <div hidden={sec !== 'online'} className="st-sec"><OnlineStats cloud={cloud} active={active && sec === 'online'} /></div>
 
     <section className="panel" data-testid="recs" hidden={sec !== 'advice'}>
         <div className="panel-head"><div><div className="eyebrow">{t('stats.recs.eyebrow')}</div><h2>{t('stats.recs.title')}</h2></div></div>

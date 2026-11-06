@@ -40,9 +40,27 @@ def online(route,req,path,m,body,ok,err):
         if g['white'] and g['black']: return bad('full')
         if g['white'] is None: g['white']=uid; g['white_name']=body['p_name']
         else: g['black']=uid; g['black_name']=body['p_name']
-        g['status']='active'; g['turn_started']=nowiso(); touch(g); return ok(view(g)) or True
+        g['status']='active'; g['is_open']=False; g['turn_started']=nowiso(); touch(g); return ok(view(g)) or True
+    if fn=='online_open_list':
+        return ok([{'code':x['code'],'name':x['white_name'] or x['black_name'],'side':'w' if x['white'] else 'b','base_ms':x['base_ms'],'inc_ms':x['inc_ms'],'created_at':x['updated_at']}
+                   for x in G.values() if x.get('is_open') and x['status']=='waiting' and x['creator']!=uid]) or True
+    if fn=='online_seek':
+        for x in G.values():
+            if x['creator']==uid and x['status']=='waiting' and x.get('is_open'): x.update(status='finished',reason='aborted',is_open=False)
+        m=next((x for x in G.values() if x.get('is_open') and x['status']=='waiting' and x['creator']!=uid and x['base_ms']==body['p_base_s']*1000 and x['inc_ms']==body['p_inc_s']*1000),None)
+        if m:
+            if m['white'] is None: m['white']=uid; m['white_name']=body['p_name']
+            else: m['black']=uid; m['black_name']=body['p_name']
+            m.update(status='active',is_open=False,turn_started=nowiso()); touch(m); return ok(view(m)) or True
+        w=len(G)%2==0
+        g={'id':str(uuid.uuid4()),'code':uuid.uuid4().hex[:8],'creator':uid,'white':uid if w else None,'black':None if w else uid,'white_name':body['p_name'] if w else '','black_name':'' if w else body['p_name'],
+           'moves':[],'base_ms':body['p_base_s']*1000,'inc_ms':body['p_inc_s']*1000,'white_ms':body['p_base_s']*1000,'black_ms':body['p_base_s']*1000,'turn_started':None,
+           'status':'waiting','result':None,'reason':None,'draw_offer':None,'is_open':True}
+        touch(g); G[g['id']]=g; return ok(view(g)) or True
     g=G.get(body.get('p_id'))
     if not g: return bad('not_found')
+    if fn=='online_publish':
+        g['is_open']=bool(body['p_open']) and g['status']=='waiting'; touch(g); return ok(view(g)) or True
     w=uid==g['white']
     if fn=='online_get': return ok(view(g)) or True
     if fn=='online_move':
@@ -62,7 +80,7 @@ def online(route,req,path,m,body,ok,err):
         touch(g); return ok(view(g)) or True
     if fn=='online_decline_draw': g['draw_offer']=None; touch(g); return ok(view(g)) or True
     if fn=='online_abort':
-        g.update(status='finished',result=None,reason='aborted'); touch(g); return ok(view(g)) or True
+        g.update(status='finished',result=None,reason='aborted',is_open=False); touch(g); return ok(view(g)) or True
     if fn=='online_flag': return ok(view(g)) or True
     return False
 
@@ -191,6 +209,36 @@ with sync_playwright() as p:
     a.goto(URL+'#/online'); a.wait_for_selector('[data-testid=online-mine-item]'); check('my games listed', a.locator('[data-testid=online-mine-item]').count()==2)
     # неверный код
     a.locator('[data-testid=online-code-input]').fill('hello'); a.locator('[data-testid=online-join-btn]').click(); check('bad code message', a.locator('[data-testid=online-error]').count()==1)
-    check('no page errors', not (e1 or e2 or e3)); print(e1,e2,e3)
+
+    # --- лобби: быстрый поиск, открытые вызовы, статистика ---
+    a.goto(URL+'#/online'); a.wait_for_selector('[data-testid=online-quick]')
+    a.screenshot(path='shots_online_lobby2.png')
+    a.locator('[data-testid="online-quick-5+3"]').click(); a.wait_for_selector('[data-testid=online-seek]',timeout=8000)
+    check('seek screen shown', a.locator('[data-testid=online-seek-time]').count()==1)
+    a.screenshot(path='shots_online_seek.png')
+    bb.goto(URL+'#/online'); bb.wait_for_selector('[data-testid=online-open-item]',timeout=9000)
+    check('open challenge visible to B', 'Ann' in bb.locator('[data-testid=online-open-item]').first.inner_text() and '5+3' in bb.locator('[data-testid=online-open-item]').first.inner_text())
+    bb.screenshot(path='shots_online_open.png')
+    bb.locator('[data-testid=online-open-accept]').first.click()
+    for pgx in (a,bb): pgx.wait_for_selector('[data-testid=online-game][data-status=active]',timeout=10000)
+    check('challenge accepted -> both playing', True)
+    a.locator('[data-testid=online-resign]').click(); a.locator('[data-testid=online-resign-yes]').click()
+    bb.wait_for_selector('[data-testid=online-game][data-status=finished]',timeout=10000)
+    # быстрый поиск двух игроков с одним контролем
+    c3b,cc2,e4=mkpage(b); signup(cc2,'cat2@example.com')
+    cc2.goto(URL+'#/online'); cc2.wait_for_selector('[data-testid=online-quick]'); cc2.locator('[data-testid="online-quick-3+2"]').click(); cc2.wait_for_selector('[data-testid=online-seek]',timeout=8000)
+    cc.goto(URL+'#/online'); cc.wait_for_selector('[data-testid=online-quick]'); cc.locator('[data-testid="online-quick-3+2"]').click()
+    for pgx in (cc,cc2): pgx.wait_for_selector('[data-testid=online-game][data-status=active]',timeout=10000)
+    check('quick pairing works', {cc.locator('[data-testid=online-game]').get_attribute('data-side'),cc2.locator('[data-testid=online-game]').get_attribute('data-side')}=={'w','b'})
+    # отмена поиска
+    a.goto(URL+'#/online'); a.wait_for_selector('[data-testid=online-quick]'); a.locator('[data-testid="online-quick-15+10"]').click(); a.wait_for_selector('[data-testid=online-seek]')
+    a.locator('[data-testid=online-cancel]').click(); a.wait_for_selector('[data-testid=online-lobby]',timeout=8000); check('search cancelled', True)
+    # статистика аккаунта
+    a.goto(URL+'#/account'); a.wait_for_selector('[data-testid=account-view]'); a.locator('[data-testid=acc-tab-stats]:visible').click(); a.locator('[data-testid=stab-online]:visible').click()
+    a.wait_for_selector('[data-testid=ostats]',timeout=8000)
+    print(' ostats:',a.locator('[data-testid=ostats-games]').inner_text(),a.locator('[data-testid=ostats-wdl]').inner_text())
+    check('stats count finished online games (A: lost 1 by resign, won 1 by mate? ...)', int(a.locator('[data-testid=ostats-games]').inner_text())>=3)
+    a.screenshot(path='shots_online_stats.png',full_page=True)
+    check('no page errors', not (e1 or e2 or e3 or e4)); print(e1,e2,e3,e4)
     print('FAILS:',FAILS)
     b.close()

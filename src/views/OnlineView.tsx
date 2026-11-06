@@ -15,9 +15,11 @@ import {
   tryMove, turnOf, type OnlineGame, type Side,
 } from '../lib/online'
 import {
-  abortGame, claimFlag, createGame, declineDraw, getGame, joinGame, listMine, offerDraw, resignGame, sendFinish, sendMove, subscribeGame,
+  abortGame, claimFlag, createGame, declineDraw, getGame, joinGame, listMine, listOpen, offerDraw, publishGame, resignGame, seekGame, sendFinish, sendMove, subscribeGame,
+  type OpenChallenge,
 } from '../lib/onlineApi'
 import { hrefFor, navigate } from '../lib/route'
+import { tcLabel } from '../lib/onlineStats'
 
 const TIMES: { id: string; base: number; inc: number }[] = [
   { id: '3+2', base: 180, inc: 2 }, { id: '5+0', base: 300, inc: 0 }, { id: '5+3', base: 300, inc: 3 },
@@ -36,14 +38,21 @@ export default function OnlineView({ cloud, shownName, arg }: { cloud: CloudApi;
   return code ? <GameScreen key={code} code={code} uid={cloud.user.id} name={shownName} /> : <Lobby uid={cloud.user.id} name={shownName} />
 }
 
+const QUICK: { id: string; base: number; inc: number; kind: 'blitz' | 'rapid' }[] = [
+  { id: '3+2', base: 180, inc: 2, kind: 'blitz' }, { id: '5+0', base: 300, inc: 0, kind: 'blitz' }, { id: '5+3', base: 300, inc: 3, kind: 'blitz' },
+  { id: '10+0', base: 600, inc: 0, kind: 'rapid' }, { id: '10+5', base: 600, inc: 5, kind: 'rapid' }, { id: '15+10', base: 900, inc: 10, kind: 'rapid' },
+]
+
 function Lobby({ uid, name }: { uid: string; name: string }) {
   const { t } = useI18n()
   const [color, setColor] = useState<Side | 'r'>('r')
   const [time, setTime] = useState('10+0')
+  const [pub, setPub] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [codeIn, setCodeIn] = useState('')
   const [mine, setMine] = useState<OnlineGame[] | null>(null)
+  const [open, setOpen] = useState<OpenChallenge[] | null>(null)
 
   useEffect(() => {
     let live = true
@@ -51,10 +60,27 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
     return () => { live = false }
   }, [uid])
 
+  // список открытых вызовов обновляется каждые 4 секунды
+  useEffect(() => {
+    let live = true
+    const load = () => listOpen().then(r => { if (live) setOpen(r) }).catch(() => { if (live) setOpen(o => o ?? []) })
+    load()
+    const id = window.setInterval(load, 4000)
+    return () => { live = false; window.clearInterval(id) }
+  }, [])
+
+  async function quick(tc: { id: string; base: number; inc: number }) {
+    setBusy(true); setErr(null)
+    try { const g = await seekGame(name, tc.base, tc.inc); navigate('online', g.code) } catch (e) { setErr(onlineErrorKey(e)) } finally { setBusy(false) }
+  }
   async function create() {
     const tc = TIMES.find(x => x.id === time) ?? TIMES[3]
     setBusy(true); setErr(null)
-    try { const g = await createGame(name, color, tc.base, tc.inc); navigate('online', g.code) } catch (e) { setErr(onlineErrorKey(e)) } finally { setBusy(false) }
+    try {
+      const g = await createGame(name, color, tc.base, tc.inc)
+      if (pub) await publishGame(g.id, true)
+      navigate('online', g.code)
+    } catch (e) { setErr(onlineErrorKey(e)) } finally { setBusy(false) }
   }
   function join() {
     const c = parseCode(codeIn)
@@ -63,37 +89,66 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
   }
 
   return <div className="main-grid online-lobby" data-testid="online-lobby">
-    <section className="panel">
-      <div className="panel-head"><div><div className="eyebrow">{t('online.eyebrow')}</div><h2>{t('online.create.title')}</h2></div></div>
-      <p className="muted">{t('online.friendly')}</p>
-      <div className="field-label">{t('online.color.label')}</div>
-      <div className="chips">{(['w', 'b', 'r'] as const).map(c =>
-        <button key={c} className={`chip ${color === c ? 'active' : ''}`} aria-pressed={color === c} onClick={() => setColor(c)} data-testid={`online-color-${c}`}>{t(`online.color.${c}` as Key)}</button>)}</div>
-      <div className="field-label">{t('online.time.label')}</div>
-      <div className="chips">{TIMES.map(x =>
-        <button key={x.id} className={`chip ${time === x.id ? 'active' : ''}`} aria-pressed={time === x.id} onClick={() => setTime(x.id)} data-testid={`online-time-${x.id}`}>{x.id === 'none' ? t('online.time.none') : x.id}</button>)}</div>
-      <div className="action-bar"><button className="btn primary" disabled={busy} onClick={() => void create()} data-testid="online-create"><Icon name="play2" size={16} /> {t('online.create.btn')}</button></div>
-      {err && <p className="error-text" role="alert" data-testid="online-error">{t(err as Key)}</p>}
-    </section>
-    <section className="panel">
-      <div className="panel-head"><div><h2>{t('online.join.title')}</h2></div></div>
-      <div className="online-join">
-        <input value={codeIn} onChange={e => setCodeIn(e.target.value)} placeholder={t('online.join.placeholder')} aria-label={t('online.join.title')}
-          onKeyDown={e => { if (e.key === 'Enter') join() }} data-testid="online-code-input" />
-        <button className="btn" onClick={join} data-testid="online-join-btn">{t('online.join.btn')}</button>
-      </div>
-      <h3 className="online-sub">{t('online.mine.title')}</h3>
-      {mine === null ? <p className="muted">{t('online.loading')}</p>
-        : mine.length === 0 ? <p className="muted" data-testid="online-mine-empty">{t('online.mine.empty')}</p>
-        : <ul className="online-list" data-testid="online-mine">{mine.map(g => {
-          const side = mySide(g, uid)
-          const opp = side === 'w' ? g.black_name : g.white_name
-          const o = outcomeFor(g, side)
-          const state = g.status === 'finished' ? (o ? t(`online.res.${o}` as Key) : t('online.end.aborted')) : t(`online.status.${g.status}` as Key)
-          return <li key={g.id}><a href={hrefFor('online', g.code)} data-testid="online-mine-item">
-            <span>{opp ? t('online.vs', { name: opp }) : t('online.status.waiting')}</span><b>{state}</b></a></li>
-        })}</ul>}
-    </section>
+    <div className="online-col">
+      <section className="panel" data-testid="online-quick">
+        <div className="panel-head"><div><div className="eyebrow">{t('online.eyebrow')}</div><h2>{t('online.quick.title')}</h2></div></div>
+        <p className="muted">{t('online.quick.text')}</p>
+        {(['blitz', 'rapid'] as const).map(k => <div key={k}>
+          <div className="field-label">{t(`online.kind.${k}` as Key)}</div>
+          <div className="online-tiles">{QUICK.filter(x => x.kind === k).map(x =>
+            <button key={x.id} className="online-tile" disabled={busy} onClick={() => void quick(x)} data-testid={`online-quick-${x.id}`}><b>{x.id}</b><small>{t('online.quick.go')}</small></button>)}</div>
+        </div>)}
+        {err && <p className="error-text" role="alert" data-testid="online-error">{t(err as Key)}</p>}
+      </section>
+
+      <section className="panel">
+        <div className="panel-head"><div><h2>{t('online.create.title')}</h2></div></div>
+        <p className="muted">{t('online.friendly')}</p>
+        <div className="field-label">{t('online.color.label')}</div>
+        <div className="chips">{(['w', 'b', 'r'] as const).map(c =>
+          <button key={c} className={`chip ${color === c ? 'active' : ''}`} aria-pressed={color === c} onClick={() => setColor(c)} data-testid={`online-color-${c}`}>{t(`online.color.${c}` as Key)}</button>)}</div>
+        <div className="field-label">{t('online.time.label')}</div>
+        <div className="chips">{TIMES.map(x =>
+          <button key={x.id} className={`chip ${time === x.id ? 'active' : ''}`} aria-pressed={time === x.id} onClick={() => setTime(x.id)} data-testid={`online-time-${x.id}`}>{x.id === 'none' ? t('online.time.none') : x.id}</button>)}</div>
+        <label className="online-check"><input type="checkbox" checked={pub} onChange={e => setPub(e.target.checked)} data-testid="online-public" /> {t('online.create.public')}</label>
+        <div className="action-bar"><button className="btn primary" disabled={busy} onClick={() => void create()} data-testid="online-create"><Icon name="play2" size={16} /> {t('online.create.btn')}</button></div>
+      </section>
+    </div>
+
+    <div className="online-col">
+      <section className="panel" data-testid="online-open">
+        <div className="panel-head"><div><h2>{t('online.open.title')}</h2></div><span className="pill">{open ? open.length : '…'}</span></div>
+        {open === null ? <p className="muted">{t('online.loading')}</p>
+          : open.length === 0 ? <p className="muted" data-testid="online-open-empty">{t('online.open.empty')}</p>
+          : <ul className="online-list">{open.map(c => <li key={c.code}>
+            <div className="online-open-row" data-testid="online-open-item">
+              <i className={`online-dot ${c.side === 'w' ? 'white' : 'black'}`} title={t(c.side === 'w' ? 'online.color.w' : 'online.color.b')} />
+              <span className="online-open-name">{c.name || '—'}</span>
+              <b>{tcLabel(c) === 'none' ? t('online.time.none') : tcLabel(c)}</b>
+              <button className="btn primary" onClick={() => navigate('online', c.code)} data-testid="online-open-accept">{t('online.open.accept')}</button>
+            </div></li>)}</ul>}
+      </section>
+
+      <section className="panel">
+        <div className="panel-head"><div><h2>{t('online.join.title')}</h2></div></div>
+        <div className="online-join">
+          <input value={codeIn} onChange={e => setCodeIn(e.target.value)} placeholder={t('online.join.placeholder')} aria-label={t('online.join.title')}
+            onKeyDown={e => { if (e.key === 'Enter') join() }} data-testid="online-code-input" />
+          <button className="btn" onClick={join} data-testid="online-join-btn">{t('online.join.btn')}</button>
+        </div>
+        <h3 className="online-sub">{t('online.mine.title')}</h3>
+        {mine === null ? <p className="muted">{t('online.loading')}</p>
+          : mine.length === 0 ? <p className="muted" data-testid="online-mine-empty">{t('online.mine.empty')}</p>
+          : <ul className="online-list" data-testid="online-mine">{mine.map(g => {
+            const side = mySide(g, uid)
+            const opp = side === 'w' ? g.black_name : g.white_name
+            const o = outcomeFor(g, side)
+            const state = g.status === 'finished' ? (o ? t(`online.res.${o}` as Key) : t('online.end.aborted')) : t(`online.status.${g.status}` as Key)
+            return <li key={g.id}><a href={hrefFor('online', g.code)} data-testid="online-mine-item">
+              <span>{opp ? t('online.vs', { name: opp }) : t('online.status.waiting')}</span><b>{state}</b></a></li>
+          })}</ul>}
+      </section>
+    </div>
   </div>
 }
 
@@ -111,6 +166,7 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
   const gRef = useRef<OnlineGame | null>(null)
   const offset = useRef(0)
   const sent = useRef<string>('')
+  const t0 = useRef(Date.now())
 
   const apply = useCallback((next: OnlineGame) => {
     if (next.server_now) { const o = clockOffset(next, Date.now()); if (o !== null) offset.current = o }
@@ -136,7 +192,7 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
     return () => { live = false; unsub?.(); if (timer) window.clearInterval(timer) }
   }, [code, name, apply])
 
-  const active = g?.status === 'active'
+  const active = g?.status === 'active' || g?.status === 'waiting'
   useEffect(() => {
     if (!active) return
     const id = window.setInterval(() => setNow(Date.now()), 200)
@@ -144,6 +200,7 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
   }, [active])
 
   const side = g ? mySide(g, uid) : null
+  const waited = Math.max(0, Math.floor((now - t0.current) / 1000))
   const chess = useMemo(() => (g ? chessOf(g) : null), [g?.moves.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // конец по правилам: оба клиента сообщают серверу (операция идемпотентна)
@@ -221,11 +278,12 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
 
   const banner = g.status === 'finished'
     ? (o ? t(`online.end.${o}` as Key, { reason: t(`online.reason.${g.reason ?? 'draw'}` as Key) }) : t('online.end.aborted'))
-    : g.status === 'waiting' ? t('online.wait.title') : myTurn ? t('online.turn.you') : t('online.turn.opp')
+    
+    : g.status === 'waiting' ? t(g.is_open ? 'online.seek.title' : 'online.wait.title') : myTurn ? t('online.turn.you') : t('online.turn.opp')
 
   return <div className="main-grid" data-testid="online-game" data-status={g.status} data-side={side ?? ''} data-moves={g.moves.length}>
     <section className="panel board-panel play-panel">
-      <div className="panel-head"><div><div className="eyebrow">{t('online.eyebrow')}</div><h2>{t('online.vs', { name: nameOf(top) })}</h2></div>
+      <div className="panel-head"><div><div className="eyebrow">{t('online.eyebrow')}</div><h2>{g.status === 'waiting' ? t('online.title') : t('online.vs', { name: nameOf(top) })}</h2></div>
         <span className="pill">{hasClock(g) ? `${Math.round(g.base_ms / 60000 * 10) / 10}+${Math.round(g.inc_ms / 1000)}` : t('online.time.none')}</span></div>
       <PlayerStrip color={top} name={nameOf(top)} captured={top === 'w' ? caps.byWhite : caps.byBlack} advantage={top === 'w' ? Math.max(0, caps.balance) : Math.max(0, -caps.balance)}
         clock={clockFor(top)} active={g.status === 'active' && turn === top} />
@@ -238,7 +296,13 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
     </section>
 
     <section className="panel online-side">
-      {g.status === 'waiting' && <div data-testid="online-wait">
+      {g.status === 'waiting' && g.is_open && <div data-testid="online-seek">
+        <h3><span className="pulse" /> {t('online.seek.title')}</h3>
+        <p className="muted">{t('online.seek.text')}</p>
+        <div className="online-code" data-testid="online-seek-time">{t('online.seek.waited', { s: waited })}</div>
+        <div className="action-bar"><button className="btn quiet" disabled={busy} onClick={() => void run(() => abortGame(g.id)).then(() => navigate('online'))} data-testid="online-cancel">{t('online.seek.cancel')}</button></div>
+      </div>}
+      {g.status === 'waiting' && !g.is_open && <div data-testid="online-wait">
         <h3>{t('online.wait.title')}</h3><p className="muted">{t('online.wait.text')}</p>
         <input readOnly value={link} onFocus={e => e.currentTarget.select()} aria-label={t('online.wait.link')} data-testid="online-link" />
         <div className="online-code">{t('online.wait.code')}: <b data-testid="online-code">{g.code}</b></div>

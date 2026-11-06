@@ -110,7 +110,7 @@ export default function AccountView({ active, tab, games, profiles, cloud, onPro
       {tabs.map(([k, l, ic]) => <a key={k} href={hrefFor(k)} role="tab" aria-selected={tab === k} className={`tab ${tab === k ? 'active' : ''}`} data-testid={`acc-tab-${k}`}><Icon name={ic} size={16} /><span>{l}</span></a>)}
     </nav>
 
-    <div hidden={tab !== 'stats'}><StatsView active={active && tab === 'stats'} games={games} onGo={onGo} /></div>
+    <div hidden={tab !== 'stats'}><StatsView active={active && tab === 'stats'} games={games} onGo={onGo} cloud={cloud} /></div>
 
     {tab === 'profile' && <section className="panel acc-form" data-testid="acc-profile">
       <div className="panel-head"><div><div className="eyebrow">{t('app.profile.eyebrow')}</div><h2>{t('app.profile.title')}</h2></div></div>
