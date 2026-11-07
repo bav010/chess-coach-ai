@@ -45,4 +45,12 @@ export const en = {
   "vision.piece.r": "Rook",
   "vision.piece.q": "Queen",
   "vision.piece.k": "King",
+  "pwa.offline": "No connection. Analysis, puzzles, endgames, openings and games with the bot work offline; online play, sign-in and sync need the network.",
+  "pwa.update": "A new version is ready.",
+  "pwa.update.btn": "Update",
+  "pwa.install.title": "Install as an app",
+  "pwa.install.text": "Opens in its own window, starts from the home screen and works offline.",
+  "pwa.install.ios": "On iPhone and iPad: tap Share, then “Add to Home Screen”.",
+  "pwa.install.btn": "Install",
+  "pwa.install.hide": "Hide",
 } as const

@@ -46,4 +46,12 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "vision.piece.r": "Ладья",
   "vision.piece.q": "Ферзь",
   "vision.piece.k": "Король",
+  "pwa.offline": "Нет сети. Анализ, задачи, эндшпили, дебюты и игра с ботом работают без интернета; онлайн-игре, входу и синхронизации нужна сеть.",
+  "pwa.update": "Доступна новая версия.",
+  "pwa.update.btn": "Обновить",
+  "pwa.install.title": "Установить как приложение",
+  "pwa.install.text": "Открывается в отдельном окне, запускается с главного экрана и работает без интернета.",
+  "pwa.install.ios": "На iPhone и iPad: нажмите «Поделиться», затем «На экран “Домой”».",
+  "pwa.install.btn": "Установить",
+  "pwa.install.hide": "Скрыть",
 }

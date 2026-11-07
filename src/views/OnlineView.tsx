@@ -18,7 +18,7 @@ import {
   tryMove, turnOf, type OnlineGame, type Side,
 } from '../lib/online'
 import {
-  abortGame, claimFlag, createGame, declineDraw, getGame, joinGame, listMine, listOpen, myRating, offerDraw, publishGame, resignGame, seekGame, sendEmote, sendFinish, sendMove, subscribeGame,
+  abortGame, claimFlag, createGame, declineDraw, getGame, joinGame, listMine, checkServer, listOpen, myRating, offerDraw, publishGame, resignGame, seekGame, sendEmote, sendFinish, sendMove, subscribeGame,
   type OpenChallenge,
 } from '../lib/onlineApi'
 import { hrefFor, navigate } from '../lib/route'
@@ -59,6 +59,9 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
   const [mine, setMine] = useState<OnlineGame[] | null>(null)
   const [open, setOpen] = useState<OpenChallenge[] | null>(null)
   const [rating, setRating] = useState<{ rating: number; games: number } | null>(null)
+  const [diag, setDiag] = useState<{ status: string; missing: string[] } | null>(null)
+  const recheck = useCallback(() => { checkServer().then(setDiag).catch(() => setDiag({ status: 'error', missing: [] })) }, [])
+  useEffect(() => { recheck() }, [recheck])
 
   useEffect(() => {
     let live = true
@@ -99,6 +102,12 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
     <div className="online-col">
       <section className="panel" data-testid="online-quick">
         <div className="panel-head"><div><div className="eyebrow">{t('online.eyebrow')}</div><h2>{t('online.quick.title')}</h2></div></div>
+        {diag && diag.status !== 'ok' && <div className="online-diag" role="alert" data-testid="online-diag" data-status={diag.status}>
+          <b>{t(`online.diag.${diag.status}.title` as Key)}</b>
+          <p>{t(`online.diag.${diag.status}.text` as Key)}</p>
+          {diag.missing.length > 0 && <small className="muted">{t('online.diag.missing', { list: diag.missing.join(', ') })}</small>}
+          <div><button className="btn" onClick={recheck} data-testid="online-diag-recheck">{t('online.diag.recheck')}</button></div>
+        </div>}
         <p className="muted">{t('online.quick.text')}</p>
         {rating && <p className="online-rating" data-testid="online-rating"><b>{t('online.rating.title')}: {rating.rating}</b> <small>{t('online.rating.games', { n: rating.games })}</small></p>}
         <p className="muted"><small>{t('online.rating.note')}</small></p>

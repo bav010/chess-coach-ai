@@ -717,6 +717,11 @@ $$;
 revoke all on function public.online_seek(text, int, int), public.online_publish(uuid, boolean), public.online_open_list(), public.online_my_rating() from public, anon;
 grant execute on function public.online_seek(text, int, int), public.online_publish(uuid, boolean), public.online_open_list(), public.online_my_rating() to authenticated;
 
+-- Версия серверной части онлайна: приложение проверяет её и подсказывает, если SQL нужно выполнить заново.
+create or replace function public.online_version() returns int language sql immutable as $$ select 3 $$;
+revoke all on function public.online_version() from public, anon;
+grant execute on function public.online_version() to authenticated;
+
 -- Внутренние функции правил шахмат и рейтинга вызываются только из функций выше (от имени владельца), напрямую их вызывать не нужно
 revoke all on function public.chess_from_fen(text), public.chess_to_fen(public.chess_pos), public.chess_attacked(text, int, boolean), public.chess_apply(public.chess_pos, int, int, text),
   public.chess_moves(public.chess_pos), public.chess_move(text, text), public.chess_uci(int, int, text), public.chess_legal_uci(text), public.chess_status(text), public.chess_key(text),

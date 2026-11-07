@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Chess } from 'chess.js'
 import Board from '../components/Board'
 import Icon, { type IconName } from '../components/Icon'
+import InstallCard from '../components/InstallCard'
 import { dailyPuzzle } from '../lib/dailyPuzzle'
 import { buildPlan, type PlanStep } from '../lib/dailyPlan'
 import { countMistakes, loadMistakes } from '../lib/mistakes'
@@ -115,6 +116,7 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
       </div>
       <div className="home-badge"><Icon name="board" size={26} /><div><b>{t('app.hero.badge')}</b><small>{t('app.hero.badgeSub')}</small></div></div>
     </section>
+    <InstallCard />
 
     {cloud.status !== 'loading' && <section className="home-stats" aria-label={t('home.stats.aria')} data-testid="home-stats">
       {statsShown && <>

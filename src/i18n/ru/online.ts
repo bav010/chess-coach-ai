@@ -141,4 +141,12 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "online.rating.change": "Рейтинг {delta} → {after}",
   "ostats.rating": "Рейтинг",
   "ostats.peak": "пик {n}",
+  "online.diag.outdated.title": "Серверная часть онлайна устарела",
+  "online.diag.outdated.text": "Выполните онлайн-часть docs/supabase.sql в SQL Editor Supabase ещё раз (повторный запуск безопасен). Пока этого нет, рейтинг, проверка ходов и часть функций могут не работать.",
+  "online.diag.missing.title": "Онлайн-игра не настроена на сервере",
+  "online.diag.missing.text": "Выполните онлайн-часть docs/supabase.sql в SQL Editor Supabase (см. README).",
+  "online.diag.error.title": "Не удалось связаться с сервером",
+  "online.diag.error.text": "Проверьте соединение и попробуйте ещё раз.",
+  "online.diag.missing": "Не найдено: {list}",
+  "online.diag.recheck": "Проверить ещё раз",
 }

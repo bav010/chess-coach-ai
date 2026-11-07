@@ -7,6 +7,7 @@ import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView, { type PlaySeed } from './views/PlayView'
 import EndgamesView from './views/EndgamesView'
 import TrainView from './views/TrainView'
+import PwaBar from './components/PwaBar'
 import VisionView from './views/VisionView'
 import PuzzleView from './views/PuzzleView'
 import OpeningsView from './views/OpeningsView'
@@ -151,6 +152,7 @@ export default function App() {
 
   return <main className="app-shell">
     <a className="skip-link" href="#main">{t('nav.skip')}</a>
+    <PwaBar />
     <header className="topbar">
       <button className="icon-btn menu-btn" onClick={() => setMenuOpen(o => !o)} aria-label={t('nav.menu')} title={t('nav.menu')} aria-expanded={menuOpen} data-testid="menu-btn"><Icon name="menu" size={22} /></button>
       <a className="brand" href={hrefFor('home')} aria-label={t('nav.logo')} title={t('nav.logo')} data-testid="logo">
@@ -207,6 +209,6 @@ export default function App() {
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.8.0-beta</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.9.0-beta</span></footer>
   </main>
 }

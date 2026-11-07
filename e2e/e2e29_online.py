@@ -4,7 +4,7 @@ from playwright.sync_api import sync_playwright
 URL='http://127.0.0.1:4174/chess-coach-ai/'
 CORS={'access-control-allow-origin':'http://127.0.0.1:4174','access-control-allow-headers':'*','access-control-allow-methods':'GET,POST,PUT,PATCH,DELETE,OPTIONS','access-control-expose-headers':'*','content-type':'application/json'}
 b64=lambda d: base64.urlsafe_b64encode(json.dumps(d).encode()).decode().rstrip('=')
-STATE={'users':{}, 'rows':{}, 'confirm':False, 'log':[], 'games':{}}
+STATE={'users':{}, 'rows':{}, 'confirm':False, 'log':[], 'games':{}, 'ver_ok':True}
 def jwt(uid): return f"{b64({'alg':'HS256'})}.{b64({'sub':uid,'role':'authenticated','exp':int(time.time())+3600})}.sig"
 def user_obj(u): return {'id':u['id'],'aud':'authenticated','role':'authenticated','email':u['email'],'identities':[{'id':u['id']}],'app_metadata':{},'user_metadata':{},'created_at':'2026-10-18T00:00:00Z'}
 def session(u): return {'access_token':jwt(u['id']),'token_type':'bearer','expires_in':3600,'expires_at':int(time.time())+3600,'refresh_token':'r'+u['id'],'user':user_obj(u)}
@@ -25,6 +25,10 @@ def online(route,req,path,m,body,ok,err):
     if '/rest/v1/rpc/online_' not in path: return False
     fn=path.split('/rpc/')[1]
     def bad(code): err(code,400,code); return True
+    if fn=='online_version':
+        if not STATE['ver_ok']:
+            route.fulfill(status=404, headers=CORS, body=json.dumps({'code':'PGRST202','message':'Could not find the function public.online_version without parameters in the schema cache'})); return True
+        return ok(3) or True
     G=STATE['games']
     def touch(g): g['updated_at']=nowiso()
     if fn=='online_create':
@@ -64,7 +68,9 @@ def online(route,req,path,m,body,ok,err):
     if fn=='online_publish':
         g['is_open']=bool(body['p_open']) and g['status']=='waiting'; touch(g); return ok(view(g)) or True
     w=uid==g['white']
-    if fn=='online_get': return ok(view(g)) or True
+    if fn=='online_get':
+        if body.get('p_id') not in G: return bad('not_found')
+        return ok(view(G[body['p_id']])) or True
     if fn=='online_move':
         if g['status']!='active': return bad('not_active')
         if (len(g['moves'])%2==0)!=w: return bad('not_your_turn')
@@ -221,6 +227,12 @@ with sync_playwright() as p:
     # --- лобби: быстрый поиск, открытые вызовы, статистика ---
     a.goto(URL+'#/online'); a.wait_for_selector('[data-testid=online-quick]')
     check('lobby shows my rating', '1200' in a.locator('[data-testid=online-rating]').inner_text())
+    check('no server warning when SQL is current', a.locator('[data-testid=online-diag]').count()==0)
+    STATE['ver_ok']=False; a.reload(); a.wait_for_selector('[data-testid=online-quick]'); a.wait_for_selector('[data-testid=online-diag]',timeout=10000)
+    check('outdated SQL warning shown', a.locator('[data-testid=online-diag]').get_attribute('data-status')=='outdated' and 'online_version' in a.locator('[data-testid=online-diag]').inner_text())
+    a.screenshot(path='shots_online_diag.png')
+    STATE['ver_ok']=True; a.locator('[data-testid=online-diag-recheck]').click(); a.wait_for_function("()=>!document.querySelector('[data-testid=online-diag]')",timeout=10000)
+    check('warning disappears after re-check', a.locator('[data-testid=online-diag]').count()==0)
     a.screenshot(path='shots_online_lobby2.png')
     a.locator('[data-testid="online-quick-5+3"]').click(); a.wait_for_selector('[data-testid=online-seek]',timeout=8000)
     check('seek screen shown', a.locator('[data-testid=online-seek-time]').count()==1)

@@ -60,6 +60,13 @@ export async function subscribeGame(id: string, onRow: (g: OnlineGame) => void):
   return () => { void c.removeChannel(ch) }
 }
 
+import { diagnose, type Diagnosis } from './onlineCheck'
+/** Проверка, выполнен ли на сервере актуальный docs/supabase.sql. */
+export async function checkServer(): Promise<Diagnosis> {
+  const c = await getClient()
+  return diagnose(async (fn, args) => { const { data, error } = await c.rpc(fn, args); return { data, error } })
+}
+
 export type MyRating = { rating: number; peak: number; games: number }
 /** Мой рейтинг внутри приложения (Эло, старт 1200; это не рейтинг FIDE и не Chess.com). */
 export async function myRating(): Promise<MyRating> {

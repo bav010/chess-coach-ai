@@ -229,6 +229,8 @@ begin
   perform pg_temp.play(gid, wh, bl, array['e2e4','e7e5','g1f3','b8c6']);
   perform pg_temp.as_user(wh); perform public.online_offer_draw(gid); perform pg_temp.as_user(bl); g := public.online_offer_draw(gid);
   assert g->>'reason' = 'agreed' and g->'white_delta' <> 'null'::jsonb, 'ничья по согласию тоже пересчитывает рейтинг';
+  -- версия серверной части (приложение сверяет её с SERVER_VERSION в src/lib/onlineCheck.ts)
+  perform pg_temp.as_user(A); assert public.online_version() = 3, 'версия серверной части = 3';
   perform pg_temp.as_root();
   raise notice 'ВСЕ ПРОВЕРКИ SQL ПРОЙДЕНЫ';
 end $t$;

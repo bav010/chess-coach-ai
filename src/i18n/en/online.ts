@@ -134,4 +134,12 @@ export const en = {
   "online.rating.change": "Rating {delta} → {after}",
   "ostats.rating": "Rating",
   "ostats.peak": "peak {n}",
+  "online.diag.outdated.title": "The online server is out of date",
+  "online.diag.outdated.text": "Run the online part of docs/supabase.sql in the Supabase SQL Editor again (it is safe to repeat). Until then rating, move checking and some features may not work.",
+  "online.diag.missing.title": "Online play is not set up on the server",
+  "online.diag.missing.text": "Run the online part of docs/supabase.sql in the Supabase SQL Editor (see the README).",
+  "online.diag.error.title": "Could not reach the server",
+  "online.diag.error.text": "Check your connection and try again.",
+  "online.diag.missing": "Missing: {list}",
+  "online.diag.recheck": "Check again",
 } as const
