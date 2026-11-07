@@ -19,6 +19,7 @@ import { ratingSeries, summarize } from '../lib/statsCalc'
 import type { SavedSession } from '../storage'
 import { fmtNum, tn, useI18n, type Key } from '../i18n'
 import '../styles/home.css'
+import { GoalBars } from '../components/WeeklyReport'
 
 export type HomeProps = {
   games: GameStat[]; cloud: CloudApi; me: Profile; shownName: string; last: LastMode | null
@@ -32,6 +33,7 @@ const CARDS: { route: RouteName; icon: IconName; title: Key; desc: Key }[] = [
   { route: 'play', icon: 'play', title: 'app.mode.play', desc: 'home.card.play.desc' },
   { route: 'tactics', icon: 'tactics', title: 'app.mode.tactics', desc: 'home.card.tactics.desc' },
   { route: 'openings', icon: 'openings', title: 'app.mode.openings', desc: 'home.card.openings.desc' },
+  { route: 'endgames', icon: 'board', title: 'eg.title', desc: 'eg.home.desc' },
   { route: 'online', icon: 'handshake', title: 'online.title', desc: 'home.card.online.desc' },
   { route: 'stats', icon: 'stats', title: 'nav.stats', desc: 'home.card.stats.desc' },
 ]
@@ -123,6 +125,11 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
       {cloud.status === 'out' && <a className="home-note" href={hrefFor('stats')} data-testid="home-invite"><Icon name="user" size={16} /><span>{t('home.invite')}</span><b>{t('app.signin')}</b></a>}
       {cloud.status === 'in' && !me.ready && <a className="home-note" href={hrefFor('stats')} data-testid="home-setup"><Icon name="user" size={16} /><span>{t('home.setup')}</span><b>{t('home.setup.link')}</b></a>}
     </section>}
+
+    <section className="home-goal panel" data-testid="home-goal">
+      <div className="home-plan-head"><h2>{t('week.goal.title')}</h2><a href={hrefFor('stats')} data-testid="home-goal-more">{t('week.home.more')}</a></div>
+      <GoalBars games={games} compact />
+    </section>
 
     {plan.length > 0 && <section className="home-plan panel" aria-labelledby="home-plan-h" data-testid="home-plan">
       <div className="home-plan-head"><h2 id="home-plan-h">{t('home.plan.title')}</h2><small>{t('home.plan.sub')}</small></div>

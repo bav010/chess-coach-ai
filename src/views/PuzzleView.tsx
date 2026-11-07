@@ -14,7 +14,7 @@ import {
   type PuzzleStats,
 } from '../lib/puzzleStats'
 import { splitUci } from '../lib/game'
-import { markActive, markDaily } from '../lib/activity'
+import { bump, markActive, markDaily } from '../lib/activity'
 import { dailyPuzzle } from '../lib/dailyPuzzle'
 import { t, tn, useI18n } from '../i18n'
 import Icon from '../components/Icon'
@@ -47,7 +47,7 @@ function replayFen(fen: string, ucis: readonly string[]): Chess {
 }
 
 /** Задачи: библиотека и личные задачи из ваших ошибок (обе части остаются смонтированными, чтобы не терять состояние). */
-export default function PuzzleView({ active, puzzleId = null }: { active: boolean; puzzleId?: string | null }) {
+export default function PuzzleView({ active, puzzleId = null, onPlayFrom }: { active: boolean; puzzleId?: string | null; onPlayFrom: (fen: string, color: import('chess.js').Color) => void }) {
   const { t } = useI18n()
   const [tab, setTab] = useState<'library' | 'mine' | 'sprint'>('library')
   // #/tactics/mine открывает личные задачи, #/tactics/<id> — конкретную задачу из библиотеки
@@ -61,7 +61,7 @@ export default function PuzzleView({ active, puzzleId = null }: { active: boolea
       <button type="button" role="tab" aria-selected={tab === 'sprint'} className={`tab ${tab === 'sprint' ? 'active' : ''}`} onClick={() => setTab('sprint')} data-testid="ptab-sprint"><Icon name="clock" size={16} /><span>{t('puzzles.tab.sprint')}</span></button>
     </nav>
     <div hidden={tab !== 'library'}><PuzzleLibrary active={active && tab === 'library'} puzzleId={mineLink || sprintLink ? null : puzzleId} /></div>
-    <div hidden={tab !== 'mine'}><MyMistakes active={active && tab === 'mine'} /></div>
+    <div hidden={tab !== 'mine'}><MyMistakes active={active && tab === 'mine'} onPlayFrom={onPlayFrom} /></div>
     <div hidden={tab !== 'sprint'}><TimedRun active={active && tab === 'sprint'} /></div>
   </div>
 }
@@ -108,7 +108,7 @@ function PuzzleLibrary({ active, puzzleId = null }: { active: boolean; puzzleId?
     const f = flags.current
     if (f.recorded) return
     f.recorded = true
-    markActive()
+    markActive(); bump('puzzles'); if (result === 'solved') bump('solved')
     if (dailyPuzzle()?.id === p.id) markDaily(p.id, result === 'solved')
     setStats(s => recordOutcome(s, { puzzleId: p.id, themes: p.themes, result, hintsUsed: f.hints, timeMs: f.elapsed }))
   }, [])

@@ -9,7 +9,7 @@ type Cmd = { id: string; icon: IconName; label: Key; group: 'go' | 'actions'; ru
 
 const GO: [RouteName, IconName, Key][] = [
   ['home', 'home', 'nav.home'], ['analysis', 'analysis', 'app.mode.analysis'], ['play', 'play', 'app.mode.play'],
-  ['tactics', 'tactics', 'app.mode.tactics'], ['openings', 'openings', 'app.mode.openings'], ['stats', 'stats', 'nav.stats'],
+  ['tactics', 'tactics', 'app.mode.tactics'], ['openings', 'openings', 'app.mode.openings'], ['endgames', 'board', 'eg.title'], ['stats', 'stats', 'nav.stats'],
   ['profile', 'user', 'nav.profile'], ['account', 'cloud', 'nav.account'], ['settings', 'settings', 'nav.settings'], ['help', 'help', 'nav.help'],
 ]
 

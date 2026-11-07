@@ -10,12 +10,15 @@ import { useI18n, type Key } from '../i18n'
 import type { CloudApi } from '../hooks/useCloud'
 import { cloudConfigured } from '../lib/cloud'
 import { captures, replay, splitUci, START_FEN } from '../lib/game'
+import { toPgn } from '../lib/pgn'
+import { getAppearance } from '../lib/appearance'
+import { playSound } from '../lib/sound'
 import {
-  chessOf, clockOffset, formatClock, hasClock, inviteLink, isMyTurn, isNewer, mySide, onlineErrorKey, outcomeFor, parseCode, remainingMs, ruleOutcome,
+  EMOTES, chessOf, clockOffset, formatClock, hasClock, inviteLink, isMyTurn, isNewer, mySide, onlineErrorKey, outcomeFor, parseCode, ratingChange, remainingMs, ruleOutcome,
   tryMove, turnOf, type OnlineGame, type Side,
 } from '../lib/online'
 import {
-  abortGame, claimFlag, createGame, declineDraw, getGame, joinGame, listMine, listOpen, offerDraw, publishGame, resignGame, seekGame, sendFinish, sendMove, subscribeGame,
+  abortGame, claimFlag, createGame, declineDraw, getGame, joinGame, listMine, listOpen, myRating, offerDraw, publishGame, resignGame, seekGame, sendEmote, sendFinish, sendMove, subscribeGame,
   type OpenChallenge,
 } from '../lib/onlineApi'
 import { hrefFor, navigate } from '../lib/route'
@@ -26,7 +29,9 @@ const TIMES: { id: string; base: number; inc: number }[] = [
   { id: '10+0', base: 600, inc: 0 }, { id: '15+10', base: 900, inc: 10 }, { id: 'none', base: 0, inc: 0 },
 ]
 
-export default function OnlineView({ cloud, shownName, arg }: { cloud: CloudApi; shownName: string; arg: string | null }) {
+export type ReviewFn = (game: { startFen: string; ucis: string[]; userColor: Side | null; autoReview?: boolean }) => void
+
+export default function OnlineView({ cloud, shownName, arg, onReview }: { cloud: CloudApi; shownName: string; arg: string | null; onReview: ReviewFn }) {
   const { t } = useI18n()
   if (!cloudConfigured) return <section className="panel online-note" data-testid="online-off"><h2>{t('online.off.title')}</h2><p>{t('online.off.text')}</p></section>
   if (cloud.status === 'loading') return <section className="panel online-note"><p>{t('online.loading')}</p></section>
@@ -35,7 +40,7 @@ export default function OnlineView({ cloud, shownName, arg }: { cloud: CloudApi;
       <a className="btn primary" href={hrefFor('account')}><Icon name="user" size={16} /> {t('app.signin')}</a></section>
   }
   const code = arg ? parseCode(arg) : null
-  return code ? <GameScreen key={code} code={code} uid={cloud.user.id} name={shownName} /> : <Lobby uid={cloud.user.id} name={shownName} />
+  return code ? <GameScreen key={code} code={code} uid={cloud.user.id} name={shownName} onReview={onReview} /> : <Lobby uid={cloud.user.id} name={shownName} />
 }
 
 const QUICK: { id: string; base: number; inc: number; kind: 'blitz' | 'rapid' }[] = [
@@ -53,10 +58,12 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
   const [codeIn, setCodeIn] = useState('')
   const [mine, setMine] = useState<OnlineGame[] | null>(null)
   const [open, setOpen] = useState<OpenChallenge[] | null>(null)
+  const [rating, setRating] = useState<{ rating: number; games: number } | null>(null)
 
   useEffect(() => {
     let live = true
     listMine(uid).then(r => { if (live) setMine(r) }).catch(() => { if (live) setMine([]) })
+    myRating().then(r => { if (live) setRating(r) }).catch(() => { /* рейтинг необязателен */ })
     return () => { live = false }
   }, [uid])
 
@@ -93,6 +100,8 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
       <section className="panel" data-testid="online-quick">
         <div className="panel-head"><div><div className="eyebrow">{t('online.eyebrow')}</div><h2>{t('online.quick.title')}</h2></div></div>
         <p className="muted">{t('online.quick.text')}</p>
+        {rating && <p className="online-rating" data-testid="online-rating"><b>{t('online.rating.title')}: {rating.rating}</b> <small>{t('online.rating.games', { n: rating.games })}</small></p>}
+        <p className="muted"><small>{t('online.rating.note')}</small></p>
         {(['blitz', 'rapid'] as const).map(k => <div key={k}>
           <div className="field-label">{t(`online.kind.${k}` as Key)}</div>
           <div className="online-tiles">{QUICK.filter(x => x.kind === k).map(x =>
@@ -123,7 +132,7 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
           : <ul className="online-list">{open.map(c => <li key={c.code}>
             <div className="online-open-row" data-testid="online-open-item">
               <i className={`online-dot ${c.side === 'w' ? 'white' : 'black'}`} title={t(c.side === 'w' ? 'online.color.w' : 'online.color.b')} />
-              <span className="online-open-name">{c.name || '—'}</span>
+              <span className="online-open-name">{c.name || '—'}{c.rating ? <small className="muted"> ({c.rating})</small> : null}</span>
               <b>{tcLabel(c) === 'none' ? t('online.time.none') : tcLabel(c)}</b>
               <button className="btn primary" onClick={() => navigate('online', c.code)} data-testid="online-open-accept">{t('online.open.accept')}</button>
             </div></li>)}</ul>}
@@ -152,7 +161,18 @@ function Lobby({ uid, name }: { uid: string; name: string }) {
   </div>
 }
 
-function GameScreen({ code, uid, name }: { code: string; uid: string; name: string }) {
+function onlinePgn(g: OnlineGame): string {
+  const res = g.result ?? '*'
+  return toPgn(START_FEN, g.moves, { Event: 'Chess Coach AI online', Site: 'chess-coach-ai', Date: (g.updated_at ?? new Date().toISOString()).slice(0, 10).replace(/-/g, '.'),
+    White: g.white_name || '?', Black: g.black_name || '?', Result: res, TimeControl: g.base_ms ? `${Math.round(g.base_ms / 1000)}+${Math.round(g.inc_ms / 1000)}` : '-' })
+}
+
+function downloadPgn(g: OnlineGame) {
+  const url = URL.createObjectURL(new Blob([onlinePgn(g)], { type: 'application/x-chess-pgn' }))
+  const a = document.createElement('a'); a.href = url; a.download = `online-${g.code}.pgn`; a.click(); URL.revokeObjectURL(url)
+}
+
+function GameScreen({ code, uid, name, onReview }: { code: string; uid: string; name: string; onReview: ReviewFn }) {
   const { t } = useI18n()
   const [g, setG] = useState<OnlineGame | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -166,6 +186,11 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
   const gRef = useRef<OnlineGame | null>(null)
   const offset = useRef(0)
   const sent = useRef<string>('')
+  const seenMoves = useRef<number | null>(null)
+  const seenSeq = useRef<number | null>(null)
+  const seenDraw = useRef<string | null>(null)
+  const [toast, setToast] = useState<{ by: Side; code: string } | null>(null)
+  const baseTitle = useRef(document.title)
   const t0 = useRef(Date.now())
 
   const apply = useCallback((next: OnlineGame) => {
@@ -200,6 +225,35 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
   }, [active])
 
   const side = g ? mySide(g, uid) : null
+
+  // уведомления, когда вкладка не в фокусе: звук (если включён в настройках) и метка в заголовке
+  const notify = useCallback((key: Key) => {
+    if (!document.hidden) return
+    document.title = `● ${t(key)}`
+    const ap = getAppearance()
+    if (ap.sound) playSound('move', ap.volume)
+  }, [t])
+  useEffect(() => {
+    const restore = () => { if (!document.hidden) document.title = baseTitle.current }
+    document.addEventListener('visibilitychange', restore)
+    return () => { document.removeEventListener('visibilitychange', restore); document.title = baseTitle.current }
+  }, [])
+  useEffect(() => {
+    if (!g || !side) return
+    // первая загрузка только запоминает состояние: ничего не показываем и не озвучиваем
+    if (seenMoves.current !== null && g.moves.length > seenMoves.current && g.status === 'active' && isMyTurn(g, side)) notify('online.notify.move')
+    seenMoves.current = g.moves.length
+    const seq = g.emote_seq ?? 0
+    if (seenSeq.current !== null && seq > seenSeq.current && g.emote && g.emote_by && g.emote_by !== side) {
+      setToast({ by: g.emote_by, code: g.emote }); notify('online.notify.emote')
+      const id = window.setTimeout(() => setToast(null), 4000)
+      seenSeq.current = seq
+      return () => window.clearTimeout(id)
+    }
+    seenSeq.current = seq
+    if (seenDraw.current !== null && g.draw_offer && g.draw_offer !== side && seenDraw.current !== g.draw_offer) notify('online.notify.draw')
+    seenDraw.current = g.draw_offer ?? ''
+  }, [g, side, notify])
   const waited = Math.max(0, Math.floor((now - t0.current) / 1000))
   const chess = useMemo(() => (g ? chessOf(g) : null), [g?.moves.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -251,7 +305,9 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
 
   const me: Side = side ?? 'w'
   const top: Color = me === 'w' ? 'b' : 'w'
-  const nameOf = (s: Side) => (s === 'w' ? g.white_name : g.black_name) || t('online.waitingName')
+  const ratingOf = (s: Side) => { const r = s === 'w' ? g.white_rating : g.black_rating; return g.rated && r ? ` (${r})` : '' }
+  const nameOf = (s: Side) => ((s === 'w' ? g.white_name : g.black_name) || t('online.waitingName')) + ratingOf(s)
+  const rc = ratingChange(g, side)
   const caps = captures(replay(START_FEN, g.moves).records)
   const clockFor = (s: Side) => {
     if (!hasClock(g)) return null
@@ -291,7 +347,10 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
       <PlayerStrip color={me} name={nameOf(me)} captured={me === 'w' ? caps.byWhite : caps.byBlack} advantage={me === 'w' ? Math.max(0, caps.balance) : Math.max(0, -caps.balance)}
         clock={clockFor(me)} active={g.status === 'active' && turn === me} />
       {promo && <PromoPicker color={me} onPick={p => play(`${promo.from}${promo.to}${p}`)} onCancel={() => { setPromo(null); setSelected(null); setLegal([]) }} />}
+      {toast && <div className="online-toast" role="status" data-testid="online-toast"><b>{toast.by === 'w' ? g.white_name : g.black_name}:</b> {t(`online.emote.${toast.code}` as Key)}</div>}
       <div className="board-message" role="status" data-testid="online-message"><span className="pulse" /> {banner}</div>
+      {rc && <div className="board-message" data-testid="online-rating-change">{t('online.rating.change', { delta: `${rc.delta > 0 ? '+' : ''}${rc.delta}`, after: rc.after })}</div>}
+      {g.status !== 'finished' && g.rated && <small className="muted" data-testid="online-rated-note">{t('online.rated')}</small>}
       {err && <p className="error-text" role="alert" data-testid="online-error">{t(err as Key)}</p>}
     </section>
 
@@ -325,8 +384,14 @@ function GameScreen({ code, uid, name }: { code: string; uid: string; name: stri
       </div>}
 
       {g.status === 'finished' && <div className="action-bar" data-testid="online-finished">
+        {g.moves.length >= 2 && <button className="btn primary" onClick={() => onReview({ startFen: START_FEN, ucis: g.moves.slice(), userColor: side, autoReview: true })} data-testid="online-review"><Icon name="search" size={16} /> {t('online.review')}</button>}
+        {g.moves.length >= 1 && <button className="btn" onClick={() => downloadPgn(g)} data-testid="online-pgn"><Icon name="save" size={16} /> {t('online.pgn')}</button>}
         {side && g.reason !== 'aborted' && <button className="btn primary" disabled={busy} onClick={() => void rematch()} data-testid="online-rematch"><Icon name="refresh" size={16} /> {t('online.rematch')}</button>}
         <a className="btn" href={hrefFor('online')} data-testid="online-back">{t('online.lobby')}</a></div>}
+
+      {g.status !== 'waiting' && side && <div className="online-emotes" data-testid="online-emotes" role="group" aria-label={t('online.emote.title')}>
+        {EMOTES.map(c => <button key={c} className="chip" disabled={busy} onClick={() => void run(() => sendEmote(g.id, c))} data-testid={`online-emote-${c}`}>{t(`online.emote.${c}` as Key)}</button>)}
+      </div>}
 
       <p className="muted online-fine">{t('online.friendly')}</p>
     </section>

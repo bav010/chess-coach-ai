@@ -5,6 +5,7 @@ import { addSession, clearSessions, loadSessions, type SavedSession } from './st
 import { parsePgn } from './lib/pgn'
 import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView, { type PlaySeed } from './views/PlayView'
+import EndgamesView from './views/EndgamesView'
 import PuzzleView from './views/PuzzleView'
 import OpeningsView from './views/OpeningsView'
 import AccountView from './views/AccountView'
@@ -139,7 +140,7 @@ export default function App() {
   const TITLES: Partial<Record<RouteName, { icon: IconName; title: string }>> = {
     analysis: { icon: 'analysis', title: t('app.mode.analysis') }, play: { icon: 'play', title: t('app.mode.play') },
     tactics: { icon: 'tactics', title: t('app.mode.tactics') }, openings: { icon: 'openings', title: t('app.mode.openings') },
-    online: { icon: 'handshake', title: t('online.title') },
+    online: { icon: 'handshake', title: t('online.title') }, endgames: { icon: 'board', title: t('eg.title') },
     stats: { icon: 'stats', title: t('nav.stats') }, profile: { icon: 'user', title: t('nav.profile') }, account: { icon: 'cloud', title: t('nav.account') },
     settings: { icon: 'settings', title: t('nav.settings') }, help: { icon: 'help', title: t('nav.help') },
   }
@@ -187,7 +188,8 @@ export default function App() {
         onDownload={downloadPgn} onOpenSession={openSession} onResetProgress={resetProgress} onReview={reviewGame} engineError={engineState === 'error'} seed={playSeed} />
     </div>
     <div hidden={route.name !== 'tactics'}>
-      <PuzzleView active={route.name === 'tactics'} puzzleId={route.name === 'tactics' ? route.arg : null} />
+      <PuzzleView active={route.name === 'tactics'} puzzleId={route.name === 'tactics' ? route.arg : null}
+        onPlayFrom={(fen, color) => { setPlaySeed({ startFen: fen, ucis: [], nonce: Date.now(), userColor: color, from: 'mistake' }); navigate('play') }} />
     </div>
     <div hidden={route.name !== 'openings'}>
       <OpeningsView active={route.name === 'openings'} arg={route.name === 'openings' ? route.arg : null} sessions={sessions} />
@@ -196,10 +198,11 @@ export default function App() {
       <AccountView active={onAccountRoute} tab={accountTab} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
         onGo={m => navigate(m)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
     </div>
-    {route.name === 'online' && <OnlineView cloud={cloud} shownName={shownName} arg={route.arg} />}
+    {route.name === 'endgames' && <EndgamesView arg={route.arg} />}
+    {route.name === 'online' && <OnlineView cloud={cloud} shownName={shownName} arg={route.arg} onReview={reviewGame} />}
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.6.1-beta</span></footer>
-</main>
+    <footer><span>CHESS COACH AI <i>•</i> v0.7.0-beta</span></footer>
+  </main>
 }

@@ -191,4 +191,6 @@ export const en = {
   "puzzles.sprint.h.score": "Solved",
   "puzzles.sprint.h.level": "Level",
   "puzzles.sprint.note": "Runs are stored on this device and included in backup and sync. They do not change your regular puzzle statistics. Leaving the tab during a run cancels it.",
+  "puzzles.mine.play": "Play this moment vs bot",
+  "puzzles.mine.playTip": "Replay this position against the bot from the move you got wrong",
 } as const

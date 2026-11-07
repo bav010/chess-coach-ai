@@ -27,9 +27,32 @@ export type OnlineGame = {
   draw_offer: Side | null
   /** Показана в списке открытых вызовов (быстрый поиск). */
   is_open?: boolean
+  /** Последняя реакция (код из белого списка), кто её послал и порядковый номер. */
+  emote?: string | null
+  emote_by?: Side | null
+  emote_seq?: number
+  /** Позиция (FEN), которую ведёт сервер, и признак партии с рейтингом. */
+  fen?: string | null
+  rated?: boolean
+  /** Рейтинг игроков на начало партии/сейчас и изменение после партии (null — партия без рейтинга). */
+  white_rating?: number | null
+  black_rating?: number | null
+  white_elo?: number | null
+  black_elo?: number | null
+  white_delta?: number | null
+  black_delta?: number | null
   updated_at?: string
   /** Время сервера в момент ответа (есть только у ответов функций, не у событий Realtime). */
   server_now?: string
+}
+
+/** Изменение рейтинга игрока после партии: { delta, after } или null, если партия без рейтинга. */
+export function ratingChange(g: OnlineGame, side: Side | null): { delta: number; after: number } | null {
+  if (!side || g.status !== 'finished') return null
+  const delta = side === 'w' ? g.white_delta : g.black_delta
+  const elo = side === 'w' ? g.white_elo : g.black_elo
+  if (delta == null || elo == null) return null
+  return { delta, after: elo + delta }
 }
 
 export const CODE_RE = /^[0-9a-f]{8}$/
@@ -103,11 +126,15 @@ export function outcomeFor(g: OnlineGame, side: Side | null): 'win' | 'draw' | '
 /** Ключ перевода ошибки сервера или сети. */
 export function onlineErrorKey(e: unknown): string {
   const raw = (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e ?? '')).toLowerCase()
-  for (const k of ['not_found', 'full', 'not_your_turn', 'not_active', 'bad_time', 'not_authenticated', 'bad_move', 'too_long']) if (raw.includes(k)) return `online.err.${k}`
+  if (raw.includes('illegal_move')) return 'online.err.illegal'
+  for (const k of ['not_found', 'full', 'not_your_turn', 'not_active', 'bad_time', 'not_authenticated', 'bad_move', 'too_long', 'too_fast', 'bad_emote']) if (raw.includes(k)) return `online.err.${k}`
   if (raw.includes('failed to fetch') || raw.includes('network') || raw.includes('load failed')) return 'online.err.network'
   if (raw.includes('could not find the function') || raw.includes('does not exist') || raw.includes('schema cache')) return 'online.err.setup'
   return 'online.err.other'
 }
+
+export const EMOTES = ['gl', 'gg', 'nice', 'oops', 'thanks', 'wow'] as const
+export type Emote = (typeof EMOTES)[number]
 
 /** Новая версия партии не старше известной (события Realtime могут прийти не по порядку). */
 export function isNewer(next: Pick<OnlineGame, 'moves' | 'status' | 'updated_at' | 'draw_offer'>, cur: Pick<OnlineGame, 'moves' | 'status' | 'updated_at' | 'draw_offer'> | null): boolean {

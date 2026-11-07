@@ -40,9 +40,11 @@ def online(route,req,path,m,body,ok,err):
         if g['white'] and g['black']: return bad('full')
         if g['white'] is None: g['white']=uid; g['white_name']=body['p_name']
         else: g['black']=uid; g['black_name']=body['p_name']
+        if g.get('rated'): g.update(white_rating=1200,black_rating=1200)
         g['status']='active'; g['is_open']=False; g['turn_started']=nowiso(); touch(g); return ok(view(g)) or True
+    if fn=='online_my_rating': return ok({'rating':1200,'peak':1200,'games':0}) or True
     if fn=='online_open_list':
-        return ok([{'code':x['code'],'name':x['white_name'] or x['black_name'],'side':'w' if x['white'] else 'b','base_ms':x['base_ms'],'inc_ms':x['inc_ms'],'created_at':x['updated_at']}
+        return ok([{'code':x['code'],'name':x['white_name'] or x['black_name'],'side':'w' if x['white'] else 'b','rating':1200,'base_ms':x['base_ms'],'inc_ms':x['inc_ms'],'created_at':x['updated_at']}
                    for x in G.values() if x.get('is_open') and x['status']=='waiting' and x['creator']!=uid]) or True
     if fn=='online_seek':
         for x in G.values():
@@ -51,11 +53,11 @@ def online(route,req,path,m,body,ok,err):
         if m:
             if m['white'] is None: m['white']=uid; m['white_name']=body['p_name']
             else: m['black']=uid; m['black_name']=body['p_name']
-            m.update(status='active',is_open=False,turn_started=nowiso()); touch(m); return ok(view(m)) or True
+            m.update(status='active',is_open=False,turn_started=nowiso(),rated=True,white_rating=1200,black_rating=1200); touch(m); return ok(view(m)) or True
         w=len(G)%2==0
         g={'id':str(uuid.uuid4()),'code':uuid.uuid4().hex[:8],'creator':uid,'white':uid if w else None,'black':None if w else uid,'white_name':body['p_name'] if w else '','black_name':'' if w else body['p_name'],
            'moves':[],'base_ms':body['p_base_s']*1000,'inc_ms':body['p_inc_s']*1000,'white_ms':body['p_base_s']*1000,'black_ms':body['p_base_s']*1000,'turn_started':None,
-           'status':'waiting','result':None,'reason':None,'draw_offer':None,'is_open':True}
+           'status':'waiting','result':None,'reason':None,'draw_offer':None,'is_open':True,'rated':True,'white_rating':1200 if w else None,'black_rating':None if w else 1200}
         touch(g); G[g['id']]=g; return ok(view(g)) or True
     g=G.get(body.get('p_id'))
     if not g: return bad('not_found')
@@ -78,6 +80,9 @@ def online(route,req,path,m,body,ok,err):
         if g['draw_offer'] and g['draw_offer']!=me: g.update(status='finished',result='1/2-1/2',reason='agreed',draw_offer=None)
         else: g['draw_offer']=me
         touch(g); return ok(view(g)) or True
+    if fn=='online_emote':
+        if g['status']=='waiting': return bad('not_active')
+        g.update(emote=body['p_code'],emote_by='w' if w else 'b',emote_seq=g.get('emote_seq',0)+1); touch(g); return ok(view(g)) or True
     if fn=='online_decline_draw': g['draw_offer']=None; touch(g); return ok(view(g)) or True
     if fn=='online_abort':
         g.update(status='finished',result=None,reason='aborted',is_open=False); touch(g); return ok(view(g)) or True
@@ -178,6 +183,9 @@ with sync_playwright() as p:
     a.wait_for_selector('[data-testid=online-draw-in]',timeout=8000); check('A sees draw offer', True)
     a.locator('[data-testid=online-draw-decline]').click(); bb.wait_for_function("!document.querySelector('[data-testid=online-draw-in]') && document.querySelector('[data-testid=online-draw]') && !document.querySelector('[data-testid=online-draw]').disabled",timeout=8000)
     check('draw declined, B can offer again', True)
+    a.locator('[data-testid=online-emote-gl]').click()
+    bb.wait_for_selector('[data-testid=online-toast]',timeout=8000); check('B sees reaction from Ann', 'Ann' in bb.locator('[data-testid=online-toast]').inner_text() and 'Удачи' in bb.locator('[data-testid=online-toast]').inner_text())
+    check('sender has no toast of own reaction', a.locator('[data-testid=online-toast]').count()==0)
     # быстрый мат (дурацкий): f3 e5, g4 Qh4#
     for (pgx,f,t) in [(a,'f2','f3'),(bb,'a7','a6'),(a,'g2','g4')]:
         pass
@@ -212,16 +220,19 @@ with sync_playwright() as p:
 
     # --- лобби: быстрый поиск, открытые вызовы, статистика ---
     a.goto(URL+'#/online'); a.wait_for_selector('[data-testid=online-quick]')
+    check('lobby shows my rating', '1200' in a.locator('[data-testid=online-rating]').inner_text())
     a.screenshot(path='shots_online_lobby2.png')
     a.locator('[data-testid="online-quick-5+3"]').click(); a.wait_for_selector('[data-testid=online-seek]',timeout=8000)
     check('seek screen shown', a.locator('[data-testid=online-seek-time]').count()==1)
     a.screenshot(path='shots_online_seek.png')
     bb.goto(URL+'#/online'); bb.wait_for_selector('[data-testid=online-open-item]',timeout=9000)
     check('open challenge visible to B', 'Ann' in bb.locator('[data-testid=online-open-item]').first.inner_text() and '5+3' in bb.locator('[data-testid=online-open-item]').first.inner_text())
+    check('open challenge shows rating', '(1200)' in bb.locator('[data-testid=online-open-item]').first.inner_text())
     bb.screenshot(path='shots_online_open.png')
     bb.locator('[data-testid=online-open-accept]').first.click()
     for pgx in (a,bb): pgx.wait_for_selector('[data-testid=online-game][data-status=active]',timeout=10000)
     check('challenge accepted -> both playing', True)
+    check('rated game shows rating next to name', '(1200)' in bb.locator('[data-testid=online-game] .player-strip, [data-testid=online-game]').first.inner_text())
     a.locator('[data-testid=online-resign]').click(); a.locator('[data-testid=online-resign-yes]').click()
     bb.wait_for_selector('[data-testid=online-game][data-status=finished]',timeout=10000)
     # быстрый поиск двух игроков с одним контролем
@@ -239,6 +250,16 @@ with sync_playwright() as p:
     print(' ostats:',a.locator('[data-testid=ostats-games]').inner_text(),a.locator('[data-testid=ostats-wdl]').inner_text())
     check('stats count finished online games (A: lost 1 by resign, won 1 by mate? ...)', int(a.locator('[data-testid=ostats-games]').inner_text())>=3)
     a.screenshot(path='shots_online_stats.png',full_page=True)
+
+    # --- разбор и PGN онлайн-партии ---
+    a.goto(URL+'#/online/'+code); a.wait_for_selector('[data-testid=online-game][data-status=finished]',timeout=10000)
+    with a.expect_download() as d: a.locator('[data-testid=online-pgn]').click()
+    path=d.value.path(); pgn=open(path,encoding='utf-8').read()
+    check('pgn has names and result', '[White "Ann"]' in pgn and '[Black "Bob"]' in pgn and '[Result "1-0"]' in pgn and 'Qxf7#' in pgn)
+    a.locator('[data-testid=online-review]').click(); a.wait_for_timeout(1500)
+    check('review opens analysis with the game', a.url.endswith('#/analysis') and a.locator('[data-testid=tab-review]:visible').count()==1)
+    a.wait_for_selector('[data-testid=review-report]:visible,[data-testid=report]:visible',timeout=90000)
+    check('review finished', True)
     check('no page errors', not (e1 or e2 or e3 or e4)); print(e1,e2,e3,e4)
     print('FAILS:',FAILS)
     b.close()

@@ -23,9 +23,10 @@ export const abortGame = (id: string) => rpc('online_abort', { p_id: id })
 
 /** Быстрая игра: подбор открытого вызова с тем же контролем времени или создание своего открытого вызова. */
 export const seekGame = (name: string, baseS: number, incS: number) => rpc('online_seek', { p_name: name, p_base_s: baseS, p_inc_s: incS })
+export const sendEmote = (id: string, code: string) => rpc('online_emote', { p_id: id, p_code: code })
 export const publishGame = (id: string, open: boolean) => rpc('online_publish', { p_id: id, p_open: open })
 
-export type OpenChallenge = { code: string; name: string; side: Side; base_ms: number; inc_ms: number; created_at: string }
+export type OpenChallenge = { code: string; name: string; side: Side; rating?: number; base_ms: number; inc_ms: number; created_at: string }
 /** Открытые вызовы других игроков. */
 export async function listOpen(): Promise<OpenChallenge[]> {
   const c = await getClient()
@@ -57,4 +58,13 @@ export async function subscribeGame(id: string, onRow: (g: OnlineGame) => void):
     .on('postgres_changes', { event: '*', schema: 'public', table: 'online_games', filter: `id=eq.${id}` }, p => { if (p.new && 'id' in p.new) onRow(p.new as OnlineGame) })
     .subscribe()
   return () => { void c.removeChannel(ch) }
+}
+
+export type MyRating = { rating: number; peak: number; games: number }
+/** Мой рейтинг внутри приложения (Эло, старт 1200; это не рейтинг FIDE и не Chess.com). */
+export async function myRating(): Promise<MyRating> {
+  const c = await getClient()
+  const { data, error } = await c.rpc('online_my_rating')
+  if (error) throw error
+  return data as MyRating
 }

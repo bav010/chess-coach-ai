@@ -347,3 +347,20 @@ select{max-width:100%;text-overflow:ellipsis}.settings-grid select,.review-setti
 .online-form-dot{min-width:28px;height:28px;padding:0 6px;border-radius:8px;display:inline-grid;place-items:center;font:700 11px 'DM Mono',monospace;border:1px solid var(--n7);background:var(--n3);color:var(--n14)}
 .online-form-dot.win{background:var(--chart-1);color:var(--n0);border-color:transparent}
 .online-form-dot.loss{border-color:var(--n10);text-decoration:underline}
+
+/* Недельный отчёт и цель */
+.week-days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:14px 0 4px}
+.week-day{display:grid;justify-items:center;gap:6px;font-size:11px;color:var(--n11);text-transform:capitalize}
+.week-day i{width:100%;max-width:44px;height:34px;border-radius:8px;border:1px solid var(--n7);background:var(--n3)}
+.week-day.on i{background:var(--chart-1);border-color:transparent}.week-day.on{color:var(--n14);font-weight:700}
+.goal-bars{display:grid;gap:12px}.goal-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:12px;align-items:baseline}
+.goal-row b{font:700 12px 'DM Mono',monospace}.goal-track{grid-column:1/-1;height:8px;border-radius:99px;background:var(--n5);overflow:hidden}
+.goal-track i{display:block;height:100%;background:var(--chart-1);border-radius:99px;transition:width .3s}
+.goal-bars.compact{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.goal-edit{display:grid;gap:8px}.goal-step{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:8px;font-size:12px}.goal-step b{min-width:28px;text-align:center;font:700 13px 'DM Mono',monospace}
+.home-goal{display:grid;gap:12px}.home-goal .home-plan-head a{font-size:12px}
+.pill.good{background:var(--chart-1);color:var(--n0);border-color:transparent}
+.online-emotes{display:flex;flex-wrap:wrap;gap:6px}
+.online-toast{padding:8px 12px;border-radius:10px;background:var(--n14);color:var(--n0);font-size:13px;width:fit-content;max-width:100%}
+
+a.online-tile{text-decoration:none;color:inherit}a.online-tile b{text-decoration:none}a.online-tile small{text-decoration:none}

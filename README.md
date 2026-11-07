@@ -132,3 +132,13 @@ Open **Online game**, pick colour and time control, send the invite link. The fr
 
 ## Play from a position
 In **Analysis**, load a PGN or set up a position by hand, then press **Play from here** to continue against the bot from the position on the board. The editor shows which side is White (bottom) and Black (top) and has rank/file labels.
+
+## Online rating and server-side rules
+Quick games and public challenges are **rated**: an Elo rating kept inside the app (starts at 1200, K=40 for the first 20 games, then 20). It is not a FIDE or Chess.com rating. Games shorter than 4 half-moves, games by invite link, and more than 5 rated games a day with the same opponent do not change it. Quick-game pairing prefers close ratings and widens the window while you wait. The server (PL/pgSQL in `docs/supabase.sql`) checks every move for legality and ends the game itself on checkmate, stalemate, insufficient material, the 50-move rule or threefold repetition. It was checked against chess.js on 20,544 positions and perft; the SQL tests are in `e2e/sql/` (run on PostgreSQL 16). Re-run the online part of `docs/supabase.sql` once (it is idempotent) to upgrade an existing project.
+
+## Weekly report, goals, replay a mistake, reactions
+**Stats → Week** shows games, accuracy and puzzles for the week plus a focus tip; the weekly goal (games, puzzles, active days) is set there and shown on the home screen. In **My mistakes**, "Play from here" replays the position of a mistake against the bot. Online games have quick reactions (a fixed set) and a title/sound notice when it is your move while the tab is hidden.
+
+## Endgame trainer
+Menu → **Endgames** (`#/endgames`): 14 topics (basic mates, opposition, K+P vs K, rook pawn, Lucena, Philidor, Q vs pawn, Q vs R, wrong bishop), 60 positions. You play against Stockfish at full strength: deliver mate, or hold the draw (a draw by the rules or 30 moves without losing). Hint = engine's best move. Progress is stored locally.
+Every position is **verified by Stockfish** when the set is built: a "win" needs a mate score or at least +3 pawns (depth 22–34), a "draw" needs an evaluation near zero; positions that fail are dropped. Random positions use a fixed seed. Rebuild the set with `node scripts/build-endgames.mjs <path/to/sf.cjs>` (needs a Node build of Stockfish next to `sf.wasm`); the data lives in `src/data/endgames.json`, and a unit test re-checks legality and consistency of every entry.

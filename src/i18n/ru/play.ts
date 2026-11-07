@@ -147,4 +147,6 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "play.seed.reset": "Начать со стандартной позиции",
   "play.editor.sideWhite": "Белые — внизу доски, ходят вверх",
   "play.editor.sideBlack": "Чёрные — вверху доски, ходят вниз",
+  "play.seed.mistake.title": "Переигрываем вашу ошибку",
+  "play.seed.mistake.text": "Партия начнётся с позиции, где вы ошиблись. Ваша сторона уже выбрана; выберите силу бота и сыграйте этот момент лучше.",
 }

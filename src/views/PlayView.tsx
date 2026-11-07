@@ -38,7 +38,7 @@ type Props = {
   seed?: PlaySeed | null
 }
 
-export type PlaySeed = { startFen: string; ucis: string[]; nonce: number }
+export type PlaySeed = { startFen: string; ucis: string[]; nonce: number; userColor?: Color; /** Откуда позиция: подпись на экране настроек. */ from?: 'analysis' | 'mistake' }
 
 type ManualEnd = { result: '1-0' | '0-1' | '1/2-1/2'; reason: EndReason }
 
@@ -63,7 +63,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
   const { t, tn } = useI18n()
   const [cfg, setCfg] = useState<GameConfig | null>(null)
   /** Начальная позиция партии: обычная или перенесённая из анализа (с уже сыгранными ходами). */
-  const [base, setBase] = useState<{ startFen: string; ucis: string[] }>({ startFen: START_FEN, ucis: [] })
+  const [base, setBase] = useState<{ startFen: string; ucis: string[]; userColor?: Color; from?: 'analysis' | 'mistake' }>({ startFen: START_FEN, ucis: [] })
   const startFen = base.startFen
   const [gameId, setGameId] = useState(0)
   const [ucis, setUcisState] = useState<string[]>([])
@@ -125,7 +125,7 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
       onSaveSession({ result: 'in_progress', plies: ucisRef.current.length, pgn: toPgn(startFen, ucisRef.current, {}) })
     }
     if (cfg) toSetup()
-    setBase({ startFen: seed.startFen, ucis: seed.ucis.slice() })
+    setBase({ startFen: seed.startFen, ucis: seed.ucis.slice(), userColor: seed.userColor, from: seed.from })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed])
 
@@ -352,11 +352,11 @@ export default function PlayView({ prefs, onPrefs, sessions, onSaveSession, onDo
     return <div className="main-grid">
       <div className="play-setup-col">
         {custom && <div className="panel play-seed" data-testid="play-seed">
-          <b>{t('play.seed.title')}</b>
-          <p className="muted">{t('play.seed.text', { n: base.ucis.length, side: t(baseTurn === 'w' ? 'play.side.white' : 'play.side.black') })}</p>
+          <b>{t(base.from === 'mistake' ? 'play.seed.mistake.title' : 'play.seed.title')}</b>
+          <p className="muted">{base.from === 'mistake' ? t('play.seed.mistake.text') : t('play.seed.text', { n: base.ucis.length, side: t(baseTurn === 'w' ? 'play.side.white' : 'play.side.black') })}</p>
           <button className="btn quiet" onClick={() => setBase({ startFen: START_FEN, ucis: [] })} data-testid="play-seed-reset">{t('play.seed.reset')}</button>
         </div>}
-        <PlaySetup prefs={prefs} onPrefs={onPrefs} onStart={startGame} engineError={engineError} />
+        <PlaySetup prefs={prefs} onPrefs={onPrefs} onStart={startGame} engineError={engineError} presetColor={base.userColor} />
       </div>
       <aside className="right-column">
         <ProgressPanel sessions={sessions} onDownload={onDownload} onOpen={onOpenSession} onReset={onResetProgress} />

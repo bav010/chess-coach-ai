@@ -8,6 +8,7 @@ import { loadOpenings } from '../lib/openingsStore'
 import { DEFAULT_FILTERS, MIN_REVIEWED, applyFilters, movingAverage, ratingSeries, recommend, summarize, type Filters } from '../lib/statsCalc'
 import Icon from '../components/Icon'
 import OnlineStats from '../components/OnlineStats'
+import WeeklyReport from '../components/WeeklyReport'
 import type { CloudApi } from '../hooks/useCloud'
 
 type Go = 'tactics' | 'openings' | 'analysis' | 'play'
@@ -21,7 +22,7 @@ export default function StatsView({ active, games, onGo, cloud }: Props) {
   const { t, tn, lang } = useI18n()
   const [f, setF] = useState<Filters>(DEFAULT_FILTERS)
   const [tick, setTick] = useState(0)
-  const [sec, setSec] = useState<'overview' | 'mistakes' | 'learning' | 'online' | 'advice'>('overview')
+  const [sec, setSec] = useState<'overview' | 'mistakes' | 'learning' | 'week' | 'online' | 'advice'>('overview')
   // задачи и дебюты живут в своих хранилищах — перечитываем при открытии вкладки
   const puzzles = useMemo(() => loadPuzzleStats(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
   const openings = useMemo(() => loadOpenings(), [active, tick]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -59,7 +60,7 @@ export default function StatsView({ active, games, onGo, cloud }: Props) {
     </section>
 
     <div className="tabs st-tabs" role="tablist" aria-label={t('stats.sec.aria')}>
-      {([['overview', 'stats', 'stats.sec.overview'], ['mistakes', 'analysis', 'stats.sec.mistakes'], ['learning', 'tactics', 'stats.sec.learning'], ['online', 'handshake', 'stats.sec.online'], ['advice', 'hint', 'stats.sec.advice']] as const).map(([id, ic, label]) =>
+      {([['overview', 'stats', 'stats.sec.overview'], ['mistakes', 'analysis', 'stats.sec.mistakes'], ['week', 'flame', 'stats.sec.week'], ['learning', 'tactics', 'stats.sec.learning'], ['online', 'handshake', 'stats.sec.online'], ['advice', 'hint', 'stats.sec.advice']] as const).map(([id, ic, label]) =>
         <button key={id} role="tab" className={`tab ${sec === id ? 'active' : ''}`} aria-selected={sec === id} onClick={() => setSec(id)} data-testid={`stab-${id}`}><Icon name={ic} size={16} /><span>{t(label)}</span></button>)}
     </div>
 
@@ -114,6 +115,8 @@ export default function StatsView({ active, games, onGo, cloud }: Props) {
     </div>}
 
     <div hidden={sec !== 'learning'} className="st-sec"><LearningStats puzzles={puzzles} openings={openings} onGo={onGo} /></div>
+
+    <div hidden={sec !== 'week'} className="st-sec"><WeeklyReport games={games} active={active && sec === 'week'} /></div>
 
     <div hidden={sec !== 'online'} className="st-sec"><OnlineStats cloud={cloud} active={active && sec === 'online'} /></div>
 

@@ -63,6 +63,10 @@ python3 e2e14.py    # etc.
 | e2e28_sprint | timed puzzles: start, solving, time up, record, cancel |
 | e2e29_online | online games (several browsers, mocked Supabase server): invite, moves, draw, mate, resignation, rematch, third player, quick pairing, open challenges, cancel search, Online tab in statistics |
 | e2e30_playfrom | "Play from here": PGN and edited position → game against the bot; side labels in the position editor |
+| e2e31_weekly | Weekly report and goal: Week tab, home goals, counters |
+| e2e32_replay_mistake | Replay a mistake against the bot from My mistakes |
+| e2e33_endgames | Endgame trainer: topics, solving KQ vs K with hints to mate, progress, a hold-the-draw task, phone width |
+| sql/test_online.sql | Server side of online play on PostgreSQL 16: chess rules, auto-finish, rating, pairing, anti-farming (run `psql -f e2e/sql/chess.sql` first) |
 | contrast.py | text contrast in light and dark themes: `python3 contrast.py light dark` |
 
 `legacy/` holds old scenarios for removed features (local multi-accounts); there is no need to run them.

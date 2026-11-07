@@ -1,0 +1,845 @@
+{
+ "generatedWith": "Stockfish 19 (lite)",
+ "entries": [
+  {
+   "id": "lucena1",
+   "topic": "lucena",
+   "group": "rook",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1",
+   "eval": {
+    "cp": 610,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "philidor1",
+   "topic": "philidor",
+   "group": "rook",
+   "goal": "draw",
+   "user": "b",
+   "level": 3,
+   "fen": "4k3/8/1r6/3KP3/8/8/8/R7 b - - 0 1",
+   "eval": {
+    "cp": -5,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "philidor2",
+   "topic": "philidor",
+   "group": "rook",
+   "goal": "draw",
+   "user": "b",
+   "level": 3,
+   "fen": "4k3/8/1r6/4PK2/8/8/8/R7 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "philidor3",
+   "topic": "philidor",
+   "group": "rook",
+   "goal": "draw",
+   "user": "b",
+   "level": 3,
+   "fen": "3k4/8/6r1/3PK3/8/8/8/R7 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "rookpawn1",
+   "topic": "rookpawn",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "1k6/8/K7/P7/8/8/8/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "rookpawn2",
+   "topic": "rookpawn",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "7k/8/6K1/7P/8/8/8/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "opposition1",
+   "topic": "opposition",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 12,
+    "depth": 28
+   }
+  },
+  {
+   "id": "opposition2",
+   "topic": "opposition",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "3k4/8/3K4/3P4/8/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 13,
+    "depth": 28
+   }
+  },
+  {
+   "id": "oppdraw1",
+   "topic": "oppdraw",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 1,
+   "fen": "8/8/4k3/8/4P3/4K3/8/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "oppdraw2",
+   "topic": "oppdraw",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 1,
+   "fen": "8/4k3/8/4P3/4K3/8/8/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 28
+   }
+  },
+  {
+   "id": "kqk1",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/8/1k2K3/8/2Q5/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 5,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk2",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/1Q6/8/5K2/8/6k1/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 5,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk3",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/3Q4/8/8/8/2k4K/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 8,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk4",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/5Q2/8/8/8/8/4k1K1/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 5,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk5",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/2Q5/8/8/8/7k/8/3K4 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 4,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk6",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "3K4/3Q4/8/k7/8/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 7,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk7",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/4k3/6Q1/1K6/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 5,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqk8",
+   "topic": "kqk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/5k2/8/8/6Q1/6K1/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 7,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk1",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/3K4/5k2/8/1R6/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 8,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk2",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/5k2/8/1K6/3R4/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 15,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk3",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/1K6/R7/8/8/8/6k1 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 11,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk4",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/2K5/5k2/8/4R3/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 13,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk5",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/3k4/2R5/8/8/8/3K4/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 13,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk6",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/8/8/8/1R6/k6K/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 14,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk7",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/7k/8/8/8/8/8/K4R2 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 13,
+    "depth": 22
+   }
+  },
+  {
+   "id": "krk8",
+   "topic": "krk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 1,
+   "fen": "8/8/8/7R/4K3/8/4k3/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 7,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbbk1",
+   "topic": "kbbk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/8/8/1K6/4B3/B7/4k3/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 19,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbbk2",
+   "topic": "kbbk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/8/1K3B2/7B/8/8/8/1k6 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 15,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbbk3",
+   "topic": "kbbk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "1k6/8/6K1/8/8/8/3B4/1B6 w - - 0 1",
+   "eval": {
+    "cp": 9165,
+    "mate": null,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbbk4",
+   "topic": "kbbk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "7B/3K4/8/8/6B1/8/5k2/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 20,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbnk1",
+   "topic": "kbnk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "3k4/8/1K6/2N5/8/8/1B6/8 w - - 0 1",
+   "eval": {
+    "cp": 422,
+    "mate": null,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbnk2",
+   "topic": "kbnk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "3B3k/8/8/8/8/N7/2K5/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 16,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kbnk3",
+   "topic": "kbnk",
+   "group": "basic",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "8/8/8/5K2/8/4N3/2B5/6k1 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 15,
+    "depth": 22
+   }
+  },
+  {
+   "id": "wrongbishop1",
+   "topic": "wrongbishop",
+   "group": "bishop",
+   "goal": "draw",
+   "user": "b",
+   "level": 3,
+   "fen": "8/6kP/8/3B4/4K3/8/8/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 30
+   }
+  },
+  {
+   "id": "wrongbishop2",
+   "topic": "wrongbishop",
+   "group": "bishop",
+   "goal": "draw",
+   "user": "b",
+   "level": 3,
+   "fen": "7k/4K3/7P/8/8/8/4B3/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 30
+   }
+  },
+  {
+   "id": "wrongbishop3",
+   "topic": "wrongbishop",
+   "group": "bishop",
+   "goal": "draw",
+   "user": "b",
+   "level": 3,
+   "fen": "6k1/8/4B2P/8/4K3/8/8/8 b - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 30
+   }
+  },
+  {
+   "id": "qvpawn1",
+   "topic": "qvpawn",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "8/2K5/8/5k2/8/8/Q1p5/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 9,
+    "depth": 30
+   }
+  },
+  {
+   "id": "qvpawn2",
+   "topic": "qvpawn",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "5k2/8/8/K7/8/8/1p6/Q7 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 9,
+    "depth": 30
+   }
+  },
+  {
+   "id": "qvpawn3",
+   "topic": "qvpawn",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "8/6K1/8/8/8/7Q/k3p3/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 10,
+    "depth": 30
+   }
+  },
+  {
+   "id": "qvpawn4",
+   "topic": "qvpawn",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "8/4Q3/1K6/8/8/8/3p3k/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 10,
+    "depth": 30
+   }
+  },
+  {
+   "id": "kqkr1",
+   "topic": "kqkr",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "6r1/2K5/8/4k3/8/8/8/5Q2 w - - 0 1",
+   "eval": {
+    "cp": 589,
+    "mate": null,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqkr2",
+   "topic": "kqkr",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "8/8/7k/8/r7/7K/8/5Q2 w - - 0 1",
+   "eval": {
+    "cp": 977,
+    "mate": null,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqkr3",
+   "topic": "kqkr",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "2r5/8/8/5Q2/8/8/8/1K5k w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 7,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kqkr4",
+   "topic": "kqkr",
+   "group": "queen",
+   "goal": "win",
+   "user": "w",
+   "level": 3,
+   "fen": "8/r7/4Q3/8/8/8/3K4/6k1 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 7,
+    "depth": 22
+   }
+  },
+  {
+   "id": "kpkd1",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "2K5/8/k7/8/P7/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd2",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "k7/8/1P6/8/8/8/2K5/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw1",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "4K3/8/P5k1/8/8/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 12,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw2",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/8/8/8/8/8/1PK1k3/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 13,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw3",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/8/8/8/4K3/8/k1P5/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 11,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw4",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/8/8/k7/6K1/5P2/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 16,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw5",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "6K1/8/7k/8/8/2P5/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 16,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw6",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/8/8/8/3k4/1P6/K7/8 w - - 0 1",
+   "eval": {
+    "cp": 632,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd3",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "7K/8/6k1/4P3/8/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw7",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "5k2/8/8/3PK3/8/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 13,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkw8",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "win",
+   "user": "w",
+   "level": 2,
+   "fen": "8/4K3/8/8/8/8/2P5/3k4 w - - 0 1",
+   "eval": {
+    "cp": null,
+    "mate": 15,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd4",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "8/k7/8/8/PK6/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd5",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "5K2/8/8/8/1kP5/8/8/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd6",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "8/8/2k5/8/8/P7/5K2/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd7",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "5K2/8/8/8/8/4k3/6P1/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  },
+  {
+   "id": "kpkd8",
+   "topic": "kpk",
+   "group": "pawn",
+   "goal": "draw",
+   "user": "b",
+   "level": 2,
+   "fen": "6K1/8/8/8/8/P2k4/8/8 w - - 0 1",
+   "eval": {
+    "cp": 0,
+    "mate": null,
+    "depth": 34
+   }
+  }
+ ]
+}

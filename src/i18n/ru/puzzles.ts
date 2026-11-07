@@ -197,4 +197,6 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "puzzles.sprint.h.score": "Решено",
   "puzzles.sprint.h.level": "Уровень",
   "puzzles.sprint.note": "Забеги хранятся на этом устройстве, входят в резервную копию и синхронизацию. Обычную статистику задач они не меняют. Уход с вкладки во время забега отменяет его.",
+  "puzzles.mine.play": "Сыграть момент с ботом",
+  "puzzles.mine.playTip": "Переиграть эту позицию с ботом с момента вашей ошибки",
 }

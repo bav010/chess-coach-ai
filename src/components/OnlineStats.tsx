@@ -6,6 +6,7 @@ import type { CloudApi } from '../hooks/useCloud'
 import { cloudConfigured } from '../lib/cloud'
 import type { OnlineGame } from '../lib/online'
 import { listFinished } from '../lib/onlineApi'
+import { myRating, type MyRating } from '../lib/onlineApi'
 import { summarizeOnline, type Wdl } from '../lib/onlineStats'
 import { hrefFor } from '../lib/route'
 
@@ -16,11 +17,13 @@ export default function OnlineStats({ cloud, active }: { cloud: CloudApi; active
   const uid = cloud.status === 'in' ? cloud.user?.id ?? null : null
   const [games, setGames] = useState<OnlineGame[] | null>(null)
   const [failed, setFailed] = useState(false)
+  const [rt, setRt] = useState<MyRating | null>(null)
 
   useEffect(() => {
     if (!active || !uid) return
     let live = true
     setFailed(false)
+    myRating().then(r => { if (live) setRt(r) }).catch(() => { /* без рейтинга */ })
     listFinished(uid).then(r => { if (live) setGames(r) }).catch(() => { if (live) { setFailed(true); setGames(g => g ?? []) } })
     return () => { live = false }
   }, [active, uid])
@@ -35,6 +38,7 @@ export default function OnlineStats({ cloud, active }: { cloud: CloudApi; active
 
   return <div className="st-sec" data-testid="ostats">
     <section className="st-kpis">
+      {rt && <div className="st-kpi"><small>{t('ostats.rating')}</small><strong data-testid="ostats-rating">{rt.rating}</strong><em>{t('ostats.peak', { n: rt.peak })}</em></div>}
       <div className="st-kpi"><small>{t('ostats.games')}</small><strong data-testid="ostats-games">{s.total.games}</strong><em>{s.avgPlies !== null ? t('ostats.avgPlies', { n: s.avgPlies }) : ''}</em></div>
       <div className="st-kpi"><small>{t('stats.kpi.wdl')}</small><strong data-testid="ostats-wdl">{rowText(s.total)}</strong><em>{t('stats.kpi.score', { pct: s.winRate === null ? '—' : `${s.winRate}%` })}</em></div>
       <div className="st-kpi"><small>{t('ostats.streak')}</small><strong>{s.streak ? (s.streak.kind === 'win' ? tn('ostats.streak.win', s.streak.n) : tn('ostats.streak.loss', s.streak.n)) : '—'}</strong></div>

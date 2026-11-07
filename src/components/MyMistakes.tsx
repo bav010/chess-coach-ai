@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Chess, type Square } from 'chess.js'
+import { Chess, type Color, type Square } from 'chess.js'
 import Board from './Board'
 import Icon from './Icon'
 import PromoPicker from './PromoPicker'
 import { splitUci } from '../lib/game'
-import { markActive } from '../lib/activity'
+import { bump, markActive } from '../lib/activity'
 import { backfillFromReviews, countMistakes, gradeMistake, loadMistakes, planMistakes, saveMistakes, type MistakeItem, type MistakeStore } from '../lib/mistakes'
 import { hrefFor } from '../lib/route'
 import { t, tn, useI18n } from '../i18n'
@@ -14,7 +14,7 @@ type Msg = { kind: 'info' | 'ok' | 'bad'; text: () => string }
 const SESSION = 15
 
 /** Личные задачи: позиции из ваших разобранных партий, где был ошибочный ход. Нужно найти лучший ход движка. */
-export default function MyMistakes({ active }: { active: boolean }) {
+export default function MyMistakes({ active, onPlayFrom }: { active: boolean; onPlayFrom: (fen: string, color: Color) => void }) {
   const { lang } = useI18n()
   const [store, setStore] = useState<MistakeStore>(() => backfillFromReviews(loadMistakes()))
   const [queue, setQueue] = useState<string[]>([])
@@ -53,7 +53,7 @@ export default function MyMistakes({ active }: { active: boolean }) {
     if (!item || graded.current) return
     graded.current = true
     setStore(s => gradeMistake(s, item.id, ok, Date.now()))
-    markActive()
+    markActive(); bump('mistakes')
   }
 
   const canMove = !!item && status === 'solving'
@@ -117,6 +117,7 @@ export default function MyMistakes({ active }: { active: boolean }) {
             {status === 'solving'
               ? <button className="btn quiet" onClick={showAnswer} data-testid="mine-answer"><Icon name="eye" size={16} />{t('puzzles.mine.showAnswer')}</button>
               : <button className="btn primary" onClick={next} data-testid="mine-next"><Icon name="arrowRight" size={16} />{idx + 1 >= queue.length ? t('puzzles.mine.finish') : t('puzzles.btn.next')}</button>}
+            <button className="btn" onClick={() => onPlayFrom(item.fen, item.color)} data-testid="mine-play" title={t('puzzles.mine.playTip')}><Icon name="play2" size={16} />{t('puzzles.mine.play')}</button>
           </div>
         </>
         : <div className="empty-state" data-testid="mine-empty">

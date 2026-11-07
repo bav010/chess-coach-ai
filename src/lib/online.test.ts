@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chessOf, clockOffset, formatClock, inviteLink, isMyTurn, isNewer, mySide, onlineErrorKey, outcomeFor, parseCode, remainingMs, ruleOutcome, tryMove, turnOf, type OnlineGame } from './online'
+import { chessOf, clockOffset, formatClock, inviteLink, isMyTurn, isNewer, mySide, onlineErrorKey, outcomeFor, parseCode, ratingChange, remainingMs, ruleOutcome, tryMove, turnOf, type OnlineGame } from './online'
 
 const base: OnlineGame = { id: 'i', code: 'abcdef12', creator: 'A', white: 'A', black: 'B', white_name: 'Ann', black_name: 'Bob', moves: [], base_ms: 300000, inc_ms: 3000, white_ms: 300000, black_ms: 300000, turn_started: '2026-11-01T10:00:00.000Z', status: 'active', result: null, reason: null, draw_offer: null }
 const g = (p: Partial<OnlineGame> = {}): OnlineGame => ({ ...base, ...p })
@@ -74,8 +74,21 @@ describe('обновления и ошибки', () => {
   it('ошибки сервера превращаются в ключи перевода', () => {
     expect(onlineErrorKey({ message: 'not_found' })).toBe('online.err.not_found')
     expect(onlineErrorKey(new Error('full'))).toBe('online.err.full')
+    expect(onlineErrorKey({ message: 'too_fast' })).toBe('online.err.too_fast')
+    expect(onlineErrorKey({ message: 'illegal_move' })).toBe('online.err.illegal')
     expect(onlineErrorKey(new Error('Failed to fetch'))).toBe('online.err.network')
     expect(onlineErrorKey({ message: 'Could not find the function public.online_get in the schema cache' })).toBe('online.err.setup')
     expect(onlineErrorKey('???')).toBe('online.err.other')
+  })
+})
+
+describe('ratingChange', () => {
+  it('показывает изменение только в завершённой партии с рейтингом', () => {
+    const done = g({ status: 'finished', result: '1-0', white_elo: 1200, black_elo: 1200, white_delta: 20, black_delta: -20 })
+    expect(ratingChange(done, 'w')).toEqual({ delta: 20, after: 1220 })
+    expect(ratingChange(done, 'b')).toEqual({ delta: -20, after: 1180 })
+    expect(ratingChange(g({ status: 'finished', white_delta: null }), 'w')).toBeNull()
+    expect(ratingChange(g({ white_elo: 1200, white_delta: 5 }), 'w')).toBeNull()
+    expect(ratingChange(done, null)).toBeNull()
   })
 })

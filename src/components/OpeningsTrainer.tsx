@@ -10,6 +10,7 @@ import { useI18n, type Key, type Params } from '../i18n'
 import { lineLabel, repLabel } from '../lib/lessonSync'
 import { uciToSan } from '../lib/san'
 import { isDue, newCard, schedule, type Grade } from '../lib/srs'
+import { bump } from '../lib/activity'
 import type { OpeningsData } from '../lib/openingsStore'
 import Icon from './Icon'
 
@@ -118,6 +119,7 @@ export default function OpeningsTrainer({ data, update, active }: Props) {
 
   function grade(spec: CardSpec, g: Grade) {
     const t = Date.now()
+    bump('openings')
     update(d => {
       const cur = d.cards[spec.id] ?? newCard(t)
       // верный ответ по карточке, которой ещё не пора, не двигает расписание (иначе интервалы раздувались бы повторной практикой)

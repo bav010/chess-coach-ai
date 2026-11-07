@@ -144,4 +144,6 @@ export const en = {
   "play.seed.reset": "Start from the standard position",
   "play.editor.sideWhite": "White — bottom of the board, moves up",
   "play.editor.sideBlack": "Black — top of the board, moves down",
+  "play.seed.mistake.title": "Replaying your mistake",
+  "play.seed.mistake.text": "The game starts from the position where you went wrong. Your side is preselected; pick the bot's strength and try to play the moment better.",
 } as const

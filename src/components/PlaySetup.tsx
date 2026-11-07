@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n'
 import type { Color } from 'chess.js'
 import { ELO_MAX, ELO_MIN, ELO_PRESETS, ENGINE_MIN_ELO, clampElo } from '../lib/bot'
@@ -19,15 +19,18 @@ type Props = {
   onPrefs: (patch: Partial<Prefs>) => void
   onStart: (cfg: GameConfig) => void
   engineError: boolean
+  /** Цвет, который нужно выбрать заранее (например, при игре из позиции своей ошибки). */
+  presetColor?: Color
 }
 
 type ColorChoice = Color | 'random'
 
 /** Настройки перед партией: сила бота (ELO), цвет, контроль времени. */
-export default function PlaySetup({ prefs, onPrefs, onStart, engineError }: Props) {
+export default function PlaySetup({ prefs, onPrefs, onStart, engineError, presetColor }: Props) {
   const { t } = useI18n()
   const [elo, setElo] = useState(1400)
-  const [color, setColor] = useState<ColorChoice>('w')
+  const [color, setColor] = useState<ColorChoice>(presetColor ?? 'w')
+  useEffect(() => { if (presetColor) setColor(presetColor) }, [presetColor])
   const [tcId, setTcId] = useState('5+3')
   const [youMin, setYouMin] = useState(10)
   const [botMin, setBotMin] = useState(10)

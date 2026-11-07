@@ -7,7 +7,7 @@ import PromoPicker from './PromoPicker'
 import PUZZLES from '../data/puzzles.json'
 import { LEVEL_LABEL, judgeMove, type Evaluate, type Level, type Puzzle } from '../lib/puzzles'
 import { splitUci } from '../lib/game'
-import { markActive } from '../lib/activity'
+import { bump, markActive } from '../lib/activity'
 import { MAX_MISTAKES, RUN_SECONDS, loadSprint, recordRun, runAccuracy, saveSprint, type SprintStore } from '../lib/sprint'
 import { fmtDate, t, tn, useI18n } from '../i18n'
 
@@ -76,6 +76,7 @@ export default function TimedRun({ active }: { active: boolean }) {
     if (!record) return
     markActive()
     const r = run.current
+    bump('puzzles', r.score + r.mistakes); bump('solved', r.score)
     const out = recordRun(storeRef.current, { at: new Date().toISOString(), score: r.score, mistakes: r.mistakes, level: levelRef.current, seconds: RUN_SECONDS })
     setIsRecord(out.record); setStore(out.store); saveSprint(out.store)
   }, [])
