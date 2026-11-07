@@ -364,3 +364,9 @@ select{max-width:100%;text-overflow:ellipsis}.settings-grid select,.review-setti
 .online-toast{padding:8px 12px;border-radius:10px;background:var(--n14);color:var(--n0);font-size:13px;width:fit-content;max-width:100%}
 
 a.online-tile{text-decoration:none;color:inherit}a.online-tile b{text-decoration:none}a.online-tile small{text-decoration:none}
+
+.eg-side p{margin:10px 0}.eg-side .panel-head{margin-bottom:6px}.chips a.chip{text-decoration:none;color:inherit}.chips a.chip.active{color:#171b13}
+.eg-strip{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px}.eg-moves{margin:10px 0 0;font:12px 'DM Mono',monospace;line-height:1.7;max-height:96px;overflow:auto;color:var(--n13)}
+.eg-tipbox{margin:12px 0;padding:10px 12px;border:1px solid var(--accent-ink);border-radius:10px;background:var(--n3);font-size:13px;line-height:1.5}
+.eg-hint{border-left:3px solid var(--accent-ink)}.eg-side .action-bar{margin-top:12px}
+a.btn{text-decoration:none}

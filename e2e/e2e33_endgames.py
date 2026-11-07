@@ -29,6 +29,13 @@ with sync_playwright() as p:
         try: btn.wait_for(state='visible'); pg.wait_for_function("()=>{const b=document.querySelector('[data-testid=eg-hint-btn]');return b&&!b.disabled}",timeout=15000)
         except Exception: continue
         btn.click(); pg.wait_for_selector('[data-testid=eg-hint]',timeout=15000)
+        if n==1:
+            check('hint level 1 shows idea', 'Идея' in pg.locator('[data-testid=eg-hint]').inner_text())
+            pg.screenshot(path='shots_endgames_hint1.png')
+        for _ in range(3):
+            if pg.locator('[data-testid=eg-hint][data-uci]').count(): break
+            pg.wait_for_function("()=>{const b=document.querySelector('[data-testid=eg-hint-btn]');return b&&!b.disabled}",timeout=15000)
+            btn.click(); pg.wait_for_timeout(2500)
         u=pg.locator('[data-testid=eg-hint]').get_attribute('data-uci')
         B='[data-testid=eg-trainer] '; pg.locator(B+f'[data-square={u[:2]}]').click(); pg.locator(B+f'[data-square={u[2:4]}]').click()
         if len(u)==5: pg.locator('[data-testid=promo-q], [aria-label*="Queen"], [aria-label*="Ферзь"]').first.click()
@@ -36,6 +43,7 @@ with sync_playwright() as p:
         pg.wait_for_function("()=>{const t=document.querySelector('[data-testid=eg-trainer]');return t.dataset.verdict!=='playing' || document.querySelector('[data-testid=eg-hint-btn]:not([disabled])')}",timeout=20000)
     v=pg.locator('[data-testid=eg-trainer]').get_attribute('data-verdict'); print(' moves',n,'verdict',v)
     check('solved with checkmate', v=='solved')
+    check('moves list filled', len(pg.locator('[data-testid=eg-moves]').inner_text())>12)
     check('status says solved', 'решена' in pg.locator('[data-testid=eg-status]').inner_text())
     pg.screenshot(path='shots_endgames_solved.png')
     check('next button', pg.locator('[data-testid=eg-next]').count()==1)

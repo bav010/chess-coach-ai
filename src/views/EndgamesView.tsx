@@ -52,7 +52,7 @@ function Trainer({ entry: e, progress, update }: { entry: EndgameEntry; progress
   const [moves, setMoves] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [hints, setHints] = useState(0)
-  const [hint, setHint] = useState<{ from: Square; uci: string; san: string } | null>(null)
+  const [hint, setHint] = useState<{ level: 1 | 2 | 3; from?: Square; uci?: string; san?: string } | null>(null)
   const [hintBusy, setHintBusy] = useState(false)
   const [err, setErr] = useState(false)
   const [run, setRun] = useState(0)
@@ -92,15 +92,28 @@ function Trainer({ entry: e, progress, update }: { entry: EndgameEntry; progress
     update(p => markSolved(p, e.id, hints)); bump('puzzles', 1)
   }, [verdict, e.id, run, hints, update])
 
+  // подсказка в три шага: идея темы → фигура → точный ход (движок считает один раз, на втором шаге)
   async function askHint() {
     if (!myTurn || hintBusy) return
-    setHintBusy(true)
-    try {
-      const a = await analysisEngine.analyse(chess.fen(), { depth: 18, movetime: 1500 })
-      const u = a.bestMoveUci
-      if (u) { setHints(h => h + 1); setHint({ from: u.slice(0, 2) as Square, uci: u, san: uciToSan(chess.fen(), u) ?? u }) }
-    } catch { setErr(true) } finally { setHintBusy(false) }
+    const level = hint?.level ?? 0
+    if (level === 0) { setHints(h => h + 1); setHint({ level: 1 }); return }
+    if (level === 1) {
+      setHintBusy(true)
+      try {
+        const r = await analysisEngine.analyse(chess.fen(), { depth: 18, movetime: 1500 })
+        const u = r.bestMoveUci
+        if (u) { setHints(h => h + 1); setHint({ level: 2, from: u.slice(0, 2) as Square, uci: u, san: uciToSan(chess.fen(), u) ?? u }) }
+      } catch { setErr(true) } finally { setHintBusy(false) }
+      return
+    }
+    if (level === 2) { setHints(h => h + 1); setHint(h => (h ? { ...h, level: 3 } : h)) }
   }
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => { if ((ev.key === 'h' || ev.key === 'H') && !ev.ctrlKey && !ev.metaKey && !(ev.target instanceof HTMLInputElement)) void askHint() }
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
+  })
+  const san = useMemo(() => { const c = new Chess(e.fen); return moves.map(u => { const m = c.move(splitUci(u)); return m.san }) }, [e.fen, moves])
+  const toMove = chess.turn()
 
   const list = entriesOf(e.topic)
   const idx = list.findIndex(x => x.id === e.id)
@@ -115,24 +128,29 @@ function Trainer({ entry: e, progress, update }: { entry: EndgameEntry; progress
     <section className="panel board-panel play-panel">
       <div className="panel-head"><div><div className="eyebrow">{t('eg.eyebrow')}</div><h2>{t(`eg.topic.${e.topic}.title` as Key)}</h2></div>
         <span className="pill">{t(e.user === 'w' ? 'eg.side.w' : 'eg.side.b')}</span></div>
+      <div className="eg-strip" data-testid="eg-strip"><span className={`player-dot ${toMove === 'w' ? 'white' : 'black'}`} /> <b>{t(toMove === 'w' ? 'eg.turn.w' : 'eg.turn.b')}</b>{hints > 0 && <small className="muted"> · {t('eg.hints.used', { n: hints })}</small>}</div>
       <div className="board-wrap"><Board chess={chess} orientation={e.user} selected={input.selected} legal={input.legal} lastMove={last} hint={hint?.from ?? null}
         onSquareClick={input.onSquare} readOnly={!myTurn} /></div>
       {input.promo && <PromoPicker color={e.user} onPick={input.pickPromo} onCancel={input.cancelPromo} />}
       <div className="board-message" role="status" data-testid="eg-status"><span className="pulse" /> {status}</div>
-      {hint && <div className="board-message" data-testid="eg-hint" data-uci={hint.uci}>{t('eg.hint.text', { san: hint.san })}</div>}
+      {hint && <div className="board-message eg-hint" data-testid="eg-hint" data-level={hint.level} data-uci={hint.uci}>
+        {hint.level === 1 ? t('eg.hint.tip', { tip: t(`eg.topic.${e.topic}.tip` as Key) })
+          : hint.level === 2 ? t('eg.hint.piece', { sq: hint.from ?? '' }) : t('eg.hint.text', { san: hint.san ?? '' })}</div>}
+      <div className="eg-moves" data-testid="eg-moves"><small className="muted">{t('eg.moves')}:</small> {san.length ? san.map((m, i) => <span key={i}>{i % 2 === (new Chess(e.fen).turn() === 'w' ? 0 : 1) ? `${Math.floor((i + (new Chess(e.fen).turn() === 'w' ? 0 : 1)) / 2) + 1}. ` : ''}{m} </span>) : <small className="muted">{t('eg.moves.empty')}</small>}</div>
       <div className="action-bar">
-        <button className="btn" disabled={!myTurn || hintBusy} onClick={() => void askHint()} data-testid="eg-hint-btn"><Icon name="hint" size={16} />{t('eg.btn.hint')}</button>
-        <button className="btn" onClick={() => setRun(r => r + 1)} data-testid="eg-restart"><Icon name="refresh" size={16} />{t('eg.btn.restart')}</button>
+        <button className="btn" disabled={!myTurn || hintBusy || hint?.level === 3} onClick={() => void askHint()} title={t('eg.hint.tooltip')} data-testid="eg-hint-btn"><Icon name="hint" size={16} />{hint ? t('eg.btn.hint.n', { n: Math.min(3, hint.level + 1) }) : t('eg.btn.hint')}</button>
+        <button className="btn" onClick={() => setRun(r => r + 1)} title={t('eg.restart.tooltip')} data-testid="eg-restart"><Icon name="refresh" size={16} />{t('eg.btn.restart')}</button>
         {verdict === 'solved' && nxt && nxt.id !== e.id && <button className="btn primary" onClick={() => navigate('endgames', nxt.id)} data-testid="eg-next"><Icon name="arrowRight" size={16} />{t('eg.btn.next')}</button>}
       </div>
     </section>
-    <section className="panel online-side">
+    <section className="panel online-side eg-side">
         <div className="panel-head"><div><h3>{t(`eg.topic.${e.topic}.title` as Key)}</h3></div><span className="pill">{t(`eg.level.${e.level}` as Key)}</span></div>
         <p data-testid="eg-goal"><b>{t(e.goal === 'win' ? 'eg.goal.win' : 'eg.goal.draw', { n: HOLD_MOVES })}</b></p>
         <p className="muted">{t(`eg.topic.${e.topic}.text` as Key)}</p>
+        <div className="eg-tipbox"><b>{t('eg.tips.title')}</b><br />{t(`eg.topic.${e.topic}.tip` as Key)}</div>
         <div className="field-label">{t('eg.positions')}</div>
-        <div className="chips">{list.map((x, i) => <a key={x.id} className={`chip ${x.id === e.id ? 'active' : ''}`} href={hrefFor('endgames', x.id)} data-testid={`eg-chip-${x.id}`} data-solved={!!progress.solved[x.id]}>
-          {i + 1}{progress.solved[x.id] ? ' ✓' : ''}</a>)}</div>
+        <div className="chips">{list.map((x, i) => <a key={x.id} className={`chip ${x.id === e.id ? 'active' : ''}`} href={hrefFor('endgames', x.id)} data-testid={`eg-chip-${x.id}`} data-solved={!!progress.solved[x.id]} title={t(x.goal === 'win' ? 'eg.chip.win' : 'eg.chip.draw')}>
+          {i + 1} {x.goal === 'win' ? '♛' : '🛡'}{progress.solved[x.id] ? ' ✓' : ''}</a>)}</div>
         <p className="muted"><small>{t('eg.verified')}</small></p>
         <a className="btn" href={hrefFor('endgames')} data-testid="eg-back"><Icon name="arrowLeft" size={16} />{t('eg.btn.all')}</a>
       </section>
