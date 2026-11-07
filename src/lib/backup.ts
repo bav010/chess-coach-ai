@@ -7,6 +7,7 @@ import { loadPuzzleStats, savePuzzleStats, type PuzzleStats } from './puzzleStat
 import { loadOpenings, saveOpenings, type OpeningsData } from './openingsStore'
 import { loadActivity, mergeActivity, saveActivity, type Activity } from './activity'
 import { loadMistakes, mergeMistakes, saveMistakes, type MistakeStore } from './mistakes'
+import { loadProgress as loadEndgames, mergeEgProgress, saveProgress as saveEndgames, type EgProgress } from './endgames'
 import { loadPrefs, savePrefs, type Prefs } from './prefs'
 import { getAppearance, setAppearance, type Appearance } from './appearance'
 import { loadSprint, mergeSprint, saveSprint, type SprintStore } from './sprint'
@@ -24,6 +25,7 @@ export type Backup = {
   /** С версии 2. */
   activity?: Activity
   mistakes?: MistakeStore
+  endgames?: EgProgress
   sprint?: SprintStore
   reviews?: StoredReview[]
   prefs?: Prefs
@@ -34,7 +36,7 @@ export function makeBackup(): Backup {
   return {
     app: 'chess-coach-ai', kind: 'backup', v: 2, exportedAt: new Date().toISOString(),
     games: loadGames(), sessions: loadSessions(), puzzles: loadPuzzleStats(), openings: loadOpenings(),
-    activity: loadActivity(), mistakes: loadMistakes(), sprint: loadSprint(), reviews: listReviews(), prefs: loadPrefs(), appearance: getAppearance(),
+    activity: loadActivity(), mistakes: loadMistakes(), endgames: loadEndgames(), sprint: loadSprint(), reviews: listReviews(), prefs: loadPrefs(), appearance: getAppearance(),
   }
 }
 
@@ -76,6 +78,7 @@ export function applyBackup(b: Backup, o: ApplyOptions = {}): { games: number; s
   if (b.openings && b.openings.v === 1 && Array.isArray(b.openings.repertoires)) saveOpenings(mergeOpenings(loadOpenings(), b.openings))
   if (b.activity && b.activity.v === 1) saveActivity(mergeActivity(loadActivity(), b.activity))
   if (b.mistakes && b.mistakes.v === 1 && b.mistakes.items && b.mistakes.cards) saveMistakes(mergeMistakes(loadMistakes(), b.mistakes))
+  if (b.endgames && b.endgames.v === 1 && b.endgames.solved && b.endgames.tries) saveEndgames(mergeEgProgress(loadEndgames(), b.endgames))
   if (b.sprint && b.sprint.v === 1 && Array.isArray(b.sprint.history)) saveSprint(mergeSprint(loadSprint(), b.sprint))
   if (Array.isArray(b.reviews)) {
     const have = new Set(listReviews().map(r => r.key))

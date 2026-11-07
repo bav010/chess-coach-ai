@@ -13,6 +13,8 @@ const GROUPS: { title: Key; items: Item[] }[] = [
     { route: 'play', icon: 'play', label: 'app.mode.play' },
     { route: 'tactics', icon: 'tactics', label: 'app.mode.tactics' },
     { route: 'openings', icon: 'openings', label: 'app.mode.openings' },
+    { route: 'train', icon: 'flame', label: 'train.title' },
+    { route: 'vision', icon: 'eye', label: 'vision.title' },
     { route: 'endgames', icon: 'board', label: 'eg.title' },
     { route: 'online', icon: 'handshake', label: 'online.title' },
   ] },

@@ -4,7 +4,7 @@ import { pk } from './profile'
 
 export type DailyResult = { id: string; ok: boolean }
 /** Счётчики действий за день (для недельного отчёта). */
-export type DayCounts = { puzzles?: number; solved?: number; openings?: number; mistakes?: number }
+export type DayCounts = { puzzles?: number; solved?: number; openings?: number; mistakes?: number; endgames?: number }
 /** Цель недели: партий, задач и активных дней. */
 export type WeeklyGoal = { games: number; puzzles: number; days: number }
 export type Activity = { v: 1; days: string[]; daily: Record<string, DailyResult>; counts?: Record<string, DayCounts>; goal?: WeeklyGoal }
@@ -80,7 +80,7 @@ function mergeCounts(a: Record<string, DayCounts> | undefined, b: Record<string,
   const out: Record<string, DayCounts> = {}
   for (const k of new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})])) {
     const x = a?.[k] ?? {}, y = b?.[k] ?? {}
-    out[k] = { puzzles: Math.max(x.puzzles ?? 0, y.puzzles ?? 0), solved: Math.max(x.solved ?? 0, y.solved ?? 0), openings: Math.max(x.openings ?? 0, y.openings ?? 0), mistakes: Math.max(x.mistakes ?? 0, y.mistakes ?? 0) }
+    out[k] = { puzzles: Math.max(x.puzzles ?? 0, y.puzzles ?? 0), solved: Math.max(x.solved ?? 0, y.solved ?? 0), openings: Math.max(x.openings ?? 0, y.openings ?? 0), mistakes: Math.max(x.mistakes ?? 0, y.mistakes ?? 0), endgames: Math.max(x.endgames ?? 0, y.endgames ?? 0) }
   }
   return pruneCounts(out)
 }

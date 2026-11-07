@@ -3,6 +3,7 @@
 import type { Chess, Color } from 'chess.js'
 import raw from '../data/endgames.json'
 import { pk } from './profile'
+import { isDue, newCard, schedule, urgency, type CardState, type Grade } from './srs'
 
 export type Goal = 'win' | 'draw'
 export type EndgameEntry = {
@@ -50,15 +51,17 @@ export function judge(chess: Chess, e: Pick<EndgameEntry, 'goal' | 'user'>, user
 }
 
 // --- прогресс ---
-export type EgProgress = { v: 1; solved: Record<string, { at: number; hints: number }>; tries: Record<string, number> }
+/** `cards` — расписание повторений (интервальное повторение, как у «Моих ошибок»); у старых сохранений его нет. */
+export type EgProgress = { v: 1; solved: Record<string, { at: number; hints: number }>; tries: Record<string, number>; cards?: Record<string, CardState> }
 const KEY = 'chess-coach-ai:endgames:v1'
+export const EMPTY_EG: EgProgress = { v: 1, solved: {}, tries: {} }
 const empty = (): EgProgress => ({ v: 1, solved: {}, tries: {} })
 
 export function loadProgress(): EgProgress {
   try {
     const d = JSON.parse(localStorage.getItem(pk(KEY)) ?? 'null') as Partial<EgProgress> | null
     if (!d || d.v !== 1) return empty()
-    return { v: 1, solved: d.solved && typeof d.solved === 'object' ? d.solved : {}, tries: d.tries && typeof d.tries === 'object' ? d.tries : {} }
+    return { v: 1, solved: d.solved && typeof d.solved === 'object' ? d.solved : {}, tries: d.tries && typeof d.tries === 'object' ? d.tries : {}, ...(d.cards && typeof d.cards === 'object' ? { cards: d.cards } : {}) }
   } catch { return empty() }
 }
 export function saveProgress(p: EgProgress) { try { localStorage.setItem(pk(KEY), JSON.stringify(p)) } catch { /* ничего */ } }
@@ -75,4 +78,34 @@ export function nextUnsolved(p: EgProgress, topic: string, afterId?: string): En
   const start = afterId ? list.findIndex(e => e.id === afterId) + 1 : 0
   for (let i = 0; i < list.length; i++) { const e = list[(start + i) % list.length]; if (!p.solved[e.id] && e.id !== afterId) return e }
   return null
+}
+
+// --- интервальное повторение ---
+/**
+ * Итог попытки для расписания: решено без подсказок — «good» (интервалы 1, 3, 7… дней), с подсказками — «hard»,
+ * не решено (мат ученику, ничья в выигрышной позиции) — «again» (вернётся через 10 минут).
+ */
+export function gradeEndgame(p: EgProgress, id: string, grade: Grade, now = Date.now()): EgProgress {
+  if (!entryById(id)) return p
+  return { ...p, cards: { ...p.cards, [id]: schedule(p.cards?.[id] ?? newCard(now), grade, now) } }
+}
+/** Позиции, которые пора повторить (уже были в тренировке), самые срочные первыми. */
+export function dueEndgames(p: EgProgress, now = Date.now()): EndgameEntry[] {
+  const cards = p.cards ?? {}
+  return ENTRIES.filter(e => cards[e.id] && isDue(cards[e.id], now)).sort((a, b) => urgency(cards[b.id], now) - urgency(cards[a.id], now))
+}
+/** Первая нерешённая позиция в порядке тем (для «новой» позиции в плане дня). */
+export function firstNew(p: EgProgress): EndgameEntry | null {
+  for (const g of GROUPS) for (const t of g.topics) { const e = entriesOf(t).find(x => !p.solved[x.id] && !p.cards?.[x.id]); if (e) return e }
+  return null
+}
+/** Объединение двух устройств: решённое — объединением (раньше и с меньшим числом подсказок), карточки — где тренировались позже. */
+export function mergeEgProgress(a: EgProgress, b: EgProgress): EgProgress {
+  const solved: EgProgress['solved'] = { ...b.solved }
+  for (const [k, v] of Object.entries(a.solved)) { const o = solved[k]; solved[k] = o ? { at: Math.min(o.at, v.at), hints: Math.min(o.hints, v.hints) } : v }
+  const tries: Record<string, number> = { ...b.tries }
+  for (const [k, v] of Object.entries(a.tries)) tries[k] = Math.max(tries[k] ?? 0, v)
+  const cards: Record<string, CardState> = { ...b.cards }
+  for (const [k, v] of Object.entries(a.cards ?? {})) { const o = cards[k]; cards[k] = !o || v.last >= o.last ? v : o }
+  return { v: 1, solved, tries, ...(Object.keys(cards).length ? { cards } : {}) }
 }

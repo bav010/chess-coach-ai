@@ -33,6 +33,8 @@ const CARDS: { route: RouteName; icon: IconName; title: Key; desc: Key }[] = [
   { route: 'play', icon: 'play', title: 'app.mode.play', desc: 'home.card.play.desc' },
   { route: 'tactics', icon: 'tactics', title: 'app.mode.tactics', desc: 'home.card.tactics.desc' },
   { route: 'openings', icon: 'openings', title: 'app.mode.openings', desc: 'home.card.openings.desc' },
+  { route: 'train', icon: 'flame', title: 'train.title', desc: 'train.home.desc' },
+  { route: 'vision', icon: 'eye', title: 'vision.title', desc: 'vision.home.desc' },
   { route: 'endgames', icon: 'board', title: 'eg.title', desc: 'eg.home.desc' },
   { route: 'online', icon: 'handshake', title: 'online.title', desc: 'home.card.online.desc' },
   { route: 'stats', icon: 'stats', title: 'nav.stats', desc: 'home.card.stats.desc' },
@@ -132,7 +134,7 @@ export default function HomeView({ games, cloud, me, last, sessions = [], onOpen
     </section>
 
     {plan.length > 0 && <section className="home-plan panel" aria-labelledby="home-plan-h" data-testid="home-plan">
-      <div className="home-plan-head"><h2 id="home-plan-h">{t('home.plan.title')}</h2><small>{t('home.plan.sub')}</small></div>
+      <div className="home-plan-head"><h2 id="home-plan-h">{t('home.plan.title')}</h2><a href={hrefFor('train')} data-testid="home-train-link">{t('train.home.link')}</a></div>
       <ol className="home-plan-list">
         {plan.map((s, i) => <PlanRow key={s.id} step={s} n={i + 1} onReview={last0 && onOpenSession ? () => onOpenSession(last0) : undefined} />)}
       </ol>

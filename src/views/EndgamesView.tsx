@@ -5,9 +5,9 @@ import PromoPicker from '../components/PromoPicker'
 import Icon from '../components/Icon'
 import { useBoardInput } from '../hooks/useBoardInput'
 import { analysisEngine, botEngine } from '../engine'
-import { useI18n, type Key } from '../i18n'
-import { bump } from '../lib/activity'
-import { ENTRIES, GROUPS, HOLD_MOVES, entriesOf, entryById, judge, loadProgress, markSolved, markTry, nextUnsolved, saveProgress, solvedCount, type EgProgress, type EndgameEntry, type Verdict } from '../lib/endgames'
+import { tn, useI18n, type Key } from '../i18n'
+import { bump, markActive } from '../lib/activity'
+import { ENTRIES, GROUPS, HOLD_MOVES, dueEndgames, entriesOf, entryById, gradeEndgame, judge, loadProgress, markSolved, markTry, nextUnsolved, saveProgress, solvedCount, type EgProgress, type EndgameEntry, type Verdict } from '../lib/endgames'
 import { splitUci } from '../lib/game'
 import { hrefFor, navigate } from '../lib/route'
 import { uciToSan } from '../lib/san'
@@ -25,10 +25,12 @@ export default function EndgamesView({ arg }: { arg: string | null }) {
 function Overview({ progress }: { progress: EgProgress }) {
   const { t } = useI18n()
   const total = ENTRIES.length, done = ENTRIES.filter(e => progress.solved[e.id]).length
+  const due = dueEndgames(progress)
   return <div className="st-sec" data-testid="eg-overview">
     <section className="panel">
       <div className="panel-head"><div><div className="eyebrow">{t('eg.eyebrow')}</div><h2>{t('eg.title')}</h2></div><span className="pill" data-testid="eg-total">{t('eg.progress', { n: done, m: total })}</span></div>
       <p className="muted">{t('eg.intro')}</p>
+      {due.length > 0 && <p data-testid="eg-due"><a className="btn primary" href={hrefFor('endgames', due[0].id)} data-testid="eg-due-go"><Icon name="refresh" size={16} />{tn('eg.due', due.length)}</a></p>}
       <p className="muted"><small>{t('eg.verified')}</small></p>
     </section>
     {GROUPS.map(g => <section className="panel" key={g.id}>
@@ -87,9 +89,10 @@ function Trainer({ entry: e, progress, update }: { entry: EndgameEntry; progress
 
   // итог: прогресс и счётчик активности
   useEffect(() => {
-    if (verdict !== 'solved' || reported.current === `${e.id}:${run}`) return
+    if (verdict === 'playing' || reported.current === `${e.id}:${run}`) return
     reported.current = `${e.id}:${run}`
-    update(p => markSolved(p, e.id, hints)); bump('puzzles', 1)
+    if (verdict === 'solved') { update(p => gradeEndgame(markSolved(p, e.id, hints), e.id, hints === 0 ? 'good' : 'hard')); markActive(); bump('endgames', 1) }
+    else update(p => gradeEndgame(p, e.id, 'again'))
   }, [verdict, e.id, run, hints, update])
 
   // подсказка в три шага: идея темы → фигура → точный ход (движок считает один раз, на втором шаге)

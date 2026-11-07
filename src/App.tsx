@@ -6,6 +6,8 @@ import { parsePgn } from './lib/pgn'
 import AnalysisView, { type GameSeed } from './views/AnalysisView'
 import PlayView, { type PlaySeed } from './views/PlayView'
 import EndgamesView from './views/EndgamesView'
+import TrainView from './views/TrainView'
+import VisionView from './views/VisionView'
 import PuzzleView from './views/PuzzleView'
 import OpeningsView from './views/OpeningsView'
 import AccountView from './views/AccountView'
@@ -140,7 +142,7 @@ export default function App() {
   const TITLES: Partial<Record<RouteName, { icon: IconName; title: string }>> = {
     analysis: { icon: 'analysis', title: t('app.mode.analysis') }, play: { icon: 'play', title: t('app.mode.play') },
     tactics: { icon: 'tactics', title: t('app.mode.tactics') }, openings: { icon: 'openings', title: t('app.mode.openings') },
-    online: { icon: 'handshake', title: t('online.title') }, endgames: { icon: 'board', title: t('eg.title') },
+    online: { icon: 'handshake', title: t('online.title') }, endgames: { icon: 'board', title: t('eg.title') }, train: { icon: 'flame', title: t('train.title') }, vision: { icon: 'eye', title: t('vision.title') },
     stats: { icon: 'stats', title: t('nav.stats') }, profile: { icon: 'user', title: t('nav.profile') }, account: { icon: 'cloud', title: t('nav.account') },
     settings: { icon: 'settings', title: t('nav.settings') }, help: { icon: 'help', title: t('nav.help') },
   }
@@ -198,11 +200,13 @@ export default function App() {
       <AccountView active={onAccountRoute} tab={accountTab} games={games} profiles={profiles} cloud={cloud} onProfiles={setProfiles}
         onGo={m => navigate(m)} onResetGames={() => { markGamesReset(); saveGames([]); setGames([]) }} />
     </div>
+    {route.name === 'vision' && <VisionView />}
+    {route.name === 'train' && <TrainView />}
     {route.name === 'endgames' && <EndgamesView arg={route.arg} />}
     {route.name === 'online' && <OnlineView cloud={cloud} shownName={shownName} arg={route.arg} onReview={reviewGame} />}
     {route.name === 'settings' && <SettingsView prefs={prefs} onPrefs={updatePrefs} />}
     {route.name === 'help' && <HelpView />}
     </div>
-    <footer><span>CHESS COACH AI <i>•</i> v0.7.1-beta</span></footer>
+    <footer><span>CHESS COACH AI <i>•</i> v0.8.0-beta</span></footer>
   </main>
 }
