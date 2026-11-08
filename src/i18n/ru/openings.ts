@@ -196,7 +196,7 @@ export const ru: Record<keyof typeof en, string> & Record<string, string> = {
   "openings.mine.games_few": "{n} партии",
   "openings.mine.games_many": "{n} партий",
   "openings.mine.games_other": "{n} партии",
-  "openings.mine.basis": "Считается по сохранённым партиям с ботом. Названия дебютов — по каталогу lichess; выход из каталога не означает ошибку.",
+  "openings.mine.basis": "Считается по сохранённым партиям с ботом и партиям из библиотеки. Названия дебютов — по каталогу lichess; выход из каталога не означает ошибку.",
   "openings.mine.colorAria": "Фильтр по цвету",
   "openings.mine.color.all": "Все",
   "openings.mine.color.w": "Белые",

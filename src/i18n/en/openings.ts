@@ -191,7 +191,7 @@ export const en = {
   "openings.mine.title": "My openings",
   "openings.mine.games_one": "{n} game",
   "openings.mine.games_other": "{n} games",
-  "openings.mine.basis": "Built from your saved games against the bot. Openings are named by the lichess catalog; leaving the catalog does not mean a mistake.",
+  "openings.mine.basis": "Built from your saved games against the bot and the games in your library. Openings are named by the lichess catalog; leaving the catalog does not mean a mistake.",
   "openings.mine.colorAria": "Filter by colour",
   "openings.mine.color.all": "All",
   "openings.mine.color.w": "White",

@@ -381,3 +381,12 @@ a.btn{text-decoration:none}
 .pwa-bar{position:sticky;top:0;z-index:60;display:grid;gap:6px;padding:0 12px}.pwa-note{margin:8px auto 0;max-width:900px;padding:9px 14px;border-radius:10px;background:#fff7e0;color:#4a3500;border:1px solid #e5a000;font-size:13px}
 .pwa-note.update{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#eefbd0;border-color:#8fbf2a;color:#2a3a05}
 .install-card{display:flex;gap:14px;align-items:center;margin:14px 0}.install-ic{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--n3)}.install-body{flex:1;min-width:0;display:grid;gap:2px}.install-body small{color:var(--n13)}
+
+.library .lib-field{display:grid;gap:6px;margin:10px 0 2px;font-size:12px;color:var(--n12)}.library .lib-row{display:flex;gap:8px}.library .lib-row input{flex:1}
+.library input[type=text],.library input[type=search],.library textarea{background:var(--n4);border:1px solid var(--n7);border-radius:8px;color:var(--n15);padding:8px 10px;font:inherit;min-width:0}
+.library textarea{width:100%;resize:vertical;font:11px 'DM Mono',monospace}
+.lib-import{display:grid;gap:8px;margin:12px 0}.lib-import .btn{justify-self:start}
+.lib-filters{display:grid;gap:8px;margin:12px 0}
+.lib-list li{grid-template-columns:auto 1fr auto auto auto}.lib-list .lib-players{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-out{font-weight:700}.lib-out.win{color:var(--accent-ink)}.lib-out.loss{color:#e5877d}
+.lib-list{max-height:420px}
