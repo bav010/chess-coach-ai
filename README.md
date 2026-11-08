@@ -115,9 +115,13 @@ Puzzles → "My mistakes" turns the mistakes, misses and blunders from your revi
 
 ## My openings
 
-Openings → "My games" (`src/lib/myOpenings.ts`) groups your saved games against the bot by opening family and colour: results, how long the game stayed in the lichess opening catalog, and the first move outside it (yours or the bot's). Weak openings are flagged only with at least 3 games and a score under 40%. Leaving the catalog is not a mistake; the catalog only names openings.
+Openings → "My games" (`src/lib/myOpenings.ts`) groups your saved games against the bot and the games from your library by opening family and colour: results, how long the game stayed in the lichess opening catalog, and the first move outside it (yours or the bot's). Weak openings are flagged only with at least 3 games and a score under 40%. Leaving the catalog is not a mistake; the catalog only names openings.
 
 The quick jump (Ctrl+K) also finds these features by keywords in both languages, for example "fix mistakes" / "исправить ошибки".
+
+## Game library (import from lichess / chess.com)
+
+Openings → *My games* now starts with a **library of imported games** (`src/lib/library.ts`). Export your games from lichess or chess.com as PGN and either choose one or more `.pgn` files or paste the text; a file with many games is split automatically. Enter your nickname(s) (up to 5) so the app can find your side: your games are then summarised (wins, draws, losses, score), can be filtered by colour, result and player/date, opened in analysis with a game review in one click, and are counted in **My openings** together with your games against the bot. Repeated imports never duplicate games (the key is the start position plus the moves), unreadable games are only counted in the import report, comments and clock marks are stripped to keep the data compact, and the library keeps up to 500 games. It is stored on the device and included in the backup file; it is not sent to cloud sync because of its size.
 
 ## Backup (one file)
 

@@ -11,6 +11,7 @@ import { loadProgress as loadEndgames, mergeEgProgress, saveProgress as saveEndg
 import { loadPrefs, savePrefs, type Prefs } from './prefs'
 import { getAppearance, setAppearance, type Appearance } from './appearance'
 import { loadSprint, mergeSprint, saveSprint, type SprintStore } from './sprint'
+import { loadLibrary, mergeLibrary, saveLibrary, type LibStore } from './library'
 import { mergeOpenings, mergePuzzles } from './sync'
 
 export type Backup = {
@@ -27,6 +28,7 @@ export type Backup = {
   mistakes?: MistakeStore
   endgames?: EgProgress
   sprint?: SprintStore
+  library?: LibStore
   reviews?: StoredReview[]
   prefs?: Prefs
   appearance?: Appearance
@@ -36,7 +38,7 @@ export function makeBackup(): Backup {
   return {
     app: 'chess-coach-ai', kind: 'backup', v: 2, exportedAt: new Date().toISOString(),
     games: loadGames(), sessions: loadSessions(), puzzles: loadPuzzleStats(), openings: loadOpenings(),
-    activity: loadActivity(), mistakes: loadMistakes(), endgames: loadEndgames(), sprint: loadSprint(), reviews: listReviews(), prefs: loadPrefs(), appearance: getAppearance(),
+    activity: loadActivity(), mistakes: loadMistakes(), endgames: loadEndgames(), sprint: loadSprint(), library: loadLibrary(), reviews: listReviews(), prefs: loadPrefs(), appearance: getAppearance(),
   }
 }
 
@@ -80,6 +82,7 @@ export function applyBackup(b: Backup, o: ApplyOptions = {}): { games: number; s
   if (b.mistakes && b.mistakes.v === 1 && b.mistakes.items && b.mistakes.cards) saveMistakes(mergeMistakes(loadMistakes(), b.mistakes))
   if (b.endgames && b.endgames.v === 1 && b.endgames.solved && b.endgames.tries) saveEndgames(mergeEgProgress(loadEndgames(), b.endgames))
   if (b.sprint && b.sprint.v === 1 && Array.isArray(b.sprint.history)) saveSprint(mergeSprint(loadSprint(), b.sprint))
+  if (b.library && b.library.v === 1 && Array.isArray(b.library.games)) saveLibrary(mergeLibrary(loadLibrary(), b.library))
   if (Array.isArray(b.reviews)) {
     const have = new Set(listReviews().map(r => r.key))
     for (const r of b.reviews) if (r && typeof r.key === 'string' && Array.isArray(r.evals) && !have.has(r.key)) saveReview(r)

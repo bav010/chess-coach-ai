@@ -3,6 +3,7 @@ import { applyBackup, describeBackup, makeBackup, parseBackup } from './backup'
 import { loadGames, saveGames, type GameStat } from './gameStats'
 import { addMistakes, loadMistakes, saveMistakes, EMPTY_MISTAKES, type MistakeItem } from './mistakes'
 import { loadActivity, markActive } from './activity'
+import { EMPTY_LIB, importPgn, loadLibrary, saveLibrary } from './library'
 
 const game = (key: string, at = '2026-01-01T00:00:00Z'): GameStat => ({ key, at, src: 'bot', color: 'w', result: '1-0', outcome: 'win', opp: 1200, tc: '-', plies: 20, endgame: false })
 const mistake = (n: number): MistakeItem => ({ id: `g#${n}`, gameKey: 'g', ply: n, fen: 'x', color: 'w', bestUci: 'e2e4', bestSan: 'e4', playedSan: 'a3', cls: 'mistake', loss: 10, at: '2026-01-01' })
@@ -44,5 +45,15 @@ describe('резервная копия v2', () => {
   it('чужой файл и не-JSON отклоняются', () => {
     expect(() => parseBackup('nope')).toThrow()
     expect(() => parseBackup('{"app":"x"}')).toThrow()
+  })
+  it('библиотека партий входит в копию и объединяется без дублей', () => {
+    const pgn = '[Event "x"]\n[Date "2026.10.01"]\n[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 Nc6 1-0'
+    saveLibrary({ ...importPgn(EMPTY_LIB, pgn).store, nicks: ['Alice'] })
+    const text = JSON.stringify(makeBackup())
+    localStorage.clear()
+    applyBackup(parseBackup(text))
+    applyBackup(parseBackup(text))
+    const lib = loadLibrary()
+    expect(lib.games).toHaveLength(1); expect(lib.nicks).toEqual(['Alice'])
   })
 })
