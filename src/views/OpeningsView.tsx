@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import OpeningsLessons from '../components/OpeningsLessons'
 import OpeningsStudy from '../components/OpeningsStudy'
 import OpeningsTrainer from '../components/OpeningsTrainer'
 import OpeningsMine from '../components/OpeningsMine'
+import GameLibrary from '../components/GameLibrary'
+import { asSessions, loadLibrary, saveLibrary, type LibStore } from '../lib/library'
 import type { SavedSession } from '../storage'
 import { buildCatalog, type Catalog } from '../lib/openings'
 import { syncLessons } from '../lib/lessonSync'
@@ -15,10 +17,14 @@ import Icon from '../components/Icon'
 type Sub = 'lessons' | 'study' | 'train' | 'mine'
 const SUBS: readonly Sub[] = ['lessons', 'study', 'train', 'mine']
 
-export default function OpeningsView({ active, arg = null, sessions = [] }: { active: boolean; arg?: string | null; sessions?: readonly SavedSession[] }) {
+export default function OpeningsView({ active, arg = null, sessions = [], onOpenSession }: { active: boolean; arg?: string | null; sessions?: readonly SavedSession[]; onOpenSession?: (s: SavedSession) => void }) {
   const { t } = useI18n()
   const [data, setData] = useState<OpeningsData>(() => loadOpenings())
   const [sub, setSub] = useState<Sub>('lessons')
+  const [lib, setLib] = useState<LibStore>(() => loadLibrary())
+  const changeLib = useCallback((fn: (s: LibStore) => LibStore) => setLib(cur => { const next = fn(cur); if (next !== cur) saveLibrary(next); return next }), [])
+  // партии с ботом + загруженные партии (ваша сторона определяется по нику)
+  const mineSessions = useMemo(() => [...sessions, ...asSessions(lib)], [sessions, lib])
   // #/openings/mine, #/openings/train… открывают нужную вкладку
   useEffect(() => { if (arg && (SUBS as readonly string[]).includes(arg)) setSub(arg as Sub) }, [arg])
   const [lessonTitle, setLessonTitle] = useState<string | null>(null)
@@ -77,7 +83,10 @@ export default function OpeningsView({ active, arg = null, sessions = [] }: { ac
     {error && <p className="error-text" role="alert">{'key' in error ? t(error.key) : errorText(error.err, 'openings.view.readError')}</p>}
     <div hidden={sub !== 'lessons'}><OpeningsLessons data={data} update={update} active={active && sub === 'lessons'} onLesson={setLessonTitle} leaveKey={leave} /></div>
     <div hidden={sub !== 'study'}><OpeningsStudy catalog={catalog} data={data} update={update} onTitle={setStudyTitle} /></div>
-    <div hidden={sub !== 'mine'}><OpeningsMine catalog={catalog} sessions={sessions} /></div>
+    <div hidden={sub !== 'mine'}>
+      <GameLibrary lib={lib} onChange={changeLib} onOpen={s => onOpenSession?.(s)} />
+      <OpeningsMine catalog={catalog} sessions={mineSessions} />
+    </div>
     <div hidden={sub !== 'train'}><OpeningsTrainer data={data} update={update} active={active && sub === 'train'} /></div>
   </div>
 }

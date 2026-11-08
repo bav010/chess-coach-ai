@@ -9,7 +9,7 @@ Three levels of checks: types, unit tests and end-to-end (e2e) browser scenarios
 ```bash
 npm install
 npx tsc -b          # strict type check, must print no errors
-npx vitest run      # unit tests (205), including EN/RU dictionary parity
+npx vitest run      # unit tests (309), including EN/RU dictionary parity
 npx vite build      # build into dist/
 ```
 
@@ -69,6 +69,7 @@ python3 e2e14.py    # etc.
 | e2e34_train | Daily training: blocks from data, today's counters, endgame review, home links, phone width |
 | e2e35_vision | Board vision: coordinates with a record, knight routes (10 of 10), attacked squares with a deliberate mistake, home card, phone width |
 | e2e36_pwa | PWA: worker and cache, manifest, install prompt, offline (reload without network, the bot answers), version update |
+| e2e37_library | Game library: import by paste and file, duplicates, empty input, nicknames and side, summary, filters, search, delete, counted in My openings, open in analysis, persistence, RU, mobile layout |
 | sql/test_online.sql | Server side of online play on PostgreSQL 16: chess rules, auto-finish, rating, pairing, anti-farming (run `psql -f e2e/sql/chess.sql` first) |
 | contrast.py | text contrast in light and dark themes: `python3 contrast.py light dark` |
 
